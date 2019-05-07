@@ -64,14 +64,59 @@ class Tokenizer:
         return Mark(self._index)
 
     def reset(self, index: Mark) -> None:
-        assert 0 <= index < len(self._tokens)
+        assert 0 <= index <= len(self._tokens), (index, len(self._tokens))
         self._index = index
 
+
+def memoize(method: Callable[['Parser'], Optional[Tree]]):
+    """Memoize a symbol method."""
+
+    def symbol_wrapper(self: 'Parser') -> Optional[Tree]:
+        mark = self.mark()
+        key = mark, method
+        if key not in self._symbol_cache:
+            tree = method(self)
+            if tree:
+                endmark = self.mark()
+            else:
+                endmark = mark
+            self._symbol_cache[key] = tree, endmark
+        tree, endmark = self._symbol_cache[key]
+        self.reset(endmark)
+        return tree
+
+    return symbol_wrapper
+
+
+def memoize_expect(method: Callable[['Parser'], bool]) -> bool:
+    """Memoize the expect() method."""
+
+    def expect_wrapper(self: 'Parser', type: str) -> bool:
+        mark = self.mark()
+        key = mark, type
+        if key not in self._token_cache:
+            res = method(self, type)
+            if res:
+                endmark = self.mark()
+            else:
+                endmark = mark
+            self._token_cache[key] = res, endmark
+        else:
+            res, endmark = self._token_cache[key]
+        self.reset(endmark)
+        return res
+
+    return expect_wrapper
+    
 
 class Parser:
 
     def __init__(self, tokenizer: Tokenizer):
         self._tokenizer = tokenizer
+        self._symbol_cache: Dict[Tuple[Mark,
+                                       Callable[['Parser'], Optional[Tree]]],
+                                 Tuple[Optional[Tree], Mark]] = {}
+        self._token_cache: Dict[Tuple[Mark, str], bool] = {}
 
     def mark(self) -> Mark:
         return self._tokenizer.mark()
@@ -79,6 +124,7 @@ class Parser:
     def reset(self, mark: Mark) -> None:
         self._tokenizer.reset(mark)
 
+    @memoize
     def start(self) -> Optional[Tree]:
         """
         start: sum EOF
@@ -89,6 +135,7 @@ class Parser:
         self.reset(mark)
         return None
 
+    @memoize
     def sum(self) -> Optional[Tree]:
         """
         sum: term '+' sum | term
@@ -109,6 +156,7 @@ class Parser:
         self.reset(mark)
         return None
 
+    @memoize
     def term(self) -> Optional[Tree]:
         """
         term: factor '*' term | factor
@@ -127,6 +175,7 @@ class Parser:
         self.reset(mark)
         return None
 
+    @memoize
     def factor(self) -> Optional[Tree]:
         """
         factor: '(' sum ')' | NUMBER
@@ -140,6 +189,7 @@ class Parser:
         self.reset(mark)
         return None
 
+    @memoize
     def number(self) -> Optional[Tree]:
         mark = self.mark()
         toktup = self._tokenizer.getnext()
@@ -148,6 +198,7 @@ class Parser:
         self.reset(mark)
         return None
 
+    @memoize_expect
     def expect(self, type: str) -> bool:
         mark = self.mark()
         toktup = self._tokenizer.getnext()
