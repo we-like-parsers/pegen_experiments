@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 """pegen -- PEG Generator.
 
@@ -22,7 +22,7 @@ Mark = NewType('Mark', int)
 
 class Tree:
 
-    def __init__(self, type: str, *args: Optional['Tree'], value: str = None):
+    def __init__(self, type: str, *args: Optional['Tree'], value: Optional[str] = None):
         if value is not None:
             assert not args, args
         self.type = type
@@ -58,7 +58,7 @@ class Tokenizer:
     def mark(self) -> Mark:
         return Mark(self._index)
 
-    def reset(self, index: Mark):
+    def reset(self, index: Mark) -> None:
         assert 0 <= index < len(self._tokens)
         self._index = index
 
