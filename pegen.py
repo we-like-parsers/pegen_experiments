@@ -83,9 +83,10 @@ class Parser:
         """
         start: sum EOF
         """
-        tree = self.sum()
-        if tree and self.expect('NEWLINE') and self.expect('ENDMARKER'):
+        mark = self.mark()
+        if (tree := self.sum()) and self.expect('NEWLINE') and self.expect('ENDMARKER'):
             return tree
+        self.reset(mark)
         return None
 
     def sum(self) -> Optional[Tree]:
@@ -93,71 +94,51 @@ class Parser:
         sum: term '+' sum | term
         """
         mark = self.mark()
-        left = self.term()
-        if not left:
-            self.reset(mark)
-            return None
-        mark = self.mark()
-        if not self.expect('+'):
-            self.reset(mark)
+        if (left := self.term()) and self.expect('+') and (right := self.sum()):
+            # Note that 'a + b + c' is parsed as 'a + (b + c)'.
+            # Also note that explicit parentheses are preserved.
+            terms = [left]  # type: List[Optional[Tree]]
+            if right.type == '+':
+                terms.extend(right.args)
+            else:
+                terms.append(right)
+            return Tree('+', *terms)
+        self.reset(mark)
+        if left := self.term():
             return left
-        right = self.sum()
-        if not right:
-            self.reset(mark)
-            return left
-        # Note that 'a + b + c' is parsed as 'a + (b + c)'.
-        # Also note that explicit parentheses are preserved.
-        terms = [left]  # type: List[Optional[Tree]]
-        if right.type == '+':
-            terms.extend(right.args)
-        else:
-            terms.append(right)
-        return Tree('+', *terms)
+        self.reset(mark)
+        return None
 
     def term(self) -> Optional[Tree]:
         """
         term: factor '*' term | factor
         """
         mark = self.mark()
-        left = self.factor()
-        if not left:
-            self.reset(mark)
+        if (left := self.factor()) and self.expect('*') and (right := self.term()):
+            factors = [left]  # type: List[Optional[Tree]]
+            if right.type == '*':
+                factors.extend(right.args)
+            else:
+                factors.append(right)
+            return Tree('*', *factors)
+        self.reset(mark)
+        if left := self.factor():
             return left
-        mark = self.mark()
-        if not self.expect('*'):
-            self.reset(mark)
-            return left
-        right = self.term()
-        if not right:
-            self.reset(mark)
-            return left
-        factors = [left]  # type: List[Optional[Tree]]
-        if right.type == '*':
-            factors.extend(right.args)
-        else:
-            factors.append(right)
-        return Tree('*', *factors)
+        self.reset(mark)
+        return None
 
     def factor(self) -> Optional[Tree]:
         """
         factor: '(' sum ')' | NUMBER
         """
         mark = self.mark()
-        number = self.number()
-        if number:
+        if self.expect('(') and (sum := self.sum()) and self.expect(')'):
+            return Tree('Group', sum)
+        self.reset(mark)
+        if number := self.number():
             return number
         self.reset(mark)
-        if not self.expect('('):
-            self.reset(mark)
-            return None
-        sum = self.sum()
-        if not sum:
-            self.reset(mark)
-            return None
-        if not self.expect(')'):
-            self.reset(mark)
-            return None
-        return Tree('Group', sum)
+        return None
 
     def number(self) -> Optional[Tree]:
         mark = self.mark()
