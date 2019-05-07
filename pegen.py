@@ -127,11 +127,22 @@ class Parser:
     @memoize
     def start(self) -> Optional[Tree]:
         """
-        start: sum EOF
+        start: (sum '\n')+ EOF
         """
         mark = self.mark()
-        if (tree := self.sum()) and self.expect('NEWLINE') and self.expect('ENDMARKER'):
-            return tree
+        trees = []
+        while True:
+            if (tree := self.sum()) and self.expect('NEWLINE'):
+                trees.append(tree)
+                mark = self.mark()
+            else:
+                self.reset(mark)
+                if not self.expect('ENDMARKER'):
+                    trees = []
+                break
+
+        if trees:
+            return Tree('Sums', *trees)
         self.reset(mark)
         return None
 
@@ -228,7 +239,11 @@ def main() -> None:
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
             sys.exit(1)
-        print(tree)
+        if tree.type == 'Sums':
+            for arg in tree.args:
+                print(arg)
+        else:
+            print(tree)
 
 
 if __name__ == '__main__':
