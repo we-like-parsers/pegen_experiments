@@ -11,6 +11,7 @@ from __future__ import annotations  # Requires Python 3.7 or later
 
 import argparse
 import sys
+import time
 import token
 import tokenize
 from typing import *
@@ -226,12 +227,14 @@ class Parser:
 
 
 argparser = argparse.ArgumentParser(prog='pegen')
+argparser.add_argument('-q', '--quiet', action='store_true')
 argparser.add_argument('-v', '--verbose', action='store_true')
 argparser.add_argument('filename')
 
 
 def main() -> None:
     args = argparser.parse_args()
+    t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(file)
         parser = Parser(tokenizer)
@@ -239,11 +242,26 @@ def main() -> None:
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
             sys.exit(1)
-        if tree.type == 'Sums':
-            for arg in tree.args:
-                print(arg)
+        if not args.quiet:
+            if tree.type == 'Sums':
+                for arg in tree.args:
+                    print(arg)
+            else:
+                print(tree)
+        endpos = file.tell()
+    t1 = time.time()
+    dt = t1 - t0
+    if args.verbose:
+        diag = tokenizer.diagnose()
+        nlines = diag.end[0]
+        if diag.type == token.ENDMARKER:
+            nlines -= 1
+        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
+              end="", file=sys.stderr)
+        if dt:
+            print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
         else:
-            print(tree)
+            print(file=sys.stderr)
 
 
 if __name__ == '__main__':
