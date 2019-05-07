@@ -18,7 +18,7 @@ from typing import *
 
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
-Mark = NewType('Mark', int)
+Mark = int
 
 
 class Tree:
@@ -62,7 +62,7 @@ class Tokenizer:
         return self._tokens[-1]
 
     def mark(self) -> Mark:
-        return Mark(self._index)
+        return self._index
 
     def reset(self, index: Mark) -> None:
         assert 0 <= index <= len(self._tokens), (index, len(self._tokens))
@@ -118,33 +118,27 @@ class Parser:
                                        Callable[['Parser'], Optional[Tree]]],
                                  Tuple[Optional[Tree], Mark]] = {}
         self._token_cache: Dict[Tuple[Mark, str], bool] = {}
-
-    def mark(self) -> Mark:
-        return self._tokenizer.mark()
-
-    def reset(self, mark: Mark) -> None:
-        self._tokenizer.reset(mark)
+        self.mark = self._tokenizer.mark
+        self.reset = self._tokenizer.reset
 
     @memoize
     def start(self) -> Optional[Tree]:
         """
         start: (sum '\n')+ EOF
         """
-        mark = self.mark()
         trees = []
         while True:
+            mark = self.mark()
             if (tree := self.sum()) and self.expect('NEWLINE'):
                 trees.append(tree)
-                mark = self.mark()
             else:
                 self.reset(mark)
                 if not self.expect('ENDMARKER'):
-                    trees = []
+                    return None
                 break
 
         if trees:
             return Tree('Sums', *trees)
-        self.reset(mark)
         return None
 
     @memoize
@@ -165,7 +159,6 @@ class Parser:
         self.reset(mark)
         if left := self.term():
             return left
-        self.reset(mark)
         return None
 
     @memoize
@@ -184,7 +177,6 @@ class Parser:
         self.reset(mark)
         if left := self.factor():
             return left
-        self.reset(mark)
         return None
 
     @memoize
@@ -198,21 +190,17 @@ class Parser:
         self.reset(mark)
         if number := self.number():
             return number
-        self.reset(mark)
         return None
 
     @memoize
     def number(self) -> Optional[Tree]:
-        mark = self.mark()
         toktup = self._tokenizer.getnext()
         if toktup.type == token.NUMBER:
             return Tree('NUMBER', value=toktup.string)
-        self.reset(mark)
         return None
 
     @memoize_expect
     def expect(self, type: str) -> bool:
-        mark = self.mark()
         toktup = self._tokenizer.getnext()
         if type in exact_token_types:
             if toktup.type == exact_token_types[type]:
@@ -222,7 +210,6 @@ class Parser:
                 return True
         if toktup.type == token.OP and toktup.string == type:
             return True
-        self.reset(mark)
         return False
 
 
