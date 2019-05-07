@@ -55,6 +55,11 @@ class Tokenizer:
         self._index += 1
         return tok
 
+    def diagnose(self) -> tokenize.TokenInfo:
+        if not self._tokens:
+            self.getnext()
+        return self._tokens[-1]
+
     def mark(self) -> Mark:
         return Mark(self._index)
 
@@ -78,7 +83,10 @@ class Parser:
         """
         start: sum EOF
         """
-        return self.sum()  # TODO: expect EOF
+        tree = self.sum()
+        if tree and self.expect('NEWLINE') and self.expect('ENDMARKER'):
+            return tree
+        return None
 
     def sum(self) -> Optional[Tree]:
         """
@@ -175,6 +183,7 @@ class Parser:
 
 
 argparser = argparse.ArgumentParser(prog='pegen')
+argparser.add_argument('-v', '--verbose', action='store_true')
 argparser.add_argument('filename')
 
 
@@ -185,7 +194,7 @@ def main() -> None:
         parser = Parser(tokenizer)
         tree = parser.start()
         if not tree:
-            print("Syntax error")
+            print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
             sys.exit(1)
         print(tree)
 
