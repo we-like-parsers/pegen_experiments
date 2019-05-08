@@ -1,0 +1,19 @@
+# Simplified grammar for Python
+
+program: statement* ENDMARKER
+statement: assignment | expression | function
+assignment: target '=' expression
+
+function: 'def' NAME '(' [parameters] ')' ':' body
+parameters: kwargs | arg ',' parameters | arg ',' | arg
+kwargs: kwarg ',' kwargs | kwarg ',' | kwarg
+kwarg: NAME '=' expression | '**' NAME
+arg: NAME | '*' NAME
+
+expression: term '+' expression | term '-' expression | term
+term: factor '*' term | factor '/' term | factor
+factor: list | tuple | group | NAME | STRING
+list: '[' [expressions] ']'
+tuple: '(' expression ',' expressions ')' | '(' expression ',' ')' | '(' ')'
+group: '(' expression ')'
+expressions: expression ',' expressions | expression ',' | expression

@@ -18,10 +18,16 @@ from typing import *
 
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
-Mark = int
+Mark = int  # NewType('Mark', int)
 
 
 class Tree:
+    """Parse tree node.
+
+    There are two kinds of nodes:
+    - Leaf nodes have a value field that's not None.
+    - Interior nodes have an args field that's not empty.
+    """
 
     def __init__(self, type: str, *args: Optional['Tree'], value: Optional[str] = None):
         if value is not None:
@@ -37,6 +43,10 @@ class Tree:
 
 
 class Tokenizer:
+    """Caching wrapper for the tokenize module.
+
+    This is hopelessly tied to Python's syntax.
+    """
 
     _tokens: List[tokenize.TokenInfo]
 
@@ -51,6 +61,7 @@ class Tokenizer:
         Updates the current index.
         """
         if self._index == len(self._tokens):
+            # TODO: Skip NL and COMMENT here.
             self._tokens.append(next(self._tokengen))
         tok = self._tokens[self._index]
         self._index += 1
@@ -69,10 +80,10 @@ class Tokenizer:
         self._index = index
 
 
-def memoize(method: Callable[['Parser'], Optional[Tree]]):
+def memoize(method: Callable[[Parser], Optional[Tree]]):
     """Memoize a symbol method."""
 
-    def symbol_wrapper(self: 'Parser') -> Optional[Tree]:
+    def symbol_wrapper(self: Parser) -> Optional[Tree]:
         mark = self.mark()
         key = mark, method
         if key not in self._symbol_cache:
@@ -89,10 +100,10 @@ def memoize(method: Callable[['Parser'], Optional[Tree]]):
     return symbol_wrapper
 
 
-def memoize_expect(method: Callable[['Parser'], bool]) -> bool:
+def memoize_expect(method: Callable[[Parser], bool]) -> bool:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: 'Parser', type: str) -> bool:
+    def expect_wrapper(self: Parser, type: str) -> bool:
         mark = self.mark()
         key = mark, type
         if key not in self._token_cache:
@@ -111,20 +122,183 @@ def memoize_expect(method: Callable[['Parser'], bool]) -> bool:
     
 
 class Parser:
+    """Parsing base class."""
 
     def __init__(self, tokenizer: Tokenizer):
         self._tokenizer = tokenizer
         self._symbol_cache: Dict[Tuple[Mark,
-                                       Callable[['Parser'], Optional[Tree]]],
+                                       Callable[[Parser], Optional[Tree]]],
                                  Tuple[Optional[Tree], Mark]] = {}
         self._token_cache: Dict[Tuple[Mark, str], bool] = {}
+        # Pass through common tokeniser methods.
+        # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
 
     @memoize
+    def name(self) -> Optional[Tree]:
+        toktup = self._tokenizer.getnext()
+        if toktup.type == token.NAME:
+            return Tree('NAME', value=toktup.string)
+        return None
+
+    @memoize
+    def number(self) -> Optional[Tree]:
+        toktup = self._tokenizer.getnext()
+        if toktup.type == token.NUMBER:
+            return Tree('NUMBER', value=toktup.string)
+        return None
+
+    @memoize
+    def string(self) -> Optional[Tree]:
+        toktup = self._tokenizer.getnext()
+        if toktup.type == token.STRING:
+            return Tree('STRING', value=toktup.string)
+        return None
+
+    @memoize_expect
+    def expect(self, type: str) -> bool:
+        toktup = self._tokenizer.getnext()
+        if type in exact_token_types:
+            if toktup.type == exact_token_types[type]:
+                return True
+        if type in token.__dict__:
+            if toktup.type == token.__dict__[type]:
+                return True
+        if toktup.type == token.OP and toktup.string == type:
+            return True
+        return False
+
+
+class GrammarParser(Parser):
+    """Parser for Grammar files."""
+
+    @memoize
     def start(self) -> Optional[Tree]:
         """
-        start: '\n'* (sum '\n'*)+ EOF
+        start: '\n'* (rule '\n'+)+ EOF
+        """
+        trees = []
+        while True:
+            mark = self.mark()
+            if self.expect('NL'):
+                continue
+            if self.expect('COMMENT'):
+                continue
+            if (tree := self.rule()) and self.expect('NEWLINE'):
+                trees.append(tree)
+            else:
+                self.reset(mark)
+                if not self.expect('ENDMARKER'):
+                    return None
+                break
+
+        if trees:
+            return Tree('Grammar', *trees)
+        return None
+
+    @memoize
+    def rule(self) -> Optional[Tree]:
+        """
+        rule: NAME ':' alternatives
+        """
+        if (name := self.name()) and self.expect(':') and (alts := self.alternatives()):
+            return Tree('Rule', name, alts)
+        return None
+
+    @memoize
+    def alternatives(self) -> Optional[Tree]:
+        """
+        alternatives: alternative '|' alternatives | alternative
+        """
+        mark = self.mark()
+        if (left := self.alternative()) and self.expect('|') and (right := self.alternatives()):
+            alts = [left]
+            if right.type == 'Alts':
+                alts.extend(right.args)
+            else:
+                alts.append(right)
+            return Tree('Alts', *alts)
+        self.reset(mark)
+        return self.alternative()
+
+    @memoize
+    def alternative(self) -> Optional[Tree]:
+        """
+        alternative: item alternative | item
+        """
+        mark = self.mark()
+        if (item := self.item()) and (alt := self.alternative()):
+            items = [item]
+            if alt.type == 'Alt':
+                items.extend(alt.args)
+            else:
+                items.append(alt)
+            return Tree('Alt', *items)
+        self.reset(mark)
+        return self.item()
+
+    @memoize
+    def item(self) -> Optional[Tree]:
+        """
+        item: optional | atom '*' | atom '+' | atom
+
+        Note that optional cannot be followed by * or +.
+        """
+        mark = self.mark()
+        if (opt := self.optional()):
+            return opt
+        if (atom := self.atom()) and self.expect('*'):
+            return Tree('ZeroOrMore', atom)
+        self.reset(mark)
+        if (atom := self.atom()) and self.expect('+'):
+            return Tree('OneOrMore', atom)
+        self.reset(mark)
+        return self.atom()
+
+    @memoize
+    def optional(self) -> Optional[Tree]:
+        """
+        optional: '[' alternatives ']'
+        """
+        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
+            return Tree('Opt', alts)
+        return None
+
+    @memoize
+    def atom(self) -> Optional[Tree]:
+        """
+        atom: group | NAME | STRING
+        """
+        mark = self.mark()
+        if (par := self.group()):
+            return par
+        if (name := self.name()):
+            return name
+        if (string := self.string()):
+            return string
+        return None
+
+    @memoize
+    def group(self) -> Optional[Tree]:
+        """
+        group: '(' alternatives ')'
+        """
+        if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
+            return Tree('Group', alts)
+        return None
+
+
+class ExpressionParser(Parser):
+    """Parser for simple expressions.
+
+    Currently just + and * on numbers, with parentheses.
+    """
+
+    @memoize
+    def start(self) -> Optional[Tree]:
+        """
+        start: '\n'* (sum '\n'+)+ EOF
         """
         trees = []
         while True:
@@ -159,9 +333,7 @@ class Parser:
                 terms.append(right)
             return Tree('+', *terms)
         self.reset(mark)
-        if left := self.term():
-            return left
-        return None
+        return self.term()
 
     @memoize
     def term(self) -> Optional[Tree]:
@@ -177,9 +349,7 @@ class Parser:
                 factors.append(right)
             return Tree('*', *factors)
         self.reset(mark)
-        if left := self.factor():
-            return left
-        return None
+        return self.factor()
 
     @memoize
     def factor(self) -> Optional[Tree]:
@@ -190,34 +360,13 @@ class Parser:
         if self.expect('(') and (sum := self.sum()) and self.expect(')'):
             return Tree('Group', sum)
         self.reset(mark)
-        if number := self.number():
-            return number
-        return None
-
-    @memoize
-    def number(self) -> Optional[Tree]:
-        toktup = self._tokenizer.getnext()
-        if toktup.type == token.NUMBER:
-            return Tree('NUMBER', value=toktup.string)
-        return None
-
-    @memoize_expect
-    def expect(self, type: str) -> bool:
-        toktup = self._tokenizer.getnext()
-        if type in exact_token_types:
-            if toktup.type == exact_token_types[type]:
-                return True
-        if type in token.__dict__:
-            if toktup.type == token.__dict__[type]:
-                return True
-        if toktup.type == token.OP and toktup.string == type:
-            return True
-        return False
+        return self.number()
 
 
 argparser = argparse.ArgumentParser(prog='pegen')
 argparser.add_argument('-q', '--quiet', action='store_true')
 argparser.add_argument('-v', '--verbose', action='store_true')
+argparser.add_argument('-g', '--grammar', action='store_true')
 argparser.add_argument('filename')
 
 
@@ -226,13 +375,16 @@ def main() -> None:
     t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(file)
-        parser = Parser(tokenizer)
+        if args.grammar:
+            parser = GrammarParser(tokenizer)
+        else:
+            parser = ExpressionParser(tokenizer)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
             sys.exit(1)
         if not args.quiet:
-            if tree.type == 'Sums':
+            if tree.type in ('Sums', 'Grammar'):
                 for arg in tree.args:
                     print(arg)
             else:
