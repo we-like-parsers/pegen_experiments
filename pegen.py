@@ -10,6 +10,7 @@ Google PEG Parsers for reference.
 from __future__ import annotations  # Requires Python 3.7 or later
 
 import argparse
+import contextlib
 import sys
 import time
 import token
@@ -363,6 +364,109 @@ class ExpressionParser(Parser):
         return self.number()
 
 
+class ParserGenerator:
+
+    def __init__(self, grammar: Tree):
+        assert grammar.type == 'Grammar', (grammar.type, grammar.args, grammar.value)
+        self.grammar = grammar
+        self.file = None
+        self.level = 0
+
+    @contextlib.contextmanager
+    def indent(self) -> None:
+        self.level += 1
+        try:
+            yield
+        finally:
+            self.level -= 1
+
+    def print(self, *args, **kwds):
+        print("    "*self.level, end="", file=self.file)
+        print(*args, **kwds, file=self.file)
+
+    def set_output(self, filename: str) -> None:
+        self.file = open(filename, 'w')
+
+    def close(self) -> None:
+        file = self.file
+        if file:
+            self.file = None
+            file.close()
+
+    def generate_parser(self) -> None:
+        self.print("class GeneratedParser(Parser):")
+        for rule in self.grammar.args:
+            with self.indent():
+                self.gen_rule(rule)
+
+    def gen_rule(self, rule: Tree) -> None:
+        rulename = rule.args[0]
+        self.print(f"def {rulename}(self):")
+        with self.indent():
+            self.print("mark = self.mark()")
+            rhs = rule.args[1]
+            alts = []
+            if rhs.type == 'Alt':
+                alts = [rhs]
+            elif rhs.type == 'Alts':
+                alts = list(rhs.args)
+            else:
+                alts = [Tree('Alt', rhs)]
+            for alt in alts:
+                if alt.type != 'Alt':
+                    alt = Tree('Alt', alt)
+                children = []
+                self.print("#", alt)
+                self.print("if (")
+                with self.indent():
+                    first = True
+                    for item in alt.args:
+                        if first:
+                            first = False
+                        else:
+                            self.print("and")
+                        if item.type == 'NAME':
+                            name = item.value
+                            if name.isupper():
+                                self.print(f"self.expect({name!r})")
+                            else:
+                                varname = dedupe(name, children)
+                                children.append(varname)
+                                self.print(f"({varname} := self.{name}())")
+                        elif item.type == 'STRING':
+                            self.print(f"self.expect({item.value})")
+                        elif item.type in ('ZeroOrMore', 'OneOrMore', 'Opt'):
+                            if item.type == 'ZeroOrMore':
+                                helper = 'repeat0_helper'
+                            elif item.type == 'OneOrMore':
+                                helper = 'repeat_helper'
+                            elif item.type == 'Opt':
+                                helper = 'optional_helper'
+                            else:
+                                assert False, item
+                            name = str(item.args[0])
+                            varname = dedupe(name, children)
+                            children.append(varname)
+                            self.print(f"({varname} := self.{helper}(self.{name}))")
+                        else:
+                            assert False, item
+                self.print("):")
+                with self.indent():
+                    altstr = ", ".join(children)
+                    self.print(f"return Tree('{rulename}', {altstr})")
+                self.print("self.reset(mark)")
+            self.print("return None")
+
+
+def dedupe(name: str, names: Container[str]) -> str:
+    origname = name
+    counter = 0
+    while name in names:
+        counter += 1
+        name = f"{origname}_{counter}"
+    return name
+
+
 argparser = argparse.ArgumentParser(prog='pegen')
 argparser.add_argument('-q', '--quiet', action='store_true')
 argparser.add_argument('-v', '--verbose', action='store_true')
@@ -373,6 +477,7 @@ argparser.add_argument('filename')
 def main() -> None:
     args = argparser.parse_args()
     t0 = time.time()
+
     with open(args.filename) as file:
         tokenizer = Tokenizer(file)
         if args.grammar:
@@ -383,13 +488,19 @@ def main() -> None:
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
             sys.exit(1)
-        if not args.quiet:
-            if tree.type in ('Sums', 'Grammar'):
-                for arg in tree.args:
-                    print(arg)
-            else:
-                print(tree)
         endpos = file.tell()
+
+    if not args.quiet:
+        if tree.type in ('Sums', 'Grammar'):
+            for arg in tree.args:
+                print(arg)
+        else:
+            print(tree)
+
+    if args.grammar:
+        genr = ParserGenerator(tree)
+        genr.generate_parser()
+
     t1 = time.time()
     dt = t1 - t0
     if args.verbose:
