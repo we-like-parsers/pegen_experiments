@@ -124,11 +124,13 @@ class Parser:
     @memoize
     def start(self) -> Optional[Tree]:
         """
-        start: (sum '\n')+ EOF
+        start: '\n'* (sum '\n'*)+ EOF
         """
         trees = []
         while True:
             mark = self.mark()
+            if self.expect('NL'):
+                continue
             if (tree := self.sum()) and self.expect('NEWLINE'):
                 trees.append(tree)
             else:
