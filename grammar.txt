@@ -1,8 +1,12 @@
 # Simplified grammar for Python
 
-program: statement* ENDMARKER
-statement: assignment | expression | function
+start: statements ENDMARKER
+statements: statement statements | statement
+statement: assignment NEWLINE | expression NEWLINE | function | import_stmt NEWLINE
 assignment: target '=' expression
+
+import_stmt: 'import' NAME | 'from' NAME 'import' names
+names: NAME ',' names | NAME
 
 function: 'def' NAME '(' [parameters] ')' ':' body
 parameters: kwargs | arg ',' parameters | arg ',' | arg
@@ -10,10 +14,14 @@ kwargs: kwarg ',' kwargs | kwarg ',' | kwarg
 kwarg: NAME '=' expression | '**' NAME
 arg: NAME | '*' NAME
 
+body: NEWLINE INDENT statements DEDENT
+
 expression: term '+' expression | term '-' expression | term
 term: factor '*' term | factor '/' term | factor
-factor: list | tuple | group | NAME | STRING
+factor: list | tuple | group | NAME | STRING | NUMBER
 list: '[' [expressions] ']'
 tuple: '(' expression ',' expressions ')' | '(' expression ',' ')' | '(' ')'
 group: '(' expression ')'
 expressions: expression ',' expressions | expression ',' | expression
+
+target: NAME  # TODO: foo.bar, foo[bar], foo(bar)

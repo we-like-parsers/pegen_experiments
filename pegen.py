@@ -162,6 +162,8 @@ class Parser:
     @memoize_expect
     def expect(self, type: str) -> bool:
         toktup = self._tokenizer.getnext()
+        if toktup.string == type:
+            return True
         if type in exact_token_types:
             if toktup.type == exact_token_types[type]:
                 return True
