@@ -61,9 +61,11 @@ class Tokenizer:
 
         Updates the current index.
         """
-        if self._index == len(self._tokens):
-            # TODO: Skip NL and COMMENT here.
-            self._tokens.append(next(self._tokengen))
+        while self._index == len(self._tokens):
+            tok = next(self._tokengen)
+            if tok.type in (token.NL, token.COMMENT):
+                continue
+            self._tokens.append(tok)
         tok = self._tokens[self._index]
         self._index += 1
         return tok
@@ -170,6 +172,39 @@ class Parser:
             return True
         return False
 
+    # TODO: Generate a unique memoized helper for each occurrence.
+
+    def repeat0_helper(self, func: Callable) -> Optional[Tree]:
+        trees = []
+        while True:
+            mark = self.mark()
+            tree = func()
+            if tree is None:
+                self.reset(mark)
+                break
+            trees.append(None)
+        return Tree('Repeat', *trees)
+
+    def repeat1_helper(self, func: Callable) -> Optional[Tree]:
+        tree = func()
+        if not tree:
+            return None
+        trees = [tree]
+        while True:
+            mark = self.mark()
+            tree = func()
+            if not tree:
+                self.reset(mark)
+                break
+            trees.append(None)
+        return Tree('Repeat', *trees)
+
+    def optional_helper(self, func: Callable) -> Optional[Tree]:
+        tree = func()
+        if tree:
+            return tree
+        return Tree('Empty')
+
 
 class GrammarParser(Parser):
     """Parser for Grammar files."""
@@ -182,10 +217,6 @@ class GrammarParser(Parser):
         trees = []
         while True:
             mark = self.mark()
-            if self.expect('NL'):
-                continue
-            if self.expect('COMMENT'):
-                continue
             if (tree := self.rule()) and self.expect('NEWLINE'):
                 trees.append(tree)
             else:
@@ -304,8 +335,6 @@ class ExpressionParser(Parser):
         trees = []
         while True:
             mark = self.mark()
-            if self.expect('NL'):
-                continue
             if (tree := self.sum()) and self.expect('NEWLINE'):
                 trees.append(tree)
             else:
@@ -464,7 +493,13 @@ class ParserGenerator:
                         if item.type == 'NAME':
                             name = item.value
                             if name.isupper():
-                                self.print(f"self.expect({name!r})")
+                                if name in ('NAME', 'STRING', 'NUMBER'):
+                                    name = name.lower()
+                                    varname = dedupe(name, children)
+                                    children.append(varname)
+                                    self.print(f"({varname} := self.{name}())")
+                                else:
+                                    self.print(f"self.expect({name!r})")
                             else:
                                 varname = dedupe(name, children)
                                 children.append(varname)
