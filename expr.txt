@@ -1,7 +1,7 @@
-start: sums ENDMARKER
-sums: sum '\n' sums | sum
+start: sums NEWLINE ENDMARKER
+sums: sum NEWLINE sums | sum
 sum: term '+' sum | term
 term: factor '*' term | factor
-factor: pair | group | NAME | STRING
+factor: pair | group | NAME | STRING | NUMBER
 pair: '(' sum ',' sum ')'
 group: '(' sum ')'
