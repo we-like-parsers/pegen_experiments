@@ -2,17 +2,19 @@
 
 start: statements ENDMARKER
 statements: statement statements | statement
-statement: assignment NEWLINE | expression NEWLINE | function | import_stmt NEWLINE
+statement: assignment NEWLINE | expression NEWLINE | function_def | class_def | import_stmt NEWLINE
 assignment: target '=' expression
 
 import_stmt: 'import' NAME | 'from' NAME 'import' names
 names: NAME ',' names | NAME
 
-function: 'def' NAME '(' [parameters] ')' ':' body
+function_def: 'def' NAME '(' [parameters] ')' ':' body
 parameters: kwargs | arg ',' parameters | arg ',' | arg
 kwargs: kwarg ',' kwargs | kwarg ',' | kwarg
 kwarg: NAME '=' expression | '**' NAME
 arg: NAME | '*' NAME
+
+class_def: 'class' NAME '(' names ')' ':' body | 'class' NAME ':' body
 
 body: NEWLINE INDENT statements DEDENT
 
