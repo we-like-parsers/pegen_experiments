@@ -6,14 +6,20 @@ the same notation as CPython's Grammar) and generate a Python module
 that contains a packrat parser.  Various desirable features are still
 missing.
 
-Note that this deviates from the formal PEG mechanism in various ways:
+Note that this deviates from the standard [PEG
+notation](https://github.com/PhilippeSigaud/Pegged/wiki/PEG-Basics) in
+various ways:
 
-- Various grammar features not yet implemented correctly
-- The notation is different from the standard PEG formalism
 - It requires a separate tokenizer
+- The notation is different from the standard PEG formalism
 - No support yet for &X and !X
-- No way to specify what kind of tree to build
-- No way to produce C code for a parser
+- Various grammar features not yet implemented correctly
+
+Other TO DO items:
+
+- Tests
+- Syntax what kind of tree to build, e.g. { ... } (combine with 'NAME = ...')
+- Generate C code
 
 ___
 PS. It's pronounced "pagan".

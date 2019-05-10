@@ -28,7 +28,12 @@ class Tree:
     There are two kinds of nodes:
     - Leaf nodes have a value field that's not None.
     - Interior nodes have an args field that's not empty.
+
+    This should be considered an immutable data type,
+    as it's used for the return type of memoized functions.
     """
+
+    __slots__ = ('type', 'args', 'value')
 
     def __init__(self, type: str, *args: Optional['Tree'], value: Optional[str] = None):
         if value is not None:
@@ -41,6 +46,16 @@ class Tree:
         if self.value is not None:
             return self.value
         return "%s(%s)" % (self.type, ", ".join(repr(arg) for arg in self.args))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Tree):
+            return NotImplemented
+        return (self.type == other.type and
+                self.args == other.args and
+                self.value == other.value)
+
+    def __hash__(self) -> int:
+        return hash((self.type, self.args, self.value))
 
 
 class Tokenizer:
@@ -234,19 +249,23 @@ class GrammarParser(Parser):
     @memoize
     def rule(self) -> Optional[Tree]:
         """
-        rule: NAME ':' alternatives
+        rule: NAME (':' | '<-') alternatives
         """
-        if (name := self.name()) and self.expect(':') and (alts := self.alternatives()):
+        if ((name := self.name()) and
+            (self.expect(':') or self.expect('<-') or (self.expect('<') and self.expect('-'))) and
+            (alts := self.alternatives())):
             return Tree('Rule', name, alts)
         return None
 
     @memoize
     def alternatives(self) -> Optional[Tree]:
         """
-        alternatives: alternative '|' alternatives | alternative
+        alternatives: alternative ('|' | '/') alternatives | alternative
         """
         mark = self.mark()
-        if (left := self.alternative()) and self.expect('|') and (right := self.alternatives()):
+        if ((left := self.alternative()) and
+            (self.expect('|')  or self.expect('/')) and
+            (right := self.alternatives())):
             alts = [left]
             if right.type == 'Alts':
                 alts.extend(right.args)
@@ -275,9 +294,9 @@ class GrammarParser(Parser):
     @memoize
     def item(self) -> Optional[Tree]:
         """
-        item: optional | atom '*' | atom '+' | atom
+        item: optional | atom '*' | atom '+' | atom '?' | atom
 
-        Note that optional cannot be followed by * or +.
+        Note that optional cannot be followed by * or + or ?.
         """
         mark = self.mark()
         if (opt := self.optional()):
@@ -287,6 +306,9 @@ class GrammarParser(Parser):
         self.reset(mark)
         if (atom := self.atom()) and self.expect('+'):
             return Tree('OneOrMore', atom)
+        self.reset(mark)
+        if (atom := self.atom()) and self.expect('?'):
+            return Tree('Opt', atom)
         self.reset(mark)
         return self.atom()
 
