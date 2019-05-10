@@ -482,18 +482,31 @@ class ParserGenerator:
     def generate_parser(self) -> None:
         self.print(PARSER_PREFIX)
         self.print("class GeneratedParser(Parser):")
+        self.todo = {}  # type: Dict[str, Tree]  # Rules to generate
+        self.done = {}  # type: Dict[str, Tree]  # Rules generated
+        self.counter = 0
         for rule in self.grammar.args:
-            self.print()
-            with self.indent():
-                self.gen_rule(rule)
+            self.todo[str(rule.args[0])] = rule.args[1]
+        while self.todo:
+            for rulename, rhs in list(self.todo.items()):
+                self.done[rulename] = rhs
+                del self.todo[rulename]
+                self.print()
+                with self.indent():
+                    self.gen_rule(rulename, rhs)
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
-    def gen_rule(self, rule: Tree) -> None:
-        rulename = rule.args[0]
+    def name_tree(self, tree: Tree) -> str:
+        self.counter += 1
+        name = f'_tmp_{self.counter}'
+        if name not in self.todo and name not in self.done:
+            self.todo[name] = tree
+        return name
+
+    def gen_rule(self, rulename: str, rhs: Tree) -> None:
         self.print(f"def {rulename}(self):")
         with self.indent():
             self.print("mark = self.mark()")
-            rhs = rule.args[1]
             alts = []
             if rhs.type == 'Alt':
                 alts = [rhs]
@@ -539,7 +552,10 @@ class ParserGenerator:
                                 helper = 'optional_helper'
                             else:
                                 assert False, item
-                            name = str(item.args[0])
+                            if item.args[0].type in ('Alt', 'Alts'):
+                                name = self.name_tree(item.args[0])
+                            else:
+                                name = str(item.args[0])
                             varname = dedupe(name, children)
                             children.append(varname)
                             self.print(f"({varname} := self.{helper}(self.{name}))")

@@ -1,5 +1,5 @@
 start <- sums NEWLINE ENDMARKER
-sums <- sum NEWLINE sums / sum
+sums <- sum [NEWLINE sums]
 sum <- term '+' sum / term
 term <- factor '*' term / factor
 factor <- pair / group / NAME / STRING / NUMBER
