@@ -66,8 +66,8 @@ class Tokenizer:
 
     _tokens: List[tokenize.TokenInfo]
 
-    def __init__(self, input: TextIO):
-        self._tokengen = tokenize.generate_tokens(input.readline)
+    def __init__(self, tokengen: Iterable[TokenInfo]):
+        self._tokengen = tokengen
         self._tokens = []
         self._index = 0
 
@@ -434,7 +434,7 @@ def main():
         file = open(sys.argv[1])
     else:
         file = sys.stdin
-    tokenizer = Tokenizer(file)
+    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
     parser = GeneratedParser(tokenizer)
     tree = parser.start()
     if sys.argv[1:]:
@@ -575,7 +575,7 @@ def main() -> None:
     t0 = time.time()
 
     with open(args.filename) as file:
-        tokenizer = Tokenizer(file)
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
         if args.grammar:
             parser = GrammarParser(tokenizer)
         else:
