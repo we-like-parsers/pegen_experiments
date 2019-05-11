@@ -552,6 +552,8 @@ class ParserGenerator:
                                 helper = 'optional_helper'
                             else:
                                 assert False, item
+                            if item.args[0].type == 'Group':
+                                item = item.args[0]
                             if item.args[0].type in ('Alt', 'Alts'):
                                 name = self.name_tree(item.args[0])
                             else:
