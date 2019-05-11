@@ -204,7 +204,7 @@ class Parser:
             if tree is None:
                 self.reset(mark)
                 break
-            trees.append(None)
+            trees.append(tree)
         return Tree('Repeat', *trees)
 
     def repeat1_helper(self, func: Callable) -> Optional[Tree]:
@@ -218,7 +218,7 @@ class Parser:
             if not tree:
                 self.reset(mark)
                 break
-            trees.append(None)
+            trees.append(tree)
         return Tree('Repeat', *trees)
 
     def optional_helper(self, func: Callable) -> Optional[Tree]:
