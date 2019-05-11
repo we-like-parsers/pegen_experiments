@@ -44,8 +44,13 @@ class Tree:
 
     def __repr__(self) -> str:
         if self.value is not None:
-            return self.value
+            return "%s(value=%r)" % (self.type, self.value)
         return "%s(%s)" % (self.type, ", ".join(repr(arg) for arg in self.args))
+
+    def __str__(self) -> str:
+        if self.value is not None:
+            return str(self.value)
+        return self.__repr__()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Tree):

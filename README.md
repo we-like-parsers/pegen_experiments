@@ -21,5 +21,9 @@ Other TO DO items:
 - Syntax what kind of tree to build, e.g. { ... } (combine with 'NAME = ...')
 - Generate C code
 
+Both the generator and the generated parsers require Python 3.8 -- it
+turns out writing a recursive-descent packrat parser is a really great
+use case for the walrus operator (:=).
+
 ___
 PS. It's pronounced "pagan".
