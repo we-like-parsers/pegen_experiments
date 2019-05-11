@@ -37,12 +37,27 @@ def test_expr_grammar():
     tree = run_parser(file, parser_class)
 
     # Check the tree.
-    assert tree == Tree('start', Tree('sums',
-                                      Tree('sum',
-                                           Tree('term',
-                                                Tree('factor',
-                                                     Tree('NUMBER', value='42')))),
-                                      Tree('Empty')))
+    assert tree == Tree('start',
+                        Tree('sums',
+                             Tree('sum',
+                                  Tree('term',
+                                       Tree('factor',
+                                            Tree('NUMBER', value='42')))),
+                             Tree('Empty')))
 
-    # TODO: Verify other inputs.
 
+SAMPLE_GRAMMAR = """
+start <- sum NEWLINE ENDMARKER
+sum <- term '+' term | term
+term <- NUMBER
+"""
+
+
+def test_sample_grammar():
+    tree = run_parser(io.StringIO(SAMPLE_GRAMMAR), GrammarParser)
+    parser_class = generate_parser(tree)
+    tree = run_parser(io.StringIO("42\n"), parser_class)
+    assert tree == Tree('start',
+                        Tree('sum',
+                             Tree('term',
+                                  Tree('NUMBER', value='42'))))
