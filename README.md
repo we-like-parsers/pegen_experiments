@@ -17,13 +17,13 @@ various ways:
 
 Other TO DO items:
 
-- Tests
-- Syntax what kind of tree to build, e.g. { ... } (combine with 'NAME = ...')
+- More tests
+- Specify what kind of tree to build, e.g. { ... } (combine with 'NAME = ...')
 - Generate C code
 
 Both the generator and the generated parsers require Python 3.8 -- it
 turns out writing a recursive-descent packrat parser is a really great
 use case for the walrus operator (:=).
 
-___
+__________
 PS. It's pronounced "pagan".

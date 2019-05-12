@@ -10,6 +10,8 @@ def generate_parser(tree):
     out = io.StringIO()
     genr.file = out
     genr.generate_parser()
+    ## print("GENERATED:")
+    ## print(out.getvalue())
 
     # Load the generated parser class.
     ns = {}
@@ -46,22 +48,26 @@ def test_expr_grammar():
                              Tree('Empty')))
 
 
-SAMPLE_GRAMMAR = """
+SIMPLE_GRAMMAR = """
 start <- sum NEWLINE ENDMARKER
-sum <- term ('+' term)*
+sum <- term ('+' term)?
 term <- NUMBER
 """
 
 
-def test_sample_grammar():
-    tree = run_parser(io.StringIO(SAMPLE_GRAMMAR), GrammarParser)
+def test_simple_grammar():
+    tree = run_parser(io.StringIO(SIMPLE_GRAMMAR), GrammarParser)
     parser_class = generate_parser(tree)
-    tree = run_parser(io.StringIO("2+2\n"), parser_class)
+    tree = run_parser(io.StringIO("1+2\n"), parser_class)
     assert tree == Tree('start',
                         Tree('sum',
                              Tree('term',
-                                  Tree('NUMBER', value='2')),
-                             Tree('Repeat',
-                                  Tree('_tmp_1',
-                                       Tree('term',
-                                            Tree('NUMBER', value='2'))))))
+                                  Tree('NUMBER', value='1')),
+                             Tree('term',
+                                  Tree('NUMBER', value='2'))))
+    tree = run_parser(io.StringIO("1\n"), parser_class)
+    assert tree == Tree('start',
+                        Tree('sum',
+                             Tree('term',
+                                  Tree('NUMBER', value='1')),
+                             Tree('Empty')))

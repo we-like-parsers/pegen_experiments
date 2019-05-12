@@ -2,9 +2,7 @@
 
 """pegen -- PEG Generator.
 
-Google PEG Parsers for reference.
-
-(The first version is actually a hand-crafter packrat parser.)
+Search the web for PEG Parsers for reference.
 """
 
 from __future__ import annotations  # Requires Python 3.7 or later
@@ -194,39 +192,6 @@ class Parser:
             return True
         return False
 
-    # TODO: Generate a unique memoized helper for each occurrence.
-
-    def repeat0_helper(self, func: Callable) -> Optional[Tree]:
-        trees = []
-        while True:
-            mark = self.mark()
-            tree = func()
-            if tree is None:
-                self.reset(mark)
-                break
-            trees.append(tree)
-        return Tree('Repeat', *trees)
-
-    def repeat1_helper(self, func: Callable) -> Optional[Tree]:
-        tree = func()
-        if not tree:
-            return None
-        trees = [tree]
-        while True:
-            mark = self.mark()
-            tree = func()
-            if not tree:
-                self.reset(mark)
-                break
-            trees.append(tree)
-        return Tree('Repeat', *trees)
-
-    def optional_helper(self, func: Callable) -> Optional[Tree]:
-        tree = func()
-        if tree:
-            return tree
-        return Tree('Empty')
-
 
 class GrammarParser(Parser):
     """Parser for Grammar files."""
@@ -346,80 +311,8 @@ class GrammarParser(Parser):
         group: '(' alternatives ')'
         """
         if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
-            return Tree('Group', alts)
+            return alts
         return None
-
-
-class ExpressionParser(Parser):
-    """Parser for simple expressions.
-
-    Currently just + and * on numbers, with parentheses.
-    """
-
-    @memoize
-    def start(self) -> Optional[Tree]:
-        """
-        start: '\n'* (sum '\n'+)+ EOF
-        """
-        trees = []
-        while True:
-            mark = self.mark()
-            if (tree := self.sum()) and self.expect('NEWLINE'):
-                trees.append(tree)
-            else:
-                self.reset(mark)
-                if not self.expect('ENDMARKER'):
-                    return None
-                break
-
-        if trees:
-            return Tree('Sums', *trees)
-        return None
-
-    @memoize
-    def sum(self) -> Optional[Tree]:
-        """
-        sum: term '+' sum | term
-        """
-        mark = self.mark()
-        if (left := self.term()) and self.expect('+') and (right := self.sum()):
-            # Note that 'a + b + c' is parsed as 'a + (b + c)'.
-            # Also note that explicit parentheses are preserved.
-            terms = [left]  # type: List[Optional[Tree]]
-            if right.type == '+':
-                terms.extend(right.args)
-            else:
-                terms.append(right)
-            return Tree('+', *terms)
-        self.reset(mark)
-        return self.term()
-
-    @memoize
-    def term(self) -> Optional[Tree]:
-        """
-        term: factor '*' term | factor
-        """
-        mark = self.mark()
-        if (left := self.factor()) and self.expect('*') and (right := self.term()):
-            factors = [left]  # type: List[Optional[Tree]]
-            if right.type == '*':
-                factors.extend(right.args)
-            else:
-                factors.append(right)
-            return Tree('*', *factors)
-        self.reset(mark)
-        return self.factor()
-
-    @memoize
-    def factor(self) -> Optional[Tree]:
-        """
-        factor: '(' sum ')' | NUMBER
-        """
-        mark = self.mark()
-        if self.expect('(') and (sum := self.sum()) and self.expect(')'):
-            return Tree('Group', sum)
-        self.reset(mark)
-        return self.number()
 
 
 PARSER_PREFIX = """#!/usr/bin/env python3.8
@@ -428,7 +321,7 @@ PARSER_PREFIX = """#!/usr/bin/env python3.8
 import sys
 import tokenize
 
-from pegen import Parser, Tokenizer, Tree
+from pegen import memoize, Parser, Tokenizer, Tree
 
 """
 
@@ -502,78 +395,94 @@ class ParserGenerator:
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
     def name_tree(self, tree: Tree) -> str:
+        ## for k, v in self.todo.items() | self.done.items():
+        ##     if tree == v:
+        ##         return k
         self.counter += 1
-        name = f'_tmp_{self.counter}'
+        name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
         if name not in self.todo and name not in self.done:
             self.todo[name] = tree
         return name
 
     def gen_rule(self, rulename: str, rhs: Tree) -> None:
+        self.print("@memoize")
         self.print(f"def {rulename}(self):")
         with self.indent():
             self.print("mark = self.mark()")
-            alts = []
-            if rhs.type == 'Alt':
-                alts = [rhs]
-            elif rhs.type == 'Alts':
-                alts = list(rhs.args)
+            if rhs.type == 'Alts':
+                for alt in rhs.args:
+                    self.gen_alt(rulename, alt)
             else:
-                alts = [Tree('Alt', rhs)]
-            for alt in alts:
-                if alt.type != 'Alt':
-                    alt = Tree('Alt', alt)
-                children = []
-                self.print("#", alt)
-                self.print("if (")
-                with self.indent():
-                    first = True
-                    for item in alt.args:
-                        if first:
-                            first = False
-                        else:
-                            self.print("and")
-                        if item.type == 'NAME':
-                            name = item.value
-                            if name.isupper():
-                                if name in ('NAME', 'STRING', 'NUMBER'):
-                                    name = name.lower()
-                                    varname = dedupe(name, children)
-                                    children.append(varname)
-                                    self.print(f"({varname} := self.{name}())")
-                                else:
-                                    self.print(f"self.expect({name!r})")
-                            else:
-                                varname = dedupe(name, children)
-                                children.append(varname)
-                                self.print(f"({varname} := self.{name}())")
-                        elif item.type == 'STRING':
-                            self.print(f"self.expect({item.value})")
-                        elif item.type in ('ZeroOrMore', 'OneOrMore', 'Opt'):
-                            if item.type == 'ZeroOrMore':
-                                helper = 'repeat0_helper'
-                            elif item.type == 'OneOrMore':
-                                helper = 'repeat_helper'
-                            elif item.type == 'Opt':
-                                helper = 'optional_helper'
-                            else:
-                                assert False, item
-                            if item.args[0].type == 'Group':
-                                item = item.args[0]
-                            if item.args[0].type in ('Alt', 'Alts'):
-                                name = self.name_tree(item.args[0])
-                            else:
-                                name = str(item.args[0])
-                            varname = dedupe(name, children)
-                            children.append(varname)
-                            self.print(f"({varname} := self.{helper}(self.{name}))")
-                        else:
-                            assert False, item
-                self.print("):")
-                with self.indent():
-                    altstr = ", ".join(children)
-                    self.print(f"return Tree('{rulename}', {altstr})")
-                self.print("self.reset(mark)")
-            self.print("return None")
+                self.gen_alt(rulename, rhs)
+            if rhs.type in ('Opt', 'ZeroOrMore'):
+                self.print("return Tree('Empty')")
+            else:
+                self.print("return None")
+
+    def gen_alt(self, rulename: str, alt: Tree) -> None:
+        if alt.type == 'Alt':
+            items = alt.args
+        elif alt.type == 'Opt':
+            items = [alt.args[0]]
+        else:
+            items = [alt]
+        self.print("#", str(alt))
+        if alt.type in ('ZeroOrMore', 'OneOrMore'):
+            # TODO: Collect children.
+            self.print("while (")
+        else:
+            self.print("if (")
+        children = []
+        first = True
+        with self.indent():
+            for item in items:
+                if first:
+                    first = False
+                else:
+                    self.print("and")
+                child, text = self.gen_item(item, children)
+                if child:
+                    self.print(f"({child} := {text})")
+                    children.append(child)
+                else:
+                    self.print(text)
+        self.print("):")
+        with self.indent():
+            if rulename.startswith('_') and len(children) == 1:
+                self.print(f"return {children[0]}")
+            else:
+                self.print(f"return Tree({rulename!r}, {', '.join(children)})")
+        self.print("self.reset(mark)")
+
+    def gen_item(self, item: Tree, children: List[str]) -> Tuple[str, str]:
+        if item.type == 'STRING':
+            return None, f"self.expect({item.value})"
+        if item.type == 'NAME':
+            name = item.value
+            if name in exact_token_types or name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+                return None, f"self.expect({item.value!r})"
+            if name in ('NAME', 'STRING', 'NUMBER'):
+                name = name.lower()
+                return dedupe(name, children), f"self.{name}()"
+            if name in self.todo or name in self.done:
+                return dedupe(name, children), f"self.{name}()"
+            raise RuntimeError(f"Don't know what {name} is")
+        if item.type in ('Opt', 'ZeroOrMore', 'OneOrMore'):
+            prefix = '_' + item.type.lower() + '_'
+            subitem = item.args[0]
+            # TODO: if subitem is a single atom, no need to name it.
+            subname = self.name_tree(subitem)
+            name = prefix + subname
+            if name not in self.todo and name not in self.done:
+                self.todo[name] = item
+            return dedupe(name, children), f"self.{name}()"
+        if item.type in ('Alts', 'Alt'):
+            name = self.name_tree(item)
+            return dedupe(name, children), f"self.{name}()"
+            
+        raise RuntimeError(f"Unrecognized item {item!r}")
+        name = self.name_tree(item)
+        return name, f"self.{name}()"
 
 
 def dedupe(name: str, names: Container[str]) -> str:
@@ -588,8 +497,7 @@ def dedupe(name: str, names: Container[str]) -> str:
 argparser = argparse.ArgumentParser(prog='pegen')
 argparser.add_argument('-q', '--quiet', action='store_true')
 argparser.add_argument('-v', '--verbose', action='store_true')
-argparser.add_argument('-g', '--grammar', action='store_true')
-argparser.add_argument('-o', '--output')
+argparser.add_argument('-o', '--output', default='out.py')
 argparser.add_argument('filename')
 
 
@@ -599,10 +507,7 @@ def main() -> None:
 
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
-        if args.grammar:
-            parser = GrammarParser(tokenizer)
-        else:
-            parser = ExpressionParser(tokenizer)
+        parser = GrammarParser(tokenizer)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
@@ -610,17 +515,16 @@ def main() -> None:
         endpos = file.tell()
 
     if not args.quiet:
-        if tree.type in ('Sums', 'Grammar'):
+        if tree.type == 'Grammar':
             for arg in tree.args:
                 print(arg)
         else:
             print(tree)
 
-    if args.grammar:
-        genr = ParserGenerator(tree)
-        if args.output:
-            genr.set_output(args.output)
-        genr.generate_parser()
+    genr = ParserGenerator(tree)
+    if args.output:
+        genr.set_output(args.output)
+    genr.generate_parser()
 
     t1 = time.time()
     dt = t1 - t0

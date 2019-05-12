@@ -18,12 +18,14 @@ class_def: 'class' NAME '(' names ')' ':' body | 'class' NAME ':' body
 
 body: NEWLINE INDENT statements DEDENT
 
-expression: term '+' expression | term '-' expression | term
-term: factor '*' term | factor '/' term | factor
-factor: list | tuple | group | NAME | STRING | NUMBER
+full_expression: NAME ':=' expression | expression
+expression: term (('+' term | '-' term))*
+term: factor (('*' factor | '/' factor))*
+factor: primary ('.' NAME | '[' expression ']' | '(' [expressions] ')')*
+primary: list | tuple | group | NAME | STRING | NUMBER
 list: '[' [expressions] ']'
-tuple: '(' expression ',' expressions ')' | '(' expression ',' ')' | '(' ')'
+tuple: '(' [full_expression ',' [expressions]] ')'
 group: '(' expression ')'
-expressions: expression ',' expressions | expression ',' | expression
+expressions: full_expression ',' expressions | full_expression ',' | full_expression
 
 target: NAME  # TODO: foo.bar, foo[bar], foo(bar)
