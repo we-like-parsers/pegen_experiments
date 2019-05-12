@@ -69,10 +69,11 @@ class Tokenizer:
 
     _tokens: List[tokenize.TokenInfo]
 
-    def __init__(self, tokengen: Iterable[TokenInfo]):
+    def __init__(self, tokengen: Iterable[TokenInfo], *, verbose=False):
         self._tokengen = tokengen
         self._tokens = []
         self._index = 0
+        self._verbose = verbose
 
     def getnext(self) -> tokenize.TokenInfo:
         """Return the next token.
@@ -86,6 +87,8 @@ class Tokenizer:
             self._tokens.append(tok)
         tok = self._tokens[self._index]
         self._index += 1
+        if self._verbose:
+            self.report()
         return tok
 
     def diagnose(self) -> tokenize.TokenInfo:
@@ -99,6 +102,17 @@ class Tokenizer:
     def reset(self, index: Mark) -> None:
         assert 0 <= index <= len(self._tokens), (index, len(self._tokens))
         self._index = index
+        if self._verbose:
+            self.report()
+
+    def report(self):
+        # TODO: Make this work in terminal; only works well in Emacs.
+        if self._index == 0:
+            print("[start]", end="\r", flush=True)
+        else:
+            tok = self._tokens[self._index - 1]
+            print("."*self._index, tok.start, token.tok_name[tok.type], repr(tok.string), end="\r", flush=True)
+        time.sleep(0.02)
 
 
 def memoize(method: Callable[[Parser], Optional[Tree]]):
@@ -329,11 +343,15 @@ from pegen import memoize, Parser, Tokenizer, Tree
 PARSER_SUFFIX = """
 
 def main():
+    verbose = False
+    if sys.argv[1:2] == ['-v']:
+        verbose = True
+        del sys.argv[1:2]
     if sys.argv[1:]:
         file = open(sys.argv[1])
     else:
         file = sys.stdin
-    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
+    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose)
     parser = GeneratedParser(tokenizer)
     tree = parser.start()
     if sys.argv[1:]:
@@ -509,7 +527,7 @@ def main() -> None:
     t0 = time.time()
 
     with open(args.filename) as file:
-        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=args.verbose)
         parser = GrammarParser(tokenizer)
         tree = parser.start()
         if not tree:
