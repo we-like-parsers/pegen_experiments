@@ -344,7 +344,7 @@ PARSER_SUFFIX = """
 
 def main():
     verbose = False
-    if sys.argv[1:2] == ['-v']:
+    if sys.argv[1:2] == ['-vv']:
         verbose = True
         del sys.argv[1:2]
     if sys.argv[1:]:
@@ -517,7 +517,7 @@ def dedupe(name: str, names: Container[str]) -> str:
 
 argparser = argparse.ArgumentParser(prog='pegen')
 argparser.add_argument('-q', '--quiet', action='store_true')
-argparser.add_argument('-v', '--verbose', action='store_true')
+argparser.add_argument('-v', '--verbose', action='count', default=0)
 argparser.add_argument('-o', '--output', default='out.py')
 argparser.add_argument('filename')
 
@@ -527,7 +527,7 @@ def main() -> None:
     t0 = time.time()
 
     with open(args.filename) as file:
-        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=args.verbose)
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=args.verbose >= 2)
         parser = GrammarParser(tokenizer)
         tree = parser.start()
         if not tree:
