@@ -1,4 +1,5 @@
 import io
+import textwrap
 import tokenize
 
 from pegen import GrammarParser, ParserGenerator, Tokenizer, Tree
@@ -20,10 +21,18 @@ def generate_parser(tree):
 
 
 def run_parser(file, parser_class):
-    # Run the parser.
+    # Run the parser on a file (stream).
     tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
     parser = parser_class(tokenizer)
     return parser.start()
+
+
+def parse_string(source, parser_class, dedent=True):
+    # Run the parser on a string.
+    if dedent:
+        source = textwrap.dedent(source)
+    file = io.StringIO(source)
+    return run_parser(file, parser_class)
 
 
 def test_expr_grammar():
@@ -35,8 +44,7 @@ def test_expr_grammar():
     parser_class = generate_parser(tree)
 
     # Parse sample input.
-    file = io.StringIO("42\n")
-    tree = run_parser(file, parser_class)
+    tree = parse_string("42\n", parser_class)
 
     # Check the tree.
     assert tree == Tree('start',
@@ -48,17 +56,15 @@ def test_expr_grammar():
                              Tree('Empty')))
 
 
-SIMPLE_GRAMMAR = """
-start <- sum NEWLINE ENDMARKER
-sum <- term ('+' term)?
-term <- NUMBER
-"""
-
-
 def test_simple_grammar():
-    tree = run_parser(io.StringIO(SIMPLE_GRAMMAR), GrammarParser)
+    grammar = """
+    start <- sum NEWLINE ENDMARKER
+    sum <- term ('+' term)?
+    term <- NUMBER
+    """
+    tree = parse_string(grammar, GrammarParser)
     parser_class = generate_parser(tree)
-    tree = run_parser(io.StringIO("1+2\n"), parser_class)
+    tree = parse_string("1+2\n", parser_class)
     assert tree == Tree('start',
                         Tree('sum',
                              Tree('term',
