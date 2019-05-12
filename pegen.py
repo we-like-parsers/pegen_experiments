@@ -433,14 +433,24 @@ class ParserGenerator:
             if rhs.type == 'Alts':
                 for alt in rhs.args:
                     self.gen_alt(rulename, alt)
+            elif rhs.type in ('ZeroOrMore', 'OneOrMore'):
+                self.print("children = []")
+                self.gen_alt(rulename, rhs.args[0], special=rhs.type)
             else:
                 self.gen_alt(rulename, rhs)
-            if rhs.type in ('Opt', 'ZeroOrMore'):
+            if rhs.type == 'Opt':
                 self.print("return Tree('Empty')")
+            elif rhs.type == 'ZeroOrMore':
+                self.print("return Tree('Repeat', *children)")
+            elif rhs.type == 'OneOrMore':
+                self.print("if children:")
+                with self.indent():
+                    self.print("return Tree('Repeat', *children)")
+                self.print("return None")
             else:
                 self.print("return None")
 
-    def gen_alt(self, rulename: str, alt: Tree) -> None:
+    def gen_alt(self, rulename: str, alt: Tree, *, special=None) -> None:
         if alt.type == 'Alt':
             items = alt.args
         elif alt.type == 'Opt':
@@ -448,7 +458,7 @@ class ParserGenerator:
         else:
             items = [alt]
         self.print("#", str(alt))
-        if alt.type in ('ZeroOrMore', 'OneOrMore'):
+        if special in ('ZeroOrMore', 'OneOrMore'):
             # TODO: Collect children.
             self.print("while (")
         else:
@@ -470,9 +480,14 @@ class ParserGenerator:
         self.print("):")
         with self.indent():
             if rulename.startswith('_') and len(children) == 1:
-                self.print(f"return {children[0]}")
+                child = f"{children[0]}"
             else:
-                self.print(f"return Tree({rulename!r}, {', '.join(children)})")
+                child = f"Tree({rulename!r}, {', '.join(children)})"
+            if special in ('ZeroOrMore', 'OneOrMore'):
+                self.print("mark = self.mark()")
+                self.print(f"children.append({child})")
+            else:
+                self.print(f"return {child}")
         self.print("self.reset(mark)")
 
     def gen_item(self, item: Tree, children: List[str]) -> Tuple[str, str]:
@@ -491,8 +506,10 @@ class ParserGenerator:
         if item.type in ('Opt', 'ZeroOrMore', 'OneOrMore'):
             prefix = '_' + item.type.lower() + '_'
             subitem = item.args[0]
-            # TODO: if subitem is a single atom, no need to name it.
-            subname = self.name_tree(subitem)
+            if subitem.type == 'NAME':
+                subname = subitem.value
+            else:
+                subname = self.name_tree(subitem)
             name = prefix + subname
             if name not in self.todo and name not in self.done:
                 self.todo[name] = item
