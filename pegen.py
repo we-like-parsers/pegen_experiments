@@ -369,7 +369,7 @@ if __name__ == '__main__':
 
 class ParserGenerator:
 
-    def __init__(self, grammar: Tree, filename: str):
+    def __init__(self, grammar: Tree, filename: str = ""):
         assert grammar.type == 'Grammar', (grammar.type, grammar.args, grammar.value)
         self.grammar = grammar
         self.filename = filename
