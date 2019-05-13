@@ -425,7 +425,7 @@ from pegen import memoize, Parser, Tokenizer, Tree
 PARSER_SUFFIX = """
 
 def main():
-    import argparse
+    import argparse, time, token
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-v', '--verbose', action='count', default=0)
     argparser.add_argument('-q', '--quiet', action='store_true')
@@ -433,15 +433,30 @@ def main():
     args = argparser.parse_args()
     verbose_parser = bool(args.verbose & 1)
     verbose_tokenizer = bool(args.verbose & 2)
+    t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
         parser = GeneratedParser(tokenizer, verbose=verbose_parser)
         tree = parser.start()
+        endpos = file.tell()
+    t1 = time.time()
     if not tree:
         print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
         sys.exit(1)
     if not args.quiet:
         print(tree)
+    if args.verbose:
+        dt = t1 - t0
+        diag = tokenizer.diagnose()
+        nlines = diag.end[0]
+        if diag.type == token.ENDMARKER:
+            nlines -= 1
+        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
+              end="", file=sys.stderr)
+        if dt:
+            print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
+        else:
+            print(file=sys.stderr)
 
 
 if __name__ == '__main__':
@@ -651,8 +666,9 @@ def main() -> None:
     genr.generate_parser()
 
     t1 = time.time()
-    dt = t1 - t0
+
     if args.verbose:
+        dt = t1 - t0
         diag = tokenizer.diagnose()
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
