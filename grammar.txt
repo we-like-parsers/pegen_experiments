@@ -1,31 +1,61 @@
 # Simplified grammar for Python
 
 start: statements ENDMARKER
-statements: statement statements | statement
-statement: assignment NEWLINE | expression NEWLINE | function_def | class_def | import_stmt NEWLINE
+statements: statement+
+
+# NOTE: assignment MUST precede expression, else the parser will get stuck
+statement: simple_stmt | compound_stmt
+simple_stmt: small_stmt (';' small_stmt)* NEWLINE
+small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
+compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
+
 assignment: target '=' expression
 
-import_stmt: 'import' NAME | 'from' NAME 'import' names
+import_stmt: 'import' names | 'from' NAME 'import' ('*' | names)
 names: NAME ',' names | NAME
 
-function_def: 'def' NAME '(' [parameters] ')' ':' body
-parameters: kwargs | arg ',' parameters | arg ',' | arg
-kwargs: kwarg ',' kwargs | kwarg ',' | kwarg
-kwarg: NAME '=' expression | '**' NAME
-arg: NAME | '*' NAME
+if_stmt: 'if' full_expression ':' block elif_block* [else_block]
+elif_block: 'elif' full_expression ':' block
+else_block: 'else' ':' block
 
-class_def: 'class' NAME '(' names ')' ':' body | 'class' NAME ':' body
+while_stmt: 'while' full_expression ':' block [else_block]
 
-body: NEWLINE INDENT statements DEDENT
+with_stmt: 'with' expression ['as' target] ':' block
 
-full_expression: NAME ':=' expression | expression
+return_stmt: 'return' [expressions]
+
+function_def: [decorators] 'def' NAME '(' [parameters] ')' ':' block
+parameters: kwparams | param [',' [parameters]]
+kwparams: kwparam [',' [kwparams]]
+kwparam: NAME '=' expression | '**' NAME
+param: NAME | '*' NAME
+decorators: ('@' factor NEWLINE)+
+
+class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
+
+block: simple_stmt | NEWLINE INDENT statements DEDENT
+
+full_expressions: full_expression (',' full_expression)* [',']
+full_expression: NAME ':=' disjunction | disjunction
+disjunction: conjunction ('or' conjunction)*
+conjunction: comparison ('and' comparison)*
+comparison: 'not'* bitwise_or (compare_op bitwise_or)*
+compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in'
+
+bitwise_or: bitwise_and ('|' bitwise_and)*
+bitwise_and: expression ('&' expression)*
+
+expressions: expression (',' expression)* [',']
 expression: term (('+' term | '-' term))*
 term: factor (('*' factor | '/' factor))*
-factor: primary ('.' NAME | '[' expression ']' | '(' [expressions] ')')*
+factor: primary ('.' NAME | '[' expression ']' | '(' [arguments [',']] ')')*
 primary: list | tuple | group | NAME | STRING | NUMBER
-list: '[' [expressions] ']'
-tuple: '(' [full_expression ',' [expressions]] ')'
-group: '(' expression ')'
-expressions: full_expression ',' expressions | full_expression ',' | full_expression
+list: '[' [full_expressions] ']'
+tuple: '(' [full_expression ',' [full_expressions]] ')'
+group: '(' full_expression ')'
+arguments: kwargs | posarg [',' arguments]  # Weird to make it work
+kwargs: kwarg (',' kwarg)*
+posarg: full_expression | '*' disjunction
+kwarg: NAME '=' disjunction | '**' disjunction
 
 target: NAME  # TODO: foo.bar, foo[bar], foo(bar)
