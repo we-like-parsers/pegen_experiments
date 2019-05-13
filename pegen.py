@@ -314,6 +314,8 @@ class GrammarParser(Parser):
         item: optional | atom '*' | atom '+' | atom '?' | atom
 
         Note that optional cannot be followed by * or + or ?.
+
+        Also note that '?' is an error to the Python tokenizer.
         """
         mark = self.mark()
         if (opt := self.optional()):
@@ -376,26 +378,23 @@ from pegen import memoize, Parser, Tokenizer, Tree
 PARSER_SUFFIX = """
 
 def main():
-    verbose_parser = False
-    verbose_tokenizer = False
-    if sys.argv[1:] and sys.argv[1].startswith('-v'):
-        verbose_parser = True
-        if 'vv' in sys.argv[1]:
-            verbose_tokenizer = True
-        del sys.argv[1]
-    if sys.argv[1:]:
-        file = open(sys.argv[1])
-    else:
-        file = sys.stdin
-    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
-    parser = GeneratedParser(tokenizer, verbose=verbose_parser)
-    tree = parser.start()
-    if sys.argv[1:]:
-        file.close()
+    import argparse
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-v', '--verbose', action='count', default=0)
+    argparser.add_argument('-q', '--quiet', action='store_true')
+    argparser.add_argument('filename')
+    args = argparser.parse_args()
+    verbose_parser = bool(args.verbose & 1)
+    verbose_tokenizer = bool(args.verbose & 2)
+    with open(args.filename) as file:
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
+        parser = GeneratedParser(tokenizer, verbose=verbose_parser)
+        tree = parser.start()
     if not tree:
         print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
         sys.exit(1)
-    print(tree)
+    if not args.quiet:
+        print(tree)
 
 
 if __name__ == '__main__':
