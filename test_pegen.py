@@ -120,6 +120,11 @@ def test_repeat_0_operator():
                                   Tree('NUMBER', value='2')),
                              Tree('thing',
                                   Tree('NUMBER', value='3'))))
+    tree = parse_string("1\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('thing',
+                             Tree('NUMBER', value='1')),
+                        Tree('Repeat'))
 
 
 def test_repeat_1_operator():
@@ -137,3 +142,5 @@ def test_repeat_1_operator():
                                   Tree('NUMBER', value='2')),
                              Tree('thing',
                                   Tree('NUMBER', value='3'))))
+    tree = parse_string("1\n", parser_class)
+    assert tree is None
