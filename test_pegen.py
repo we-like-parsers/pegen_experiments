@@ -65,8 +65,7 @@ def test_optional_operator():
     sum <- term ('+' term)?
     term <- NUMBER
     """
-    tree = parse_string(grammar, GrammarParser)
-    parser_class = generate_parser(tree)
+    parser_class = make_parser(grammar)
     tree = parse_string("1+2\n", parser_class)
     assert tree == Tree('start',
                         Tree('sum',
@@ -88,8 +87,7 @@ def test_alt_optional_operator():
     sum: term ['+' term]
     term: NUMBER
     """
-    tree = parse_string(grammar, GrammarParser)
-    parser_class = generate_parser(tree)
+    parser_class = make_parser(grammar)
     tree = parse_string("1 + 2\n", parser_class)
     assert tree == Tree('start',
                         Tree('sum',
