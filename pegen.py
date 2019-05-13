@@ -61,6 +61,10 @@ class Tree:
         return hash((self.type, self.args, self.value))
 
 
+def shorttok(tok: tokenizer.TokenInfo) -> str:
+    return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
+
+
 class Tokenizer:
     """Caching wrapper for the tokenize module.
 
@@ -76,10 +80,7 @@ class Tokenizer:
         self._verbose = verbose
 
     def getnext(self) -> tokenize.TokenInfo:
-        """Return the next token.
-
-        Updates the current index.
-        """
+        """Return the next token and updates the index."""
         while self._index == len(self._tokens):
             tok = next(self._tokengen)
             if tok.type in (token.NL, token.COMMENT):
@@ -90,6 +91,15 @@ class Tokenizer:
         if self._verbose:
             self.report()
         return tok
+
+    def peek(self) -> tokenize.TokenInfo:
+        """Return the next token *without* updating the index."""
+        while self._index == len(self._tokens):
+            tok = next(self._tokengen)
+            if tok.type in (token.NL, token.COMMENT):
+                continue
+            self._tokens.append(tok)
+        return self._tokens[self._index]
 
     def diagnose(self) -> tokenize.TokenInfo:
         if not self._tokens:
@@ -106,30 +116,51 @@ class Tokenizer:
             self.report()
 
     def report(self):
-        # TODO: Make this work in terminal; only works well in Emacs.
         if self._index == 0:
-            print("[start]", end="\r", flush=True)
+            print("[start]", flush=True)
         else:
             tok = self._tokens[self._index - 1]
-            print("."*self._index, tok.start, token.tok_name[tok.type], repr(tok.string), end="\r", flush=True)
-        time.sleep(0.02)
+            print("."*self._index, shorttok(tok), flush=True)
 
 
 def memoize(method: Callable[[Parser], Optional[Tree]]):
     """Memoize a symbol method."""
+    method_name = method.__name__
 
     def symbol_wrapper(self: Parser) -> Optional[Tree]:
         mark = self.mark()
-        key = mark, method
+        key = mark, method_name
+        if key in self._symbol_cache and not self._verbose:
+            tree, endmark = self._symbol_cache[key]
+            self.reset(endmark)
+            return tree
+        verbose = self._verbose
+        tok = self._tokenizer.peek()
         if key not in self._symbol_cache:
+            if verbose:
+                print("> "*self._level + "At", shorttok(tok), method_name)
+            self._level += 1
             tree = method(self)
+            self._level -= 1
             if tree:
+                if verbose:
+                    print("< "*self._level + "Yes:", tree)
                 endmark = self.mark()
             else:
+                if verbose:
+                    print("< "*self._level + "No", method_name)
                 endmark = mark
+                self.reset(endmark)
             self._symbol_cache[key] = tree, endmark
-        tree, endmark = self._symbol_cache[key]
-        self.reset(endmark)
+        else:
+            tree, endmark = self._symbol_cache[key]
+            if tree:
+                if verbose:
+                    print("+ "*self._level + "At", shorttok(tok), method_name, "->", tree, "(cached)")
+                self.reset(endmark)
+            else:
+                if verbose:
+                    print("- "*self._level + "At", shorttok(tok), method_name, "-> No (cached)")
         return tree
 
     return symbol_wrapper
@@ -159,8 +190,10 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
 class Parser:
     """Parsing base class."""
 
-    def __init__(self, tokenizer: Tokenizer):
+    def __init__(self, tokenizer: Tokenizer, *, verbose=False):
         self._tokenizer = tokenizer
+        self._verbose = verbose
+        self._level = 0
         self._symbol_cache: Dict[Tuple[Mark,
                                        Callable[[Parser], Optional[Tree]]],
                                  Tuple[Optional[Tree], Mark]] = {}
@@ -343,16 +376,19 @@ from pegen import memoize, Parser, Tokenizer, Tree
 PARSER_SUFFIX = """
 
 def main():
-    verbose = False
-    if sys.argv[1:2] == ['-vv']:
-        verbose = True
-        del sys.argv[1:2]
+    verbose_parser = False
+    verbose_tokenizer = False
+    if sys.argv[1:] and sys.argv[1].startswith('-v'):
+        verbose_parser = True
+        if 'vv' in sys.argv[1]:
+            verbose_tokenizer = True
+        del sys.argv[1]
     if sys.argv[1:]:
         file = open(sys.argv[1])
     else:
         file = sys.stdin
-    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose)
-    parser = GeneratedParser(tokenizer)
+    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
+    parser = GeneratedParser(tokenizer, verbose=verbose_parser)
     tree = parser.start()
     if sys.argv[1:]:
         file.close()
@@ -545,7 +581,7 @@ def main() -> None:
 
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=args.verbose >= 2)
-        parser = GrammarParser(tokenizer)
+        parser = GrammarParser(tokenizer, verbose=args.verbose)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
