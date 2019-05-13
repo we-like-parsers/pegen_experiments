@@ -568,11 +568,13 @@ def dedupe(name: str, names: Container[str]) -> str:
     return name
 
 
-argparser = argparse.ArgumentParser(prog='pegen')
-argparser.add_argument('-q', '--quiet', action='store_true')
-argparser.add_argument('-v', '--verbose', action='count', default=0)
-argparser.add_argument('-o', '--output', default='out.py')
-argparser.add_argument('filename')
+argparser = argparse.ArgumentParser(prog='pegen', description="Experimental PEG-like parser generator")
+argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print the parsed grammar")
+argparser.add_argument('-v', '--verbose', action='count', default=0,
+                       help="Print extensive debugging during parsing; repeat for even more")
+argparser.add_argument('-o', '--output', default='out.py', metavar='OUT',
+                       help="Where to write the generated parser (default out.py)")
+argparser.add_argument('filename', help="Grammar description")
 
 
 def main() -> None:
