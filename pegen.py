@@ -62,13 +62,13 @@ class Tree:
 
 
 def shorttok(tok: tokenizer.TokenInfo) -> str:
-    return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
+    return "%-25.25s" % f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
 
 class Tokenizer:
     """Caching wrapper for the tokenize module.
 
-    This is hopelessly tied to Python's syntax.
+    This is pretty tied to Python's syntax.
     """
 
     _tokens: List[tokenize.TokenInfo]
@@ -78,18 +78,22 @@ class Tokenizer:
         self._tokens = []
         self._index = 0
         self._verbose = verbose
+        if verbose:
+            self.report(False, False)
 
     def getnext(self) -> tokenize.TokenInfo:
         """Return the next token and updates the index."""
+        cached = True
         while self._index == len(self._tokens):
             tok = next(self._tokengen)
             if tok.type in (token.NL, token.COMMENT):
                 continue
             self._tokens.append(tok)
+            cached = False
         tok = self._tokens[self._index]
         self._index += 1
         if self._verbose:
-            self.report()
+            self.report(cached, False)
         return tok
 
     def peek(self) -> tokenize.TokenInfo:
@@ -110,17 +114,26 @@ class Tokenizer:
         return self._index
 
     def reset(self, index: Mark) -> None:
+        if index == self._index:
+            return
         assert 0 <= index <= len(self._tokens), (index, len(self._tokens))
+        old_index = self._index
         self._index = index
         if self._verbose:
-            self.report()
+            self.report(True, index < old_index)
 
-    def report(self):
+    def report(self, cached, back):
+        if back:
+            fill = '-'*self._index + '-'
+        elif cached:
+            fill = '-'*self._index + '>'
+        else:
+            fill = '-'*self._index + '*'
         if self._index == 0:
-            print("[start]", flush=True)
+            print(f"{fill} (Bof)")
         else:
             tok = self._tokens[self._index - 1]
-            print("."*self._index, shorttok(tok), flush=True)
+            print(f"{fill} {shorttok(tok)}")
 
 
 def memoize(method: Callable[[Parser], Optional[Tree]]):
@@ -130,37 +143,44 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
     def symbol_wrapper(self: Parser) -> Optional[Tree]:
         mark = self.mark()
         key = mark, method_name
+        # Fast path: cache hit, and not verbose.
         if key in self._symbol_cache and not self._verbose:
             tree, endmark = self._symbol_cache[key]
-            self.reset(endmark)
+            if tree:
+                self.reset(endmark)
+            else:
+                assert mark == endmark
             return tree
+        # Slow path: no cache hit, or verbose.
         verbose = self._verbose
-        tok = self._tokenizer.peek()
+        if verbose:
+            tok = self._tokenizer.peek()
+            fill = ' '*mark + ' '
         if key not in self._symbol_cache:
             if verbose:
-                print("> "*self._level + "At", shorttok(tok), method_name)
+                print(f" {fill} {shorttok(tok)}: {' '*self._level}({method_name}")
             self._level += 1
             tree = method(self)
             self._level -= 1
             if tree:
-                if verbose:
-                    print("< "*self._level + "Yes:", tree)
                 endmark = self.mark()
-            else:
                 if verbose:
-                    print("< "*self._level + "No", method_name)
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # fresh")
+            else:
                 endmark = mark
                 self.reset(endmark)
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # fresh")
             self._symbol_cache[key] = tree, endmark
         else:
             tree, endmark = self._symbol_cache[key]
             if tree:
-                if verbose:
-                    print("+ "*self._level + "At", shorttok(tok), method_name, "->", tree, "(cached)")
                 self.reset(endmark)
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # cached")
             else:
                 if verbose:
-                    print("- "*self._level + "At", shorttok(tok), method_name, "-> No (cached)")
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # cached")
         return tree
 
     return symbol_wrapper
@@ -172,15 +192,35 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
     def expect_wrapper(self: Parser, type: str) -> bool:
         mark = self.mark()
         key = mark, type
+        # Fast path: cache hit, and not verbose.
+        if key in self._token_cache and not self._verbose:
+            res, endmark = self._token_cache[key]
+            if res:
+                self.reset(endmark)
+            return res
+        # Slow path: no cache hit, or verbose.
+        verbose = self._verbose
+        if verbose:
+            tok = self._tokenizer.peek()
+            fill = ' '*mark + ' '
         if key not in self._token_cache:
             res = method(self, type)
             if res:
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level}({type!r})  # fresh")
                 endmark = self.mark()
             else:
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level}(Not {type!r})  # fresh")
                 endmark = mark
             self._token_cache[key] = res, endmark
         else:
             res, endmark = self._token_cache[key]
+            if verbose:
+                if res:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level}({type!r})  # cached")
+                else:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level}(Not {type!r})  # cached")
         self.reset(endmark)
         return res
 
@@ -205,37 +245,44 @@ class Parser:
 
     @memoize
     def name(self) -> Optional[Tree]:
-        toktup = self._tokenizer.getnext()
-        if toktup.type == token.NAME:
-            return Tree('NAME', value=toktup.string)
+        tok = self._tokenizer.peek()
+        if tok.type == token.NAME:
+            self._tokenizer.getnext()
+            return Tree('NAME', value=tok.string)
         return None
 
     @memoize
     def number(self) -> Optional[Tree]:
-        toktup = self._tokenizer.getnext()
-        if toktup.type == token.NUMBER:
-            return Tree('NUMBER', value=toktup.string)
+        tok = self._tokenizer.peek()
+        if tok.type == token.NUMBER:
+            self._tokenizer.getnext()
+            return Tree('NUMBER', value=tok.string)
         return None
 
     @memoize
     def string(self) -> Optional[Tree]:
-        toktup = self._tokenizer.getnext()
-        if toktup.type == token.STRING:
-            return Tree('STRING', value=toktup.string)
+        tok = self._tokenizer.peek()
+        if tok.type == token.STRING:
+            self._tokenizer.getnext()
+            return Tree('STRING', value=tok.string)
         return None
 
     @memoize_expect
     def expect(self, type: str) -> bool:
-        toktup = self._tokenizer.getnext()
-        if toktup.string == type:
+        tok = self._tokenizer.peek()
+        if tok.string == type:
+            self._tokenizer.getnext()
             return True
         if type in exact_token_types:
-            if toktup.type == exact_token_types[type]:
+            if tok.type == exact_token_types[type]:
+                self._tokenizer.getnext()
                 return True
         if type in token.__dict__:
-            if toktup.type == token.__dict__[type]:
+            if tok.type == token.__dict__[type]:
+                self._tokenizer.getnext()
                 return True
-        if toktup.type == token.OP and toktup.string == type:
+        if tok.type == token.OP and tok.string == type:
+            self._tokenizer.getnext()
             return True
         return False
 
@@ -537,7 +584,9 @@ class ParserGenerator:
                 return dedupe(name, children), f"self.{name}()"
             if name in self.todo or name in self.done:
                 return dedupe(name, children), f"self.{name}()"
-            raise RuntimeError(f"Don't know what {name} is")
+            # TODO: Report as an error in the grammar, with line
+            # number and column of the reference.
+            raise RuntimeError(f"Don't know what {name!r} is")
         if item.type in ('Opt', 'ZeroOrMore', 'OneOrMore'):
             prefix = '_' + item.type.lower() + '_'
             subitem = item.args[0]
@@ -572,7 +621,7 @@ argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print t
 argparser.add_argument('-v', '--verbose', action='count', default=0,
                        help="Print extensive debugging during parsing; repeat for even more")
 argparser.add_argument('-o', '--output', default='out.py', metavar='OUT',
-                       help="Where to write the generated parser (default out.py)")
+                       help="Where to write the generated parser (default parse.py)")
 argparser.add_argument('filename', help="Grammar description")
 
 
