@@ -34,29 +34,30 @@ def parse_string(source, parser_class, dedent=True):
 
 
 def make_parser(source):
+    # Combine parse_string() and generate_parser().
     tree = parse_string(source, GrammarParser)
     return generate_parser(tree)
 
 
 def test_expr_grammar():
-    # Read the expression grammar.
-    with open('expr.txt') as file:
-        tree = run_parser(file, GrammarParser)
-
-    # Generate the parser and load the class.
-    parser_class = generate_parser(tree)
-
-    # Parse sample input.
+    grammar = """
+    start <- sums NEWLINE ENDMARKER
+    sums <- sum (NEWLINE sum)*
+    sum <- term '+' sum / term
+    term <- factor '*' term / factor
+    factor <- pair / group / NAME / STRING / NUMBER
+    pair <- '(' sum ',' sum ')'
+    group <- '(' sum ')'
+    """
+    parser_class = make_parser(grammar)
     tree = parse_string("42\n", parser_class)
-
-    # Check the tree.
     assert tree == Tree('start',
                         Tree('sums',
                              Tree('sum',
                                   Tree('term',
                                        Tree('factor',
                                             Tree('NUMBER', value='42')))),
-                             Tree('Empty')))
+                             Tree('Repeat')))
 
 
 def test_optional_operator():
