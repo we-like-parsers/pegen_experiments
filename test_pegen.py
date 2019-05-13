@@ -81,6 +81,27 @@ def test_optional_operator():
                              Tree('Empty')))
 
 
+def test_optional_literal():
+    grammar = """
+    start <- sum NEWLINE
+    sum <- term '+'?
+    term <- NUMBER
+    """
+    parser_class = make_parser(grammar)
+    tree = parse_string("1+\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('sum',
+                             Tree('term',
+                                  Tree('NUMBER', value='1')),
+                             Tree('_opt__tmp_1')))  # XXX Dodgy.
+    tree = parse_string("1\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('sum',
+                             Tree('term',
+                                  Tree('NUMBER', value='1')),
+                             Tree('Empty')))
+
+
 def test_alt_optional_operator():
     grammar = """
     start: sum NEWLINE
