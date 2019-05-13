@@ -103,7 +103,7 @@ def test_alt_optional_operator():
                              Tree('Empty')))
 
 
-def test_repeat_0_operator():
+def test_repeat_0_simple():
     grammar = """
     start: thing thing* NEWLINE
     thing: NUMBER
@@ -125,7 +125,24 @@ def test_repeat_0_operator():
                         Tree('Repeat'))
 
 
-def test_repeat_1_operator():
+def test_repeat_0_complex():
+    grammar = """
+    start: term ('+' term)* NEWLINE
+    term: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    tree = parse_string("1 + 2 + 3\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('term',
+                             Tree('NUMBER', value='1')),
+                        Tree('Repeat',
+                             Tree('term',
+                                  Tree('NUMBER', value='2')),
+                             Tree('term',
+                                  Tree('NUMBER', value='3'))))
+
+
+def test_repeat_1_simple():
     grammar = """
     start: thing thing+ NEWLINE
     thing: NUMBER
@@ -139,6 +156,25 @@ def test_repeat_1_operator():
                              Tree('thing',
                                   Tree('NUMBER', value='2')),
                              Tree('thing',
+                                  Tree('NUMBER', value='3'))))
+    tree = parse_string("1\n", parser_class)
+    assert tree is None
+
+
+def test_repeat_1_complex():
+    grammar = """
+    start: term ('+' term)+ NEWLINE
+    term: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    tree = parse_string("1 + 2 + 3\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('term',
+                             Tree('NUMBER', value='1')),
+                        Tree('Repeat',
+                             Tree('term',
+                                  Tree('NUMBER', value='2')),
+                             Tree('term',
                                   Tree('NUMBER', value='3'))))
     tree = parse_string("1\n", parser_class)
     assert tree is None
