@@ -197,6 +197,10 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
             res, endmark = self._token_cache[key]
             if res:
                 self.reset(endmark)
+                # Uncomment these when parsing Python, to save
+                # up to 80% of memory (though little time!).
+                # self._token_cache.clear()
+                # self._symbol_cache.clear()
             return res
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
