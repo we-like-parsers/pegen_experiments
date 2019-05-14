@@ -426,6 +426,7 @@ PARSER_SUFFIX = """
 
 def main():
     import argparse, time, token
+    from pegen import print_memstats
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-v', '--verbose', action='count', default=0,
                            help="Print timing stats; repeat for more debug output")
@@ -460,6 +461,11 @@ def main():
             print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
         else:
             print(file=sys.stderr)
+        print("Caches sizes:", file=sys.stderr)
+        print(f"  token array : {len(tokenizer._tokens):10}", file=sys.stderr)
+        print(f"  symbol cache: {len(parser._symbol_cache):10}", file=sys.stderr)
+        print(f"  token cache : {len(parser._token_cache):10}", file=sys.stderr)
+        print_memstats()
 
 
 if __name__ == '__main__':
@@ -634,6 +640,34 @@ def dedupe(name: str, names: Container[str]) -> str:
     return name
 
 
+def print_memstats() -> bool:
+    MiB: Final = 2**20
+    try:
+        import psutil
+    except ImportError:
+        return False
+    print("Memory stats:", file=sys.stderr)
+    process = psutil.Process()
+    meminfo = process.memory_info()
+    res = {}
+    res['rss'] = meminfo.rss / MiB
+    res['vms'] = meminfo.vms / MiB
+    if sys.platform == 'win32':
+        res['maxrss'] = meminfo.peak_wset / MiB
+    else:
+        # See https://stackoverflow.com/questions/938733/total-memory-used-by-python-process
+        import resource  # Since it doesn't exist on Windows.
+        rusage = resource.getrusage(resource.RUSAGE_SELF)
+        if sys.platform == 'darwin':
+            factor = 1
+        else:
+            factor = 1024  # Linux
+        res['maxrss'] = rusage.ru_maxrss * factor / MiB
+    for key, value in res.items():
+        print(f"  {key:12.12s}: {value:10.0f} MiB", file=sys.stderr)
+    return True
+
+
 argparser = argparse.ArgumentParser(prog='pegen', description="Experimental PEG-like parser generator")
 argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print the parsed grammar")
 argparser.add_argument('-v', '--verbose', action='count', default=0,
@@ -685,6 +719,12 @@ def main() -> None:
             print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
         else:
             print(file=sys.stderr)
+        print("Caches sizes:", file=sys.stderr)
+        print(f"  token array : {len(tokenizer._tokens):10}", file=sys.stderr)
+        print(f"  symbol cache: {len(parser._symbol_cache):10}", file=sys.stderr)
+        print(f"  token cache : {len(parser._token_cache):10}", file=sys.stderr)
+        if not print_memstats():
+            print("(Can't find psutil; install it for memory stats.)", file=sys.stderr)
 
 
 if __name__ == '__main__':
