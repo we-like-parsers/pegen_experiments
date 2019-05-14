@@ -10,16 +10,20 @@ Note that this deviates from the standard [PEG
 notation](https://github.com/PhilippeSigaud/Pegged/wiki/PEG-Basics) in
 various ways:
 
-- It requires a separate tokenizer
-- The notation is different from the standard PEG formalism
-- No support yet for &X and !X
-- Various grammar features not yet implemented correctly
+- It requires a separate tokenizer (currently tied to tokenize.py)
+- The notation is different from the standard PEG formalism:
+  - Can use `:` instead of `<-`
+  - Can use `|` instead of `/`
+  - Can use `[X]` instead of `X?`
+- No support yet for `&X` and `!X`
+- No support yet for `{ ... }` (i.e. code to build a parse tree)
 
 Other TO DO items:
 
+- Measure performance (both time and memory)
 - More tests
-- Specify what kind of tree to build, e.g. { ... } (combine with 'NAME = ...')
-- Generate C code
+- CI setup, including coverage
+- Generate C code (but this is waaaaay in the future)
 
 Both the generator and the generated parsers require Python 3.8 -- it
 turns out writing a recursive-descent packrat parser is a really great
