@@ -427,12 +427,15 @@ PARSER_SUFFIX = """
 def main():
     import argparse, time, token
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('-v', '--verbose', action='count', default=0)
-    argparser.add_argument('-q', '--quiet', action='store_true')
+    argparser.add_argument('-v', '--verbose', action='count', default=0,
+                           help="Print timing stats; repeat for more debug output")
+    argparser.add_argument('-q', '--quiet', action='store_true',
+                           help="Don't print the parsed program")
     argparser.add_argument('filename')
     args = argparser.parse_args()
-    verbose_parser = bool(args.verbose & 1)
-    verbose_tokenizer = bool(args.verbose & 2)
+    verbose = args.verbose
+    verbose_tokenizer = verbose == 2 or verbose >= 4
+    verbose_parser = verbose >= 3
     t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
@@ -445,7 +448,7 @@ def main():
         sys.exit(1)
     if not args.quiet:
         print(tree)
-    if args.verbose:
+    if verbose:
         dt = t1 - t0
         diag = tokenizer.diagnose()
         nlines = diag.end[0]
@@ -634,7 +637,7 @@ def dedupe(name: str, names: Container[str]) -> str:
 argparser = argparse.ArgumentParser(prog='pegen', description="Experimental PEG-like parser generator")
 argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print the parsed grammar")
 argparser.add_argument('-v', '--verbose', action='count', default=0,
-                       help="Print extensive debugging during parsing; repeat for even more")
+                       help="Print timing stats; repeat for more debug output")
 argparser.add_argument('-o', '--output', default='parse.py', metavar='OUT',
                        help="Where to write the generated parser (default parse.py)")
 argparser.add_argument('filename', help="Grammar description")
@@ -642,11 +645,14 @@ argparser.add_argument('filename', help="Grammar description")
 
 def main() -> None:
     args = argparser.parse_args()
+    verbose = args.verbose
+    verbose_tokenizer = verbose == 2 or verbose >= 4
+    verbose_parser = verbose >= 3
     t0 = time.time()
 
     with open(args.filename) as file:
-        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=args.verbose >= 2)
-        parser = GrammarParser(tokenizer, verbose=args.verbose)
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
+        parser = GrammarParser(tokenizer, verbose=verbose_parser)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
@@ -667,7 +673,7 @@ def main() -> None:
 
     t1 = time.time()
 
-    if args.verbose:
+    if verbose:
         dt = t1 - t0
         diag = tokenizer.diagnose()
         nlines = diag.end[0]
