@@ -1,0 +1,349 @@
+# Simplified grammar for Python
+
+start = statements $ ;
+statements = {statement}+ ;
+
+# NOTE = assignment MUST precede expression, else the parser will get stuck
+statement = simple_stmt | compound_stmt ;
+simple_stmt = small_stmt {';' small_stmt}* NEWLINE ;
+small_stmt = return_stmt | import_stmt | 'pass' | assignment | expression ;
+compound_stmt = if_stmt | while_stmt | with_stmt | function_def | class_def ;
+
+assignment = target '=' expression ;
+
+import_stmt = 'import' names | 'from' NAME 'import' ('*' | names) ;
+names = NAME ',' names | NAME ;
+
+if_stmt = 'if' full_expression ':' block {elif_block}* [else_block] ;
+elif_block = 'elif' full_expression ':' block ;
+else_block = 'else' ':' block ;
+
+while_stmt = 'while' full_expression ':' block [else_block] ;
+
+with_stmt = 'with' expression ['as' target] ':' block ;
+
+return_stmt = 'return' [expressions] ;
+
+function_def = [decorators] 'def' NAME '(' [parameters] ')' ':' block ;
+parameters = kwparams | param [',' [parameters]] ;
+kwparams = kwparam [',' [kwparams]] ;
+kwparam = NAME '=' expression | '**' NAME ;
+param = NAME | '*' NAME ;
+decorators = {'@' factor NEWLINE}+ ;
+
+class_def = [decorators] 'class' NAME ['(' full_expressions ')'] ':' block ;
+
+block = simple_stmt | NEWLINE INDENT statements DEDENT ;
+
+full_expressions = full_expression {',' full_expression}* [','] ;
+full_expression = NAME ':=' disjunction | disjunction ;
+disjunction = conjunction {'or' conjunction}* ;
+conjunction = comparison {'and' comparison}* ;
+comparison = {'not'}* bitwise_or {compare_op bitwise_or}* ;
+compare_op = '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in' ;
+
+bitwise_or = bitwise_and {'|' bitwise_and}* ;
+bitwise_and = expression {'&' expression}* ;
+
+expressions = expression {',' expression}* [','] ;
+expression = term {'+' term | '-' term}* ;
+term = factor {'*' factor | '/' factor}* ;
+factor = primary {'.' NAME | '[' expression ']' | '(' [arguments [',']] ')'}* ;
+primary = list | tuple | group | NAME | STRING | NUMBER ;
+list = '[' [full_expressions] ']' ;
+tuple = '(' [full_expression ',' [full_expressions]] ')' ;
+group = '(' full_expression ')' ;
+arguments = kwargs | posarg [',' arguments] ;  # Weird to make it work
+kwargs = kwarg {',' kwarg}* ;
+posarg = full_expression | '*' disjunction ;
+kwarg = NAME '=' disjunction | '**' disjunction ;
+
+target = NAME ;  # TODO = foo.bar, foo[bar], foo(bar)
+
+STRING = str ;
+NUMBER = number ;
+NEWLINE = newline ;
+
+str
+    =
+    STRING_LITERAL | BYTES_LITERAL
+    ;
+
+
+number
+    =
+    integer | float_number | IMAG_NUMBER
+    ;
+
+
+integer
+    =
+    decimal_integer | OCT_INTEGER | HEX_INTEGER | BIN_INTEGER
+    ;
+
+
+newline
+    =
+    (SPACES | (['\\r'] /[\n\r\f]/) [SPACES])
+    ;
+
+
+NAME
+    =
+    ID_START {ID_CONTINUE}
+    ;
+
+
+STRING_LITERAL
+    =
+    /[uU]?[rR]?/ (SHORT_STRING | LONG_STRING)
+    ;
+
+
+BYTES_LITERAL
+    =
+    /[bB][rR]?/ (SHORT_BYTES | LONG_BYTES)
+    ;
+
+
+decimal_integer
+    =
+    NON_ZERO_DIGIT {DIGIT} | {'0'}+
+    ;
+
+
+OCT_INTEGER
+    =
+    '0' /[oO]/ {OCT_DIGIT}+
+    ;
+
+
+HEX_INTEGER
+    =
+    '0' /[xX]/ {HEX_DIGIT}+
+    ;
+
+
+BIN_INTEGER
+    =
+    '0' /[bB]/ {BIN_DIGIT}+
+    ;
+
+
+float_number
+    =
+    POINT_FLOAT | EXPONENT_FLOAT
+    ;
+
+
+IMAG_NUMBER
+    =
+    (float_number | INT_PART) /[jJ]/
+    ;
+
+
+skip_
+    =
+    (SPACES | COMMENT | LINE_JOINING)
+    ;
+
+
+unknown_char
+    =
+    /\w+|\S+/
+    ;
+
+
+SHORT_STRING
+    =
+    "\\'"
+    {STRING_ESCAPE_SEQ | /[^\\\r\n\f']/}
+    /[\'"]/
+    {STRING_ESCAPE_SEQ | /[^\\\r\n\f"]/}
+    '"'
+    ;
+
+
+LONG_STRING
+    =
+    | "\\'\\'\\'" [LONG_STRING_ITEM] "\\'\\'\\'"
+    | '"""' [LONG_STRING_ITEM] '"""'
+    ;
+
+
+LONG_STRING_ITEM
+    =
+    LONG_STRING_CHAR | STRING_ESCAPE_SEQ
+    ;
+
+
+LONG_STRING_CHAR
+    =
+    !'\\\\' /./
+    ;
+
+
+STRING_ESCAPE_SEQ
+    =
+    '\\\\' /\w+|\S+/
+    ;
+
+
+NON_ZERO_DIGIT
+    =
+    /[1-9]/
+    ;
+
+
+DIGIT
+    =
+    /[0-9]/
+    ;
+
+
+OCT_DIGIT
+    =
+    /[0-7]/
+    ;
+
+
+HEX_DIGIT
+    =
+    /[0-9a-fA-F]/
+    ;
+
+
+BIN_DIGIT
+    =
+    /[01]/
+    ;
+
+
+POINT_FLOAT
+    =
+    [INT_PART] FRACTION | INT_PART '.'
+    ;
+
+
+EXPONENT_FLOAT
+    =
+    (INT_PART | POINT_FLOAT) EXPONENT
+    ;
+
+
+INT_PART
+    =
+    {DIGIT}+
+    ;
+
+
+FRACTION
+    =
+    '.' {DIGIT}+
+    ;
+
+
+EXPONENT
+    =
+    /[eE][+-]?/ {DIGIT}+
+    ;
+
+
+SHORT_BYTES
+    =
+    "\\'"
+    {SHORT_BYTES_CHAR_NO_SINGLE_QUOTE | BYTES_ESCAPE_SEQ}
+    /[\'"]/
+    {SHORT_BYTES_CHAR_NO_DOUBLE_QUOTE | BYTES_ESCAPE_SEQ}
+    '"'
+    ;
+
+
+LONG_BYTES
+    =
+    | "\\'\\'\\'" [LONG_BYTES_ITEM] "\\'\\'\\'"
+    | '"""' [LONG_BYTES_ITEM] '"""'
+    ;
+
+
+LONG_BYTES_ITEM
+    =
+    LONG_BYTES_CHAR | BYTES_ESCAPE_SEQ
+    ;
+
+
+SHORT_BYTES_CHAR_NO_SINGLE_QUOTE
+    =
+    | /[\u0000-\u0009]/
+    | /[\u000B-\u000C]/
+    | /[\u000E-\u0026]/
+    | /[\u0028-\u005B]/
+    | /[\u005D-\u007F]/
+    ;
+
+
+SHORT_BYTES_CHAR_NO_DOUBLE_QUOTE
+    =
+    | /[\u0000-\u0009]/
+    | /[\u000B-\u000C]/
+    | /[\u000E-\u0021]/
+    | /[\u0023-\u005B]/
+    | /[\u005D-\u007F]/
+    ;
+
+
+LONG_BYTES_CHAR
+    =
+    /[\u0000-\u005B]/ | /[\u005D-\u007F]/
+    ;
+
+
+BYTES_ESCAPE_SEQ
+    =
+    '\\\\' /[\u0000-\u007F]/
+    ;
+
+
+SPACES
+    =
+    /[ \t]+/
+    ;
+
+
+COMMENT
+    =
+    '#' /[^\r\n\f]*/
+    ;
+
+
+LINE_JOINING
+    =
+    '\\\\' [SPACES] (['\\r'] /[\n\r\f]/)
+    ;
+
+
+ID_START
+    =
+    | '_'
+    | /[A-Z]/
+    | /[a-z]/
+    ;
+
+
+ID_CONTINUE
+    =
+    | ID_START
+    | /[0-9]/
+    ;
+
+
+INDENT
+    =
+    !()
+    ;
+
+
+DEDENT
+    =
+    !()
+    ;
