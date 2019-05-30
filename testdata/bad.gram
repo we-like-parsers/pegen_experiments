@@ -1,0 +1,7 @@
+start: NAME '(' arguments ')'
+arguments: kwargs | posargs [',' kwargs]
+posargs: posarg (',' posarg)*
+kwargs: kwarg (',' kwarg)*
+posarg: expr
+kwarg: NAME '=' expr
+expr: NAME

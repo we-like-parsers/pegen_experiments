@@ -1,0 +1,15 @@
+@@grammar :: Tatsu
+@@parseinfo :: True
+@@left_recursion :: False
+
+start = {expression newline}+ $ ;
+
+expression = term '+' expression | term '-' expression | term ;
+
+term = factor '*' term | factor '/' term | factor ;
+
+factor = '(' expression ')' | number ;
+
+number = /\d+/ ;
+
+newline = '\n' ;

@@ -1,0 +1,15 @@
+@@grammar :: Tatsu
+@@comments :: /\(\*((?:.|\n)*?)\*\)/
+@@eol_comments :: /#([^\n]*?)$/
+@@parseinfo :: True
+@@left_recursion :: False
+
+start = expression ;
+
+expression = term '+' term | term ;
+
+term = factor '*' factor | factor ;
+
+factor = '(' ~ expression ')' | number ;
+
+number = /\d+/ ;
