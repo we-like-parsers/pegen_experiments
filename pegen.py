@@ -183,6 +183,7 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
                     print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # cached")
         return tree
 
+    symbol_wrapper.__wrapped__ = method
     return symbol_wrapper
 
 
@@ -228,15 +229,17 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
         self.reset(endmark)
         return res
 
+    expect_wrapper.__wrapped__ = method
     return expect_wrapper
     
 
 class Parser:
     """Parsing base class."""
 
-    def __init__(self, tokenizer: Tokenizer, *, verbose=False):
+    def __init__(self, tokenizer: Tokenizer, *, verbose=False, quiet=True):
         self._tokenizer = tokenizer
         self._verbose = verbose
+        self._quiet = quiet
         self._level = 0
         self._symbol_cache: Dict[Tuple[Mark,
                                        Callable[[Parser], Optional[Tree]]],
@@ -328,17 +331,49 @@ class GrammarParser(Parser):
     @memoize
     def alternatives(self) -> Optional[Tree]:
         """
-        alternatives: alternative ('|' | '/') alternatives | alternative
+        THIS IS A LEFT-RECURSIVE RULE!
+
+        See: https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
+
+        alternatives: alternatives ('|' | '/') alternative | alternative
         """
         mark = self.mark()
-        if ((left := self.alternative()) and
+        method_name = 'alternatives'  # self.__class__.alternatives.__wrapped__.__name__
+        key = mark, method_name
+        # Prime the cache with a failure
+        self._symbol_cache[key] = None, mark
+        lastresult, lastmark = None, mark
+        depth = 0
+        while True:
+            depth += 1
+            if not self._quiet:
+                print(f"Recursive {method_name} depth {depth} at {mark}", lastresult)
+            self.reset(mark)
+            result = self.unmemoized_alternatives()
+            if not result:
+                break
+            endmark = self.mark()
+            if endmark <= lastmark:
+                self.reset(lastmark)
+                break
+            self._symbol_cache[key] = lastresult, lastmark = result, endmark
+        return lastresult
+
+    def unmemoized_alternatives(self) -> Optional[Tree]:
+        """
+        This is the actual (naive) code; it is not memoized.
+
+        alternatives: alternatives ('|' | '/') alternative | alternative
+        """
+        mark = self.mark()
+        if ((left := self.alternatives()) and
             (self.expect('|')  or self.expect('/')) and
-            (right := self.alternatives())):
-            alts = [left]
-            if right.type == 'Alts':
-                alts.extend(right.args)
-            else:
+            (right := self.alternative())):
+            if left.type == 'Alts':
+                alts = list(left.args)
                 alts.append(right)
+            else:
+                alts = [left, right]
             return Tree('Alts', *alts)
         self.reset(mark)
         return self.alternative()
@@ -690,7 +725,7 @@ def main() -> None:
 
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
-        parser = GrammarParser(tokenizer, verbose=verbose_parser)
+        parser = GrammarParser(tokenizer, verbose=verbose_parser, quiet=args.quiet)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
