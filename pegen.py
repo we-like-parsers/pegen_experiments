@@ -231,7 +231,7 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
 
     expect_wrapper.__wrapped__ = method
     return expect_wrapper
-    
+
 
 class Parser:
     """Parsing base class."""
@@ -511,6 +511,27 @@ if __name__ == '__main__':
     main()
 """
 
+RECURSIVE_TEMPLATE = """\
+# This is a left-recursive rule.
+mark = self.mark()
+method_name = '{rulename}'  # self.__class__.{rulename}.__wrapped__.__name__
+key = mark, method_name
+# Prime the cache with a failure
+self._symbol_cache[key] = None, mark
+lastresult, lastmark = None, mark
+while True:
+    self.reset(mark)
+    result = self.unmemoized_{rulename}()
+    if not result:
+        break
+    endmark = self.mark()
+    if endmark <= lastmark:
+        break
+    self._symbol_cache[key] = lastresult, lastmark = result, endmark
+self.reset(lastmark)
+return lastresult
+"""
+
 
 class ParserGenerator:
 
@@ -530,9 +551,16 @@ class ParserGenerator:
         finally:
             self.level -= 1
 
-    def print(self, *args, **kwds):
-        print("    "*self.level, end="", file=self.file)
-        print(*args, **kwds, file=self.file)
+    def print(self, *args):
+        if not args:
+            print(file=self.file)
+        else:
+            print("    "*self.level, end="", file=self.file)
+            print(*args, file=self.file)
+
+    def printblock(self, lines):
+        for line in lines.splitlines():
+            self.print(line)
 
     def set_output(self, filename: str) -> None:
         self.file = open(filename, 'w')
@@ -570,9 +598,34 @@ class ParserGenerator:
             self.todo[name] = tree
         return name
 
+    def is_recursive(self, rulename: str, rhs: Tree) -> bool:
+        # This is just a PoC -- we only find recursion if one of the
+        # alternatives directly starts with this rule.  I'm sure
+        # there's a real graph algorithm that can determine whether a
+        # node is recursive, I'm just too lazy to look it up.
+        if rhs.type == 'Alts':
+            alts = list(rhs.args)
+        else:
+            alts = [rhs]
+        for alt in alts:
+            if alt.type == 'Alt':
+                items = list(alt.args)
+            else:
+                items = [alt]
+            item = items[0]
+            if item.type == 'NAME' and item.value == rulename:
+                return True
+        return False
+
     def gen_rule(self, rulename: str, rhs: Tree) -> None:
         self.print("@memoize")
         self.print(f"def {rulename}(self):")
+        if self.is_recursive(rulename, rhs):
+            with self.indent():
+                self.printblock(RECURSIVE_TEMPLATE.format(rulename=rulename))
+            self.print()
+            self.print(f"def unmemoized_{rulename}(self):")
+
         with self.indent():
             self.print("mark = self.mark()")
             if rhs.type == 'Alts':
@@ -664,7 +717,7 @@ class ParserGenerator:
         if item.type in ('Alts', 'Alt'):
             name = self.name_tree(item)
             return dedupe(name, children), f"self.{name}()"
-            
+
         raise RuntimeError(f"Unrecognized item {item!r}")
         name = self.name_tree(item)
         return name, f"self.{name}()"

@@ -1,0 +1,9 @@
+start: rules ENDMARKER
+rules: rules rule | rule
+rule: NAME ':' alternatives NEWLINE
+alternatives: alternatives '|' alt | alt
+alt: alt item | item
+item: optional | atom '*' | atom '+' | atom '?' | atom
+optional: '[' alternatives ']'
+atom: group | NAME | STRING
+group: '(' alternatives ')'
