@@ -187,6 +187,91 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
     return symbol_wrapper
 
 
+def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
+    """Memoize a left-recursive symbol method."""
+    method_name = method.__name__
+
+    def symbol_wrapper(self: Parser) -> Optional[Tree]:
+        mark = self.mark()
+        key = mark, method_name
+        # Fast path: cache hit, and not verbose.
+        if key in self._symbol_cache and not self._verbose:
+            tree, endmark = self._symbol_cache[key]
+            if tree:
+                self.reset(endmark)
+            else:
+                assert mark == endmark
+            return tree
+        # Slow path: no cache hit, or verbose.
+        verbose = self._verbose
+        if verbose:
+            tok = self._tokenizer.peek()
+            fill = ' '*mark + ' '
+        if key not in self._symbol_cache:
+            if verbose:
+                print(f" {fill} {shorttok(tok)}: {' '*self._level}({method_name}")
+            self._level += 1
+
+            # For left-recursive rules we manipulate the cache and
+            # loop until the rule shows no progress, then pick the
+            # previous result.  For an explanation why this works, see
+            # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
+            # (But we use the memoization cache instead of a static
+            # variable.)
+
+            # Prime the cache with a failure.
+            self._symbol_cache[key] = None, mark
+            lastresult, lastmark = None, mark
+            depth = 0
+            if verbose:
+                print(f" {fill} {shorttok(tok)}: Recursive {method_name} at {mark} depth {depth}")
+
+            while True:
+                self.reset(mark)
+                result = method(self)
+                endmark = self.mark()
+                depth += 1
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: Recursive {method_name} at {mark} depth {depth}: {result} to {endmark}")
+                if not result:
+                    if verbose:
+                        print(f" {fill} {shorttok(tok)}: Fail with {lastresult} to {lastmark}")
+                    break
+                if endmark <= lastmark:
+                    if verbose:
+                        print(f" {fill} {shorttok(tok)}: Bailing with {lastresult} to {lastmark}")
+                    break
+                self._symbol_cache[key] = lastresult, lastmark = result, endmark
+
+            self.reset(lastmark)
+            tree = lastresult
+
+            self._level -= 1
+            if tree:
+                endmark = self.mark()
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # fresh")
+            else:
+                endmark = mark
+                self.reset(endmark)
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # fresh")
+            self._symbol_cache[key] = tree, endmark
+        else:
+            tree, endmark = self._symbol_cache[key]
+            if tree:
+                self.reset(endmark)
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # cached")
+            else:
+                if verbose:
+                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # cached")
+        return tree
+
+    symbol_wrapper.__wrapped__ = method
+    return symbol_wrapper
+
+
 def memoize_expect(method: Callable[[Parser], bool]) -> bool:
     """Memoize the expect() method."""
 
@@ -328,38 +413,8 @@ class GrammarParser(Parser):
             return Tree('Rule', name, alts)
         return None
 
-    @memoize
+    @memoize_left_rec
     def alternatives(self) -> Optional[Tree]:
-        """
-        THIS IS A LEFT-RECURSIVE RULE!
-
-        See: https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
-
-        alternatives: alternatives ('|' | '/') alternative | alternative
-        """
-        mark = self.mark()
-        method_name = 'alternatives'  # self.__class__.alternatives.__wrapped__.__name__
-        key = mark, method_name
-        # Prime the cache with a failure
-        self._symbol_cache[key] = None, mark
-        lastresult, lastmark = None, mark
-        depth = 0
-        while True:
-            depth += 1
-            if not self._quiet:
-                print(f"Recursive {method_name} depth {depth} at {mark}", lastresult)
-            self.reset(mark)
-            result = self.unmemoized_alternatives()
-            if not result:
-                break
-            endmark = self.mark()
-            if endmark <= lastmark:
-                self.reset(lastmark)
-                break
-            self._symbol_cache[key] = lastresult, lastmark = result, endmark
-        return lastresult
-
-    def unmemoized_alternatives(self) -> Optional[Tree]:
         """
         This is the actual (naive) code; it is not memoized.
 
