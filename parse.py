@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import tokenize
 
-from pegen import memoize, Parser, Tokenizer, Tree
+from pegen import memoize, memoize_left_rec, Parser, Tokenizer, Tree
 
 
 class GeneratedParser(Parser):

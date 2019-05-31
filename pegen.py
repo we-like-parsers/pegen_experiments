@@ -512,7 +512,7 @@ from __future__ import annotations
 import sys
 import tokenize
 
-from pegen import memoize, Parser, Tokenizer, Tree
+from pegen import memoize, memoize_left_rec, Parser, Tokenizer, Tree
 
 """
 
@@ -565,28 +565,6 @@ def main():
 if __name__ == '__main__':
     main()
 """
-
-RECURSIVE_TEMPLATE = """\
-# This is a left-recursive rule.
-mark = self.mark()
-method_name = '{rulename}'  # self.__class__.{rulename}.__wrapped__.__name__
-key = mark, method_name
-# Prime the cache with a failure
-self._symbol_cache[key] = None, mark
-lastresult, lastmark = None, mark
-while True:
-    self.reset(mark)
-    result = self.unmemoized_{rulename}()
-    if not result:
-        break
-    endmark = self.mark()
-    if endmark <= lastmark:
-        break
-    self._symbol_cache[key] = lastresult, lastmark = result, endmark
-self.reset(lastmark)
-return lastresult
-"""
-
 
 class ParserGenerator:
 
@@ -673,14 +651,11 @@ class ParserGenerator:
         return False
 
     def gen_rule(self, rulename: str, rhs: Tree) -> None:
-        self.print("@memoize")
-        self.print(f"def {rulename}(self):")
         if self.is_recursive(rulename, rhs):
-            with self.indent():
-                self.printblock(RECURSIVE_TEMPLATE.format(rulename=rulename))
-            self.print()
-            self.print(f"def unmemoized_{rulename}(self):")
-
+            self.print("@memoize_left_rec")
+        else:
+            self.print("@memoize")
+        self.print(f"def {rulename}(self):")
         with self.indent():
             self.print("mark = self.mark()")
             if rhs.type == 'Alts':
