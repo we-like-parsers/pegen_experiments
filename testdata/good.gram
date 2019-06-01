@@ -1,6 +1,0 @@
-start: NAME '(' arguments ')'
-arguments: kwargs | posarg [',' arguments]
-kwargs: kwarg (',' kwarg)*
-posarg: expr
-kwarg: NAME '=' expr
-expr: NAME

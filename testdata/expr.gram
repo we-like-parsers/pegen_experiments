@@ -1,0 +1,7 @@
+start: expressions ENDMARKER
+expressions: (expr NEWLINE)*
+expr: expr '+' term | expr '-' term | term
+term: term '*' factor | term '/' factor | factor
+factor: group | atom
+group: '(' expr ')'
+atom: NAME | NUMBER

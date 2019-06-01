@@ -153,34 +153,27 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
-        if verbose:
-            tok = self._tokenizer.peek()
-            fill = ' '*mark + ' '
+        fill = '  ' * self._level
         if key not in self._symbol_cache:
             if verbose:
-                print(f" {fill} {shorttok(tok)}: {' '*self._level}({method_name}")
+                print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
             self._level += 1
             tree = method(self)
             self._level -= 1
+            if verbose:
+                print(f"{fill}... {method_name} -> {tree!s:.100}")
             if tree:
                 endmark = self.mark()
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # fresh")
             else:
                 endmark = mark
                 self.reset(endmark)
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # fresh")
             self._symbol_cache[key] = tree, endmark
         else:
             tree, endmark = self._symbol_cache[key]
+            if verbose:
+                print(f"{fill}{method_name} -> {tree!s:.100}")
             if tree:
                 self.reset(endmark)
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # cached")
-            else:
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # cached")
         return tree
 
     symbol_wrapper.__wrapped__ = method
@@ -204,12 +197,10 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
-        if verbose:
-            tok = self._tokenizer.peek()
-            fill = ' '*mark + ' '
+        fill = '  ' * self._level
         if key not in self._symbol_cache:
             if verbose:
-                print(f" {fill} {shorttok(tok)}: {' '*self._level}({method_name}")
+                print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
             self._level += 1
 
             # For left-recursive rules we manipulate the cache and
@@ -224,7 +215,7 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
             lastresult, lastmark = None, mark
             depth = 0
             if verbose:
-                print(f" {fill} {shorttok(tok)}: Recursive {method_name} at {mark} depth {depth}")
+                print(f"{fill}Recursive {method_name} at {mark} depth {depth}")
 
             while True:
                 self.reset(mark)
@@ -232,14 +223,14 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
                 endmark = self.mark()
                 depth += 1
                 if verbose:
-                    print(f" {fill} {shorttok(tok)}: Recursive {method_name} at {mark} depth {depth}: {result} to {endmark}")
+                    print(f"{fill}Recursive {method_name} at {mark} depth {depth}: {result!s:.100} to {endmark}")
                 if not result:
                     if verbose:
-                        print(f" {fill} {shorttok(tok)}: Fail with {lastresult} to {lastmark}")
+                        print(f"{fill}Fail with {lastresult!s:.100} to {lastmark}")
                     break
                 if endmark <= lastmark:
                     if verbose:
-                        print(f" {fill} {shorttok(tok)}: Bailing with {lastresult} to {lastmark}")
+                        print(f"{fill}Bailing with {lastresult!s:.100} to {lastmark}")
                     break
                 self._symbol_cache[key] = lastresult, lastmark = result, endmark
 
@@ -247,25 +238,20 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
             tree = lastresult
 
             self._level -= 1
+            if verbose:
+                print(f"{fill}{method_name} -> {tree!s:.100}")
             if tree:
                 endmark = self.mark()
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # fresh")
             else:
                 endmark = mark
                 self.reset(endmark)
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # fresh")
             self._symbol_cache[key] = tree, endmark
         else:
             tree, endmark = self._symbol_cache[key]
+            if verbose:
+                print(f"{fill}{method_name} -> {tree!s:.100}")
             if tree:
                 self.reset(endmark)
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} {tree!r})  # cached")
-            else:
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level} No {method_name})  # cached")
         return tree
 
     symbol_wrapper.__wrapped__ = method
@@ -290,27 +276,16 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
             return res
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
-        if verbose:
-            tok = self._tokenizer.peek()
-            fill = ' '*mark + ' '
+        fill = '  ' * self._level
         if key not in self._token_cache:
             res = method(self, type)
             if res:
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level}({type!r})  # fresh")
                 endmark = self.mark()
             else:
-                if verbose:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level}(Not {type!r})  # fresh")
                 endmark = mark
             self._token_cache[key] = res, endmark
         else:
             res, endmark = self._token_cache[key]
-            if verbose:
-                if res:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level}({type!r})  # cached")
-                else:
-                    print(f" {fill} {shorttok(tok)}: {' '*self._level}(Not {type!r})  # cached")
         self.reset(endmark)
         return res
 
@@ -321,10 +296,9 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
 class Parser:
     """Parsing base class."""
 
-    def __init__(self, tokenizer: Tokenizer, *, verbose=False, quiet=True):
+    def __init__(self, tokenizer: Tokenizer, *, verbose=False):
         self._tokenizer = tokenizer
         self._verbose = verbose
-        self._quiet = quiet
         self._level = 0
         self._symbol_cache: Dict[Tuple[Mark,
                                        Callable[[Parser], Optional[Tree]]],
@@ -334,6 +308,10 @@ class Parser:
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
+
+    def showpeek(self):
+        tok = self._tokenizer.peek()
+        return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
     @memoize
     def name(self) -> Optional[Tree]:
@@ -529,8 +507,8 @@ def main():
     argparser.add_argument('filename')
     args = argparser.parse_args()
     verbose = args.verbose
-    verbose_tokenizer = verbose == 2 or verbose >= 4
-    verbose_parser = verbose >= 3
+    verbose_tokenizer = verbose >= 2
+    verbose_parser = verbose == 1 or verbose >= 3
     t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
@@ -550,15 +528,15 @@ def main():
         if diag.type == token.ENDMARKER:
             nlines -= 1
         print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="", file=sys.stderr)
+              end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
+            print("; %.3f lines/sec" % (nlines / dt))
         else:
-            print(file=sys.stderr)
-        print("Caches sizes:", file=sys.stderr)
-        print(f"  token array : {len(tokenizer._tokens):10}", file=sys.stderr)
-        print(f"  symbol cache: {len(parser._symbol_cache):10}", file=sys.stderr)
-        print(f"  token cache : {len(parser._token_cache):10}", file=sys.stderr)
+            print()
+        print("Caches sizes:")
+        print(f"  token array : {len(tokenizer._tokens):10}")
+        print(f"  symbol cache: {len(parser._symbol_cache):10}")
+        print(f"  token cache : {len(parser._token_cache):10}")
         print_memstats()
 
 
@@ -768,7 +746,7 @@ def print_memstats() -> bool:
         import psutil
     except ImportError:
         return False
-    print("Memory stats:", file=sys.stderr)
+    print("Memory stats:")
     process = psutil.Process()
     meminfo = process.memory_info()
     res = {}
@@ -786,7 +764,7 @@ def print_memstats() -> bool:
             factor = 1024  # Linux
         res['maxrss'] = rusage.ru_maxrss * factor / MiB
     for key, value in res.items():
-        print(f"  {key:12.12s}: {value:10.0f} MiB", file=sys.stderr)
+        print(f"  {key:12.12s}: {value:10.0f} MiB")
     return True
 
 
@@ -802,13 +780,13 @@ argparser.add_argument('filename', help="Grammar description")
 def main() -> None:
     args = argparser.parse_args()
     verbose = args.verbose
-    verbose_tokenizer = verbose == 2 or verbose >= 4
-    verbose_parser = verbose >= 3
+    verbose_tokenizer = verbose >= 2
+    verbose_parser = verbose == 1 or verbose >= 3
     t0 = time.time()
 
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
-        parser = GrammarParser(tokenizer, verbose=verbose_parser, quiet=args.quiet)
+        parser = GrammarParser(tokenizer, verbose=verbose_parser)
         tree = parser.start()
         if not tree:
             print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
@@ -829,24 +807,23 @@ def main() -> None:
 
     t1 = time.time()
 
-    if verbose:
+    if not args.quiet:
         dt = t1 - t0
         diag = tokenizer.diagnose()
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
             nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="", file=sys.stderr)
+        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos), end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
+            print("; %.3f lines/sec" % (nlines / dt))
         else:
-            print(file=sys.stderr)
-        print("Caches sizes:", file=sys.stderr)
-        print(f"  token array : {len(tokenizer._tokens):10}", file=sys.stderr)
-        print(f"  symbol cache: {len(parser._symbol_cache):10}", file=sys.stderr)
-        print(f"  token cache : {len(parser._token_cache):10}", file=sys.stderr)
+            print()
+        print("Caches sizes:")
+        print(f"  token array : {len(tokenizer._tokens):10}")
+        print(f"  symbol cache: {len(parser._symbol_cache):10}")
+        print(f"  token cache : {len(parser._token_cache):10}")
         if not print_memstats():
-            print("(Can't find psutil; install it for memory stats.)", file=sys.stderr)
+            print("(Can't find psutil; install it for memory stats.)")
 
 
 if __name__ == '__main__':

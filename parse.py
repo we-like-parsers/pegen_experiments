@@ -1857,8 +1857,8 @@ def main():
     argparser.add_argument('filename')
     args = argparser.parse_args()
     verbose = args.verbose
-    verbose_tokenizer = verbose == 2 or verbose >= 4
-    verbose_parser = verbose >= 3
+    verbose_tokenizer = verbose >= 2
+    verbose_parser = verbose == 1 or verbose >= 3
     t0 = time.time()
     with open(args.filename) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
@@ -1878,15 +1878,15 @@ def main():
         if diag.type == token.ENDMARKER:
             nlines -= 1
         print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="", file=sys.stderr)
+              end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt), file=sys.stderr)
+            print("; %.3f lines/sec" % (nlines / dt))
         else:
-            print(file=sys.stderr)
-        print("Caches sizes:", file=sys.stderr)
-        print(f"  token array : {len(tokenizer._tokens):10}", file=sys.stderr)
-        print(f"  symbol cache: {len(parser._symbol_cache):10}", file=sys.stderr)
-        print(f"  token cache : {len(parser._token_cache):10}", file=sys.stderr)
+            print()
+        print("Caches sizes:")
+        print(f"  token array : {len(tokenizer._tokens):10}")
+        print(f"  symbol cache: {len(parser._symbol_cache):10}")
+        print(f"  token cache : {len(parser._token_cache):10}")
         print_memstats()
 
 
