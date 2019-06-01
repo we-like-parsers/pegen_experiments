@@ -18,19 +18,19 @@ def generate_parser(tree):
     return ns['GeneratedParser']
 
 
-def run_parser(file, parser_class):
+def run_parser(file, parser_class, *, verbose=False):
     # Run the parser on a file (stream).
     tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
-    parser = parser_class(tokenizer)
+    parser = parser_class(tokenizer, verbose=verbose)
     return parser.start()
 
 
-def parse_string(source, parser_class, dedent=True):
+def parse_string(source, parser_class, *, dedent=True, verbose=False):
     # Run the parser on a string.
     if dedent:
         source = textwrap.dedent(source)
     file = io.StringIO(source)
-    return run_parser(file, parser_class)
+    return run_parser(file, parser_class, verbose=verbose)
 
 
 def make_parser(source):
@@ -200,3 +200,19 @@ def test_repeat_1_complex():
                                   Tree('NUMBER', value='3'))))
     tree = parse_string("1\n", parser_class)
     assert tree is None
+
+def test_left_recursive():
+    grammar = """
+    start: expr NEWLINE
+    expr: expr '+' term | term
+    term: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    tree = parse_string("1 + 2 + 3\n", parser_class)
+    assert tree == Tree('start',
+                        Tree('expr',
+                             Tree('expr',
+                                  Tree('expr',
+                                       Tree('term', Tree('NUMBER', value='1'))),
+                                  Tree('term', Tree('NUMBER', value='2'))),
+                             Tree('term', Tree('NUMBER', value='3'))))
