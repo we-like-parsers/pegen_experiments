@@ -1,6 +1,6 @@
 start: expressions ENDMARKER
 expressions: (expr NEWLINE)*
-expr: expr '+' term | expr '-' term | term
+expr: expr '+' term { ast.BinOp(expr, ast.Add, term) } | expr '-' term { ast.BinOp(expr, ast.Sub, term) } | term { term }
 term: term '*' factor | term '/' factor | factor
 factor: group | atom
 group: '(' expr ')'

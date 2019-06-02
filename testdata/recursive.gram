@@ -1,7 +1,8 @@
 start: rules ENDMARKER
 rules: rules rule | rule
 rule: NAME ':' alternatives NEWLINE
-alternatives: alternatives '|' alt | alt
+alternatives: alternatives '|' alt_and_action | alt_and_action
+alt_and_action: alt CURLY_STUFF | alt
 alt: alt item | item
 item: optional | atom '*' | atom '+' | atom '?' | atom
 optional: '[' alternatives ']'
