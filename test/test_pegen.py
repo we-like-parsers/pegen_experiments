@@ -1,8 +1,9 @@
+import ast
 import io
 import textwrap
 import tokenize
 
-from pegen import GrammarParser, ParserGenerator, Tokenizer, Tree
+from pegen import GrammarParser, ParserGenerator, Tokenizer, Tree, grammar_tokenizer
 
 
 def generate_parser(tree):
@@ -20,7 +21,7 @@ def generate_parser(tree):
 
 def run_parser(file, parser_class, *, verbose=False):
     # Run the parser on a file (stream).
-    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
+    tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
     parser = parser_class(tokenizer, verbose=verbose)
     return parser.start()
 
@@ -216,3 +217,18 @@ def test_left_recursive():
                                        Tree('term', Tree('NUMBER', value='1'))),
                                   Tree('term', Tree('NUMBER', value='2'))),
                              Tree('term', Tree('NUMBER', value='3'))))
+
+def test_python_expr():
+    grammar = """
+    start: expr NEWLINE? ENDMARKER { ast.Expression(expr, lineno=1, col_offset=0) }
+    expr: expr '+' term { ast.BinOp(expr, ast.Add(), term) } | expr '-' term { ast.BinOp(expr, ast.Sub(), term) } | term { term }
+    term: term '*' factor { ast.BinOp(term, ast.Mult(), factor) } | term '/' factor { ast.BinOp(term, ast.Div(), factor) } | factor { factor }
+    factor: '(' expr ')' { expr } | atom { atom }
+    atom: NAME { ast.Name(id=name.value, ctx=ast.Load()) } | NUMBER { ast.Constant(value=ast.literal_eval(number.value)) }
+    """
+    parser_class = make_parser(grammar)
+    tree = parse_string("(1 + 2*3 + 5)/(6 - 2)\n", parser_class)
+    ast.fix_missing_locations(tree)
+    code = compile(tree, "", "eval")
+    val = eval(code)
+    assert val == 3.0
