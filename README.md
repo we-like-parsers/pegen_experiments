@@ -12,11 +12,10 @@ various ways:
 
 - It requires a separate tokenizer (currently tied to tokenize.py)
 - The notation is different from the standard PEG formalism:
-  - Can use `:` instead of `<-`
-  - Can use `|` instead of `/`
-  - Can use `[X]` instead of `X?`
+  - Use `:` instead of `<-`
+  - Use `|` instead of `/`
+  - Use `[X]` instead of `X?`
 - No support yet for `&X` and `!X`
-- No support yet for `{ ... }` (i.e. code to build a parse tree)
 
 Other TO DO items:
 
