@@ -259,14 +259,14 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
     return symbol_wrapper
 
 
-def memoize_expect(method: Callable[[Parser], bool]) -> bool:
+def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> bool:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: Parser, type: str) -> bool:
+    def expect_wrapper(self: Parser, type: str) -> Optional[tokenize.TokenInfo]:
         mark = self.mark()
         key = mark, type
-        # Fast path: cache hit, and not verbose.
-        if key in self._token_cache and not self._verbose:
+        # Fast path: cache hit.
+        if key in self._token_cache:
             res, endmark = self._token_cache[key]
             if res:
                 self.reset(endmark)
@@ -275,9 +275,7 @@ def memoize_expect(method: Callable[[Parser], bool]) -> bool:
                 # self._token_cache.clear()
                 # self._symbol_cache.clear()
             return res
-        # Slow path: no cache hit, or verbose.
-        verbose = self._verbose
-        fill = '  ' * self._level
+        # Slow path.
         if key not in self._token_cache:
             res = method(self, type)
             if res:
@@ -347,23 +345,19 @@ class Parser:
         return None
 
     @memoize_expect
-    def expect(self, type: str) -> bool:
+    def expect(self, type: str) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.string == type:
-            self._tokenizer.getnext()
-            return True
+            return self._tokenizer.getnext()
         if type in exact_token_types:
             if tok.type == exact_token_types[type]:
-                self._tokenizer.getnext()
-                return True
+                return self._tokenizer.getnext()
         if type in token.__dict__:
             if tok.type == token.__dict__[type]:
-                self._tokenizer.getnext()
-                return True
+                return self._tokenizer.getnext()
         if tok.type == token.OP and tok.string == type:
-            self._tokenizer.getnext()
-            return True
-        return False
+            return self._tokenizer.getnext()
+        return None
 
 
 class GrammarParser(Parser):
