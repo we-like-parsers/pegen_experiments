@@ -1,6 +1,8 @@
 TODO items
 ----------
 
+- [ ] Support for x?, x* and x+ in actions
+- [x] Support naming items in alternatives
 - [ ] Make grammar parser bootstrappable
 - [x] Stop supporting PEG native grammar (<-, /)
 - [ ] Implement !x, &x

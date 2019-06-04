@@ -1,0 +1,26 @@
+start: rs=rules ENDMARKER                     { rs }
+
+rules: rs=rule+                               { rs }
+
+rule: ( n=NAME ':' alts=alternatives NEWLINE  { Tree('Rule', n, alts) }
+      | n=NAME ':' NEWLINE INDENT alts=('|' alternatives NEWLINE)+ DEDENT
+                                              { Tree('Rule', n, flatten(alts)) }
+      )
+
+alternatives: l=alt rs=('|' alt)*             { Tree('Alts', l, *rs) }
+
+alt: it=(named_item | item)+                  { Tree('Alt', it) }
+
+named_item: NAME '=' item                     { Tree('Named', name, item) }
+
+item: ('[' alternatives ']'                   { Tree('Opt', alternatives) }
+      | atom ' '* '?'                         { Tree('Opt', atom) }
+      | atom '*'                              { Tree('ZeroOrMore', atom) }
+      | atom '1'                              { Tree('OneOrMore', atom) }
+      | atom                                  { atom }
+      )
+
+atom: ( '(' alternatives ')'                  { alternatives }
+      | NAME                                  { name }
+      | STRING                                { string }
+      )

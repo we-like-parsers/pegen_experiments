@@ -422,10 +422,10 @@ class GrammarParser(Parser):
     @memoize
     def alternative(self) -> Optional[Tree]:
         """
-        alternative: (item alternative | item) [CURLY_STUFF]
+        alternative: (named_item alternative | named_item) [CURLY_STUFF]
         """
         mark = self.mark()
-        if (item := self.item()) and (alt := self.alternative()):
+        if (item := self.named_item()) and (alt := self.alternative()):
             items = [item]
             if alt.type == 'Alt':
                 items.extend(alt.args)
@@ -435,11 +435,22 @@ class GrammarParser(Parser):
                 items.append(c)
             return Tree('Alt', *items)
         self.reset(mark)
-        if not (item := self.item()):
+        if not (item := self.named_item()):
             return None
         if c := self.curly_stuff():
             return Tree('Alt', item, c)
         return item
+
+    @memoize
+    def named_item(self) -> Optional[Tree]:
+        """
+        named_item: NAME '=' item | item
+        """
+        mark = self.mark()
+        if (name := self.name()) and self.expect('=') and (item := self.item()):
+            return Tree('Named', name, item)
+        self.reset(mark)
+        return self.item()
 
     @memoize
     def item(self) -> Optional[Tree]:
@@ -659,7 +670,7 @@ class ParserGenerator:
                     first = False
                 else:
                     self.print("and")
-                child, text = self.gen_item(item, children)
+                child, text = self.gen_named_item(item, children)
                 if child:
                     self.print(f"({child} := {text})")
                     children.append(child)
@@ -682,18 +693,26 @@ class ParserGenerator:
                 self.print(f"return {child}")
         self.print("self.reset(mark)")
 
-    def gen_item(self, item: Tree, children: List[str]) -> Tuple[str, str]:
+    def gen_named_item(self, item: Tree, children: List[str]) -> Tuple[str, str]:
+        if item.type == 'Named':
+            item_name = item.args[0].value
+            item_proper = item.args[1]
+            return self.gen_item(item_name, item_proper, children)
+        else:
+            return self.gen_item(None, item, children)
+
+    def gen_item(self, item_name: str, item: Tree, children: List[str]) -> Tuple[str, str]:
         if item.type == 'STRING':
-            return None, f"self.expect({item.value})"
+            return item_name, f"self.expect({item.value})"
         if item.type == 'NAME':
             name = item.value
             if name in exact_token_types or name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
-                return None, f"self.expect({item.value!r})"
+                return item_name, f"self.expect({item.value!r})"
             if name in ('NAME', 'STRING', 'NUMBER', 'CURLY_STUFF'):
                 name = name.lower()
-                return dedupe(name, children), f"self.{name}()"
+                return item_name or dedupe(name, children), f"self.{name}()"
             if name in self.todo or name in self.done:
-                return dedupe(name, children), f"self.{name}()"
+                return item_name or dedupe(name, children), f"self.{name}()"
             # TODO: Report as an error in the grammar, with line
             # number and column of the reference.
             raise RuntimeError(f"Don't know what {name!r} is")
@@ -707,14 +726,12 @@ class ParserGenerator:
             name = prefix + subname
             if name not in self.todo and name not in self.done:
                 self.todo[name] = item
-            return dedupe(name, children), f"self.{name}()"
+            return item_name or dedupe(name, children), f"self.{name}()"
         if item.type in ('Alts', 'Alt'):
             name = self.name_tree(item)
-            return dedupe(name, children), f"self.{name}()"
+            return item_name or dedupe(name, children), f"self.{name}()"
 
         raise RuntimeError(f"Unrecognized item {item!r}")
-        name = self.name_tree(item)
-        return name, f"self.{name}()"
 
 
 def dedupe(name: str, names: Container[str]) -> str:
