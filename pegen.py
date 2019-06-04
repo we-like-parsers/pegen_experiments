@@ -9,6 +9,7 @@ from __future__ import annotations  # Requires Python 3.7 or later
 
 import argparse
 import contextlib
+import os
 import sys
 import time
 import token
@@ -877,9 +878,9 @@ def main() -> None:
             print(tree)
 
     genr = ParserGenerator(tree, args.filename)
-    if args.output:
-        genr.set_output(args.output)
+    genr.set_output(args.output)
     genr.generate_parser()
+    os.chmod(args.output, 0o755)  # TODO: Honor umask.
 
     t1 = time.time()
 
