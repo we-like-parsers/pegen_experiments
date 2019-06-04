@@ -14,6 +14,7 @@ import sys
 import time
 import token
 import tokenize
+import traceback
 from typing import *
 
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
@@ -358,6 +359,10 @@ class Parser:
         if tok.type == token.OP and tok.string == type:
             return self._tokenizer.getnext()
         return None
+
+    def make_syntax_error(self, filename="<unknown>") -> NoReturn:
+        tok = self._tokenizer.diagnose()
+        return SyntaxError("pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line))
 
 
 class GrammarParser(Parser):
@@ -809,7 +814,9 @@ def simple_parser_main(parser_class):
 
     t0 = time.time()
 
-    if args.filename == '' or args.filename == '-':
+    filename = args.filename
+    if filename == '' or filename == '-':
+        filename = "<stdin>"
         file = sys.stdin
     else:
         file = open(args.filename)
@@ -828,7 +835,8 @@ def simple_parser_main(parser_class):
     t1 = time.time()
 
     if not tree:
-        print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
+        err = parser.make_syntax_error(filename)
+        traceback.print_exception(err.__class__, err, None)
         sys.exit(1)
 
     if not args.quiet:
@@ -875,7 +883,8 @@ def main() -> None:
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
         tree = parser.start()
         if not tree:
-            print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
+            err = parser.make_syntax_error(args.filename)
+            traceback.print_exception(err.__class__, err, None)
             sys.exit(1)
         endpos = file.tell()
 
