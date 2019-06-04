@@ -1847,49 +1847,6 @@ class GeneratedParser(Parser):
         return Tree('Empty')
 
 
-def main():
-    import argparse, time, token
-    from pegen import print_memstats
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-v', '--verbose', action='count', default=0,
-                           help="Print timing stats; repeat for more debug output")
-    argparser.add_argument('-q', '--quiet', action='store_true',
-                           help="Don't print the parsed program")
-    argparser.add_argument('filename')
-    args = argparser.parse_args()
-    verbose = args.verbose
-    verbose_tokenizer = verbose >= 2
-    verbose_parser = verbose == 1 or verbose >= 3
-    t0 = time.time()
-    with open(args.filename) as file:
-        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
-        parser = GeneratedParser(tokenizer, verbose=verbose_parser)
-        tree = parser.start()
-        endpos = file.tell()
-    t1 = time.time()
-    if not tree:
-        print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
-        sys.exit(1)
-    if not args.quiet:
-        print(tree)
-    if verbose:
-        dt = t1 - t0
-        diag = tokenizer.diagnose()
-        nlines = diag.end[0]
-        if diag.type == token.ENDMARKER:
-            nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="")
-        if dt:
-            print("; %.3f lines/sec" % (nlines / dt))
-        else:
-            print()
-        print("Caches sizes:")
-        print(f"  token array : {len(tokenizer._tokens):10}")
-        print(f"  symbol cache: {len(parser._symbol_cache):10}")
-        print(f"  token cache : {len(parser._token_cache):10}")
-        print_memstats()
-
-
 if __name__ == '__main__':
-    main()
+    from pegen import simple_parser_main
+    simple_parser_main(GeneratedParser)
