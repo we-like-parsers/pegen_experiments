@@ -42,13 +42,13 @@ def make_parser(source):
 
 def test_expr_grammar():
     grammar = """
-    start <- sums NEWLINE ENDMARKER
-    sums <- sum (NEWLINE sum)*
-    sum <- term '+' sum / term
-    term <- factor '*' term / factor
-    factor <- pair / group / NAME / STRING / NUMBER
-    pair <- '(' sum ',' sum ')'
-    group <- '(' sum ')'
+    start: sums NEWLINE ENDMARKER
+    sums: sum (NEWLINE sum)*
+    sum: term '+' sum | term
+    term: factor '*' term | factor
+    factor: pair | group | NAME | STRING | NUMBER
+    pair: '(' sum ',' sum ')'
+    group: '(' sum ')'
     """
     parser_class = make_parser(grammar)
     tree = parse_string("42\n", parser_class)
@@ -63,9 +63,9 @@ def test_expr_grammar():
 
 def test_optional_operator():
     grammar = """
-    start <- sum NEWLINE
-    sum <- term ('+' term)?
-    term <- NUMBER
+    start: sum NEWLINE
+    sum: term ('+' term)?
+    term: NUMBER
     """
     parser_class = make_parser(grammar)
     tree = parse_string("1+2\n", parser_class)
@@ -85,9 +85,9 @@ def test_optional_operator():
 
 def test_optional_literal():
     grammar = """
-    start <- sum NEWLINE
-    sum <- term '+'?
-    term <- NUMBER
+    start: sum NEWLINE
+    sum: term '+' ?
+    term: NUMBER
     """
     parser_class = make_parser(grammar)
     tree = parse_string("1+\n", parser_class)

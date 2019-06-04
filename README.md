@@ -14,7 +14,6 @@ various ways:
 - The notation is different from the standard PEG formalism:
   - Use `:` instead of `<-`
   - Use `|` instead of `/`
-  - Use `[X]` instead of `X?`
 - No support yet for `&X` and `!X`
 
 Other TO DO items:

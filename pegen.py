@@ -391,10 +391,10 @@ class GrammarParser(Parser):
     @memoize
     def rule(self) -> Optional[Tree]:
         """
-        rule: NAME (':' | '<-') alternatives
+        rule: NAME ':' alternatives
         """
         if ((name := self.name()) and
-            (self.expect(':') or self.expect('<-') or (self.expect('<') and self.expect('-'))) and
+            self.expect(':') and
             (alts := self.alternatives())):
             return Tree('Rule', name, alts)
         return None
@@ -404,11 +404,11 @@ class GrammarParser(Parser):
         """
         This is the actual (naive) code; it is not memoized.
 
-        alternatives: alternatives ('|' | '/') alternative | alternative
+        alternatives: alternatives '|' alternative | alternative
         """
         mark = self.mark()
         if ((left := self.alternatives()) and
-            (self.expect('|')  or self.expect('/')) and
+            self.expect('|') and
             (right := self.alternative())):
             if left.type == 'Alts':
                 alts = list(left.args)
@@ -444,11 +444,14 @@ class GrammarParser(Parser):
     @memoize
     def item(self) -> Optional[Tree]:
         """
-        item: optional | atom '*' | atom '+' | atom '?' | atom
+        item: optional | atom '*' | atom '+' | atom ' '* '?' | atom
 
         Note that optional cannot be followed by * or + or ?.
 
-        Also note that '?' is an error to the Python tokenizer.
+        Also note that '?' is an error to the Python tokenizer; every
+        space before it is also returned as an error in this case, so
+        we must ignore that.  (Somehow it seems important to support
+        this syntax though.)
         """
         mark = self.mark()
         if (opt := self.optional()):
@@ -459,8 +462,11 @@ class GrammarParser(Parser):
         if (atom := self.atom()) and self.expect('+'):
             return Tree('OneOrMore', atom)
         self.reset(mark)
-        if (atom := self.atom()) and self.expect('?'):
-            return Tree('Opt', atom)
+        if atom := self.atom():
+            while self.expect(' '):
+                pass
+            if self.expect('?'):
+                return Tree('Opt', atom)
         self.reset(mark)
         return self.atom()
 
