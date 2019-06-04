@@ -804,14 +804,22 @@ def simple_parser_main(parser_class):
                            help="Print timing stats; repeat for more debug output")
     argparser.add_argument('-q', '--quiet', action='store_true',
                            help="Don't print the parsed program")
-    argparser.add_argument('-G', '--grammar-parser', action='store_true')
-    argparser.add_argument('filename')
+    argparser.add_argument('-G', '--grammar-parser', action='store_true',
+                           help="Recognize { ... } stuff; use for meta-grammar")
+    argparser.add_argument('filename', help="Input file ('-' to use stdin)")
+
     args = argparser.parse_args()
     verbose = args.verbose
     verbose_tokenizer = verbose >= 2
     verbose_parser = verbose == 1 or verbose >= 3
+
     t0 = time.time()
-    with open(args.filename) as file:
+
+    if args.filename == '' or args.filename == '-':
+        file = sys.stdin
+    else:
+        file = open(args.filename)
+    try:
         tokengen = tokenize.generate_tokens(file.readline)
         if args.grammar_parser:
             tokengen = grammar_tokenizer(tokengen)
@@ -819,12 +827,19 @@ def simple_parser_main(parser_class):
         parser = parser_class(tokenizer, verbose=verbose_parser)
         tree = parser.start()
         endpos = file.tell()
+    finally:
+        if file is not sys.stdin:
+            file.close()
+
     t1 = time.time()
+
     if not tree:
         print("Syntax error at:", tokenizer.diagnose(), file=sys.stderr)
         sys.exit(1)
+
     if not args.quiet:
         print(tree)
+
     if verbose:
         dt = t1 - t0
         diag = tokenizer.diagnose()
