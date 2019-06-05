@@ -17,50 +17,11 @@ import tokenize
 import traceback
 from typing import *
 
+T = TypeVar('T')
+
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
 Mark = int  # NewType('Mark', int)
-
-
-class Tree:
-    """Parse tree node.
-
-    There are two kinds of nodes:
-    - Leaf nodes have a value field that's not None.
-    - Interior nodes have an args field that's not empty.
-
-    This should be considered an immutable data type,
-    as it's used for the return type of memoized functions.
-    """
-
-    __slots__ = ('type', 'args', 'value')
-
-    def __init__(self, type: str, *args: Optional['Tree'], value: Optional[str] = None):
-        if value is not None:
-            assert not args, args
-        self.type = type
-        self.args = args
-        self.value = value
-
-    def __repr__(self) -> str:
-        if self.value is not None:
-            return "%s(value=%r)" % (self.type, self.value)
-        return "%s(%s)" % (self.type, ", ".join(repr(arg) for arg in self.args))
-
-    def __str__(self) -> str:
-        if self.value is not None:
-            return str(self.value)
-        return self.__repr__()
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Tree):
-            return NotImplemented
-        return (self.type == other.type and
-                self.args == other.args and
-                self.value == other.value)
-
-    def __hash__(self) -> int:
-        return hash((self.type, self.args, self.value))
 
 
 def shorttok(tok: tokenizer.TokenInfo) -> str:
@@ -138,11 +99,11 @@ class Tokenizer:
             print(f"{fill} {shorttok(tok)}")
 
 
-def memoize(method: Callable[[Parser], Optional[Tree]]):
+def memoize(method: Callable[[Parser], T]):
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> Optional[Tree]:
+    def symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -182,11 +143,11 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
+def memoize_left_rec(method: Callable[[Parser], T]):
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> Optional[Tree]:
+    def symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -293,7 +254,7 @@ def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> 
     return expect_wrapper
 
 
-class Parser:
+class Parser(Generic[T]):
     """Parsing base class."""
 
     def __init__(self, tokenizer: Tokenizer, *, verbose=False):
@@ -301,8 +262,8 @@ class Parser:
         self._verbose = verbose
         self._level = 0
         self._symbol_cache: Dict[Tuple[Mark,
-                                       Callable[[Parser], Optional[Tree]]],
-                                 Tuple[Optional[Tree], Mark]] = {}
+                                       Callable[[Parser], Optional[T]]],
+                                 Tuple[Optional[T], Mark]] = {}
         self._token_cache: Dict[Tuple[Mark, str], bool] = {}
         # Pass through common tokeniser methods.
         # TODO: Rename to _mark and _reset.
@@ -588,7 +549,7 @@ import ast
 import sys
 import tokenize
 
-from pegen import memoize, memoize_left_rec, Parser, Tokenizer, Tree
+from pegen import memoize, memoize_left_rec, Parser
 
 """
 
@@ -601,12 +562,9 @@ if __name__ == '__main__':
 
 class ParserGenerator:
 
-    def __init__(self, grammar: Tree, filename: str = ""):
-        assert grammar.type == 'Grammar', (grammar.type, grammar.args, grammar.value)
-        self.grammar = grammar
-        self.filename = filename
-        self.input: Optional[str] = None
-        self.file: Optional[TextIO] = None
+    def __init__(self, rules: List[Rule], file: IO[Text]):
+        self.rules = rules
+        self.file = file
         self.level = 0
 
     @contextlib.contextmanager
@@ -628,17 +586,8 @@ class ParserGenerator:
         for line in lines.splitlines():
             self.print(line)
 
-    def set_output(self, filename: str) -> None:
-        self.file = open(filename, 'w')
-
-    def close(self) -> None:
-        file = self.file
-        if file:
-            self.file = None
-            file.close()
-
-    def generate_parser(self) -> None:
-        self.print(PARSER_PREFIX.format(filename=self.filename))
+    def generate_parser(self, filename: str) -> None:
+        self.print(PARSER_PREFIX.format(filename=filename))
         self.print("class GeneratedParser(Parser):")
         self.todo: Dict[str, Tree] = {}  # Rules to generate
         self.done: Dict[str, Tree] = {}  # Rules generated
@@ -960,10 +909,9 @@ def main() -> None:
         for rule in rules:
             print(rule)
 
-    ## genr = ParserGenerator(tree, args.filename)
-    ## genr.set_output(args.output)
-    ## genr.generate_parser()
-    ## os.chmod(args.output, 0o755)  # TODO: Honor umask.
+    with open(args.output, 'w') as file:
+        genr = ParserGenerator(rules, file)
+        genr.generate_parser(args.filename)
 
     t1 = time.time()
 
