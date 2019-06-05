@@ -314,35 +314,31 @@ class Parser:
         return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
     @memoize
-    def name(self) -> Optional[Tree]:
+    def name(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.NAME:
-            self._tokenizer.getnext()
-            return Tree('NAME', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def number(self) -> Optional[Tree]:
+    def number(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.NUMBER:
-            self._tokenizer.getnext()
-            return Tree('NUMBER', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def string(self) -> Optional[Tree]:
+    def string(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.STRING:
-            self._tokenizer.getnext()
-            return Tree('STRING', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def curly_stuff(self) -> Optional[Tree]:
+    def curly_stuff(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == CURLY_STUFF:
-            self._tokenizer.getnext()
-            return Tree('CURLY_STUFF', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize_expect
@@ -456,7 +452,7 @@ class Repeat1(Node):
         return f"Repeat1({self.node!r})"
 
 
-class NewGrammarParser(Parser):
+class GrammarParser(Parser):
     """Hand-written parser for Grammar files."""
 
     @memoize
@@ -484,7 +480,7 @@ class NewGrammarParser(Parser):
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
-            return Rule(name.value, alts)
+            return Rule(name.string, alts)
         self.reset(mark)
         return None
 
@@ -541,7 +537,7 @@ class NewGrammarParser(Parser):
         """
         mark = self.mark()
         if (name := self.name()) and self.expect('=') and (item := self.item()):
-            return NamedItem(name.value, item)
+            return NamedItem(name.string, item)
         self.reset(mark)
         return self.item()
 
@@ -576,10 +572,10 @@ class NewGrammarParser(Parser):
             return node
         self.reset(mark)
         if name := self.name():
-            return name.value
+            return name.string
         self.reset(mark)
         if string := self.string():
-            return string.value
+            return string.string
         self.reset(mark)
         return None
 
@@ -949,7 +945,7 @@ def main() -> None:
     with open(args.filename) as file:
         tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)),
                               verbose=verbose_tokenizer)
-        parser = NewGrammarParser(tokenizer, verbose=verbose_parser)
+        parser = GrammarParser(tokenizer, verbose=verbose_parser)
         rules = parser.start()
         if not rules:
             err = parser.make_syntax_error(args.filename)
