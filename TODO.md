@@ -9,6 +9,7 @@ TODO items
 - [ ] Implement !x, &x
 - [x] Implement naming of items
 - [x] Return the token or None from expect() rather than True/False
+- [ ] Change memoize so as to minumize mark()/reset() calls (assume all functions are atomic)
 - [ ] Move special cases in expect() (e.g. NEWLINE) to generation-time
 - [ ] Stop using CURLY_STUFF hack and instead design a mini-grammar for what goes between { and }
 - [x] Make PARSER_SUFFIX smaller, move most of the logic into a helper function
