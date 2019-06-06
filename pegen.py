@@ -452,7 +452,7 @@ class Alt:
         with gen.indent():
             action = self.action
             if not action:
-                action = ", ".join(children) + ","
+                action = f"[{', '.join(children)}]"
             gen.print(f"return {action}")
         gen.print("self.reset(mark)")
 

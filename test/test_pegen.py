@@ -49,12 +49,12 @@ def test_parse_grammar():
     term: NUMBER
     """
     rules = parse_string(grammar, pegen.GrammarParser)
+    # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules[0]) == "start: sum NEWLINE"
     assert str(rules[1]) == "sum: t1=term '+' t2=term { action } | term"
     assert repr(rules[2]) == "Rule('term', Alts([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
 
 
-@pytest.mark.skip
 def test_expr_grammar():
     grammar = """
     start: sum NEWLINE
@@ -63,10 +63,8 @@ def test_expr_grammar():
     """
     parser_class = make_parser(grammar)
     node = parse_string("42\n", parser_class)
-    assert node == ('start',
-                    ('sum',
-                     ('term',
-                      tokenize.TokenInfo(type=token.NUMBER, string='42', start=(1, 0), end=(1, 2), line='42\n'))))
+    assert node == [[[tokenize.TokenInfo(token.NUMBER, string='42', start=(1, 0), end=(1, 2), line='42\n')]],
+                    tokenize.TokenInfo(token.NEWLINE, string='\n', start=(1, 2), end=(1, 3), line='42\n')]
 
 
 @pytest.mark.skip
@@ -78,15 +76,9 @@ def test_optional_operator():
     """
     parser_class = make_parser(grammar)
     node = parse_string("1+2\n", parser_class)
-    assert node == ('start',
-                    ('sum',
-                     ('term',
-                      tokenize.TokenInfo(token.NUMBER, string='1', start=(1, 0), end=(1, 1), line='1+2\n')),
-                     ('term',
-                      tokenize.TokenInfo(token.NUMBER, string='2', start=(1, 2), end=(1, 3), line='1+2\n'))))
+    print(node)
     node = parse_string("1\n", parser_class)
     print(repr(node))
-    ##assert node == ()
 
 
 @pytest.mark.skip
