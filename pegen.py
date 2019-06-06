@@ -416,7 +416,8 @@ class Alts:
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
             return self.alts[0].items[0].make_call(gen)
-        return "alts", "XXX"
+        name = gen.name_node(self)
+        return name, f"self.{name}()"
 
 
 class Alt:
@@ -540,10 +541,7 @@ class Group:
         return f"Group({self.alts!r})"
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        if len(self.alts.alts) == 1 and len(self.alts.alts[0].items) == 1:
-            return self.alts.alts[0].items[0].make_call(gen)
-        name = gen.name_node(self.alts)
-        return name, f"self.{name}()"
+        return self.alts.make_call(gen)
 
 
 Plain = Union[Leaf, Group]

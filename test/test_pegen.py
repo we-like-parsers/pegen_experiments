@@ -102,12 +102,10 @@ def test_optional_literal():
                      TokenInfo(OP, string='+', start=(1, 1), end=(1, 2), line='1+\n')],
                     TokenInfo(NEWLINE, string='\n', start=(1, 2), end=(1, 3), line='1+\n')]
     node = parse_string("1\n", parser_class)
-    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')],
-                     None],
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')], None],
                     TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
-@pytest.mark.skip
 def test_alt_optional_operator():
     grammar = """
     start: sum NEWLINE
@@ -115,19 +113,14 @@ def test_alt_optional_operator():
     term: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 + 2\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('sum',
-                             Tree('term',
-                                  Tree('NUMBER', value='1')),
-                             Tree('term',
-                                  Tree('NUMBER', value='2'))))
-    tree = parse_string("1\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('sum',
-                             Tree('term',
-                                  Tree('NUMBER', value='1')),
-                             Tree('Empty')))
+    node = parse_string("1 + 2\n", parser_class)
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2\n')],
+                     [TokenInfo(OP, string='+', start=(1, 2), end=(1, 3), line='1 + 2\n'),
+                      [TokenInfo(NUMBER, string='2', start=(1, 4), end=(1, 5), line='1 + 2\n')]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 5), end=(1, 6), line='1 + 2\n')]
+    node = parse_string("1\n", parser_class)
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')], None],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
 @pytest.mark.skip
