@@ -44,8 +44,8 @@ def parse_string(source, parser_class, *, dedent=True, verbose=False):
 
 def make_parser(source):
     # Combine parse_string() and generate_parser().
-    tree = parse_string(source, pegen.GrammarParser)
-    return generate_parser(tree)
+    node = parse_string(source, pegen.GrammarParser)
+    return generate_parser(node)
 
 
 def test_parse_grammar():
@@ -90,7 +90,6 @@ def test_optional_operator():
                     TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
-@pytest.mark.skip
 def test_optional_literal():
     grammar = """
     start: sum NEWLINE
@@ -98,18 +97,14 @@ def test_optional_literal():
     term: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1+\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('sum',
-                             Tree('term',
-                                  Tree('NUMBER', value='1')),
-                             Tree('_opt__tmp_1')))  # XXX Dodgy.
-    tree = parse_string("1\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('sum',
-                             Tree('term',
-                                  Tree('NUMBER', value='1')),
-                             Tree('Empty')))
+    node = parse_string("1+\n", parser_class)
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1+\n')],
+                     TokenInfo(OP, string='+', start=(1, 1), end=(1, 2), line='1+\n')],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 2), end=(1, 3), line='1+\n')]
+    node = parse_string("1\n", parser_class)
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')],
+                     None],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
 @pytest.mark.skip

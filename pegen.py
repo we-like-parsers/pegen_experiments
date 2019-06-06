@@ -633,7 +633,7 @@ class GrammarParser(Parser):
     @memoize
     def item(self) -> Optional[Item]:
         """
-        item: '[' alternatives ']' | atom ('?' | '*' | '+')?
+        item: '[' alternatives ']' | atom (' '* '?' | '*' | '+')?
         """
         mark = self.mark()
         if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
@@ -641,6 +641,8 @@ class GrammarParser(Parser):
         self.reset(mark)
         if atom := self.atom():
             mark = self.mark()
+            while self.expect(' '):
+                pass
             if self.expect('?'):
                 return Opt(atom)
             if self.expect('*'):
