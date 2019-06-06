@@ -349,8 +349,7 @@ class Rule:
         gen.print(f"def {rulename}(self):")
         with gen.indent():
             gen.print("mark = self.mark()")
-            for alt in self.alts:
-                alt.gen_alt(gen)
+            self.alts.gen_body(gen)
             gen.print("return None")
 
             ## if isinstance(rhs, Alts):
@@ -381,10 +380,19 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
+    def make_call(self) -> str:
+        name = self.value
+        if name in ('NUMBER', 'STRING'):
+            name = name.lower()
+        return f"self.{name}()"
+
 
 class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
+
+    def make_call(self) -> str:
+        return f"self.expect({self.value!r})"
 
 
 class Alts:
@@ -396,6 +404,10 @@ class Alts:
 
     def __repr__(self):
         return f"Alts({self.alts!r})"
+
+    def gen_body(self, gen: ParserGenerator):
+            for alt in self.alts:
+                alt.gen_block(gen)
 
 
 class Alt:
@@ -416,6 +428,23 @@ class Alt:
         else:
             return f"Alt({self.items!r})"
 
+    def gen_block(self, gen: ParserGenerator):
+        gen.print("if (")
+        with gen.indent():
+            first = True
+            for item in self.items:
+                if first:
+                    first = False
+                else:
+                    gen.print("and")
+                item.gen_item(gen)
+        gen.print("):")
+        with gen.indent():
+            action = self.action
+            if not action:
+                action = "'WHOOPS'"
+            gen.print(f"return {action}")
+
 
 class NamedItem:
     def __init__(self, name: str, item: Item):
@@ -431,16 +460,30 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
+    def gen_item(self, gen: ParserGenerator):
+        if self.name:
+            name = self.name
+        elif isinstance(self.item, NameLeaf):
+            name = "name"
+        elif isinstance(self.item, StringLeaf):
+            name = "string"
+        else:
+            name = "tmp"
+        gen.print(f"({name} := {self.item.make_call()})")
+
 
 class Opt:
     def __init__(self, node: Plain):
         self.node = node
 
     def __str__(self):
-        return f"[{self.node}]"
+        return f"{self.node}?"
 
     def __repr__(self):
         return f"Opt({self.node!r})"
+
+    def make_call(self) -> str:
+        return f"{self.node.make_call()},"
 
 
 class Repeat:
@@ -457,6 +500,9 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
+    def make_call(self) -> str:
+        return f"{self.node.make_call()},"
+
 
 class Repeat1(Repeat):
     def __str__(self):
@@ -465,8 +511,25 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
+    def make_call(self) -> str:
+        return f"{self.node.make_call()},"
 
-Plain = Union[Leaf, Alts]
+
+class Group:
+    def __init__(self, alts: Alts):
+        self.alts = alts
+
+    def __str__(self):
+        return f"({self.alts})"
+
+    def __repr__(self):
+        return f"Group({self.alts!r})"
+
+    def make_call(self) -> str:
+        return f"XXX_Group_XXX"
+
+
+Plain = Union[Leaf, Group]
 Item = Union[Plain, Opt, Repeat]
 
 
@@ -577,7 +640,7 @@ class GrammarParser(Parser):
         """
         mark = self.mark()
         if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
-            return alts
+            return Group(alts)
         self.reset(mark)
         if name := self.name():
             return NameLeaf(name.string)
@@ -945,9 +1008,9 @@ def main() -> None:
         for rule in rules:
             print(rule)
 
-    ## with open(args.output, 'w') as file:
-    ##     genr = ParserGenerator(rules, file)
-    ##     genr.generate_parser(args.filename)
+    with open(args.output, 'w') as file:
+        genr = ParserGenerator(rules, file)
+        genr.generate_parser(args.filename)
 
     t1 = time.time()
 
