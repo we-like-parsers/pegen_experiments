@@ -348,6 +348,7 @@ class Rule:
             gen.print("@memoize")
         gen.print(f"def {rulename}(self):")
         with gen.indent():
+            gen.print(f"# {rulename}: {self.alts}")
             gen.print("mark = self.mark()")
             self.alts.gen_body(gen)
             gen.print("return None")
@@ -380,19 +381,22 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
-    def make_call(self) -> str:
+    def make_call(self) -> Tuple[str, str]:
         name = self.value
-        if name in ('NUMBER', 'STRING'):
+        if name in ('NUMBER', 'STRING', 'CURLY_STUFF'):
             name = name.lower()
-        return f"self.{name}()"
+            return name, f"self.{name}()"
+        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+            return name.lower(), f"self.expect({name!r})"
+        return name, f"self.{name}()"
 
 
 class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
-    def make_call(self) -> str:
-        return f"self.expect({self.value!r})"
+    def make_call(self) -> Tuple[str, str]:
+        return 'string', f"self.expect({self.value})"
 
 
 class Alts:
@@ -408,6 +412,11 @@ class Alts:
     def gen_body(self, gen: ParserGenerator):
             for alt in self.alts:
                 alt.gen_block(gen)
+
+    def make_call(self) -> Tuple[str, str]:
+        if len(self.alts) == 1 and len(self.alts[0].items) == 1:
+            return self.alts[0].items[0].make_call()
+        return "alts", "XXX"
 
 
 class Alt:
@@ -429,6 +438,7 @@ class Alt:
             return f"Alt({self.items!r})"
 
     def gen_block(self, gen: ParserGenerator):
+        children = []
         gen.print("if (")
         with gen.indent():
             first = True
@@ -437,13 +447,14 @@ class Alt:
                     first = False
                 else:
                     gen.print("and")
-                item.gen_item(gen)
+                item.gen_item(gen, children)
         gen.print("):")
         with gen.indent():
             action = self.action
             if not action:
-                action = "'WHOOPS'"
+                action = ", ".join(children) + ","
             gen.print(f"return {action}")
+        gen.print("self.reset(mark)")
 
 
 class NamedItem:
@@ -460,16 +471,16 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
-    def gen_item(self, gen: ParserGenerator):
+    def gen_item(self, gen: ParserGenerator, children: List[str]):
+        name, call = self.item.make_call()
+        name = dedupe(name, children)
+        gen.print(f"({name} := {call})")
+
+    def make_call(self):
+        name, call = self.item.make_call()
         if self.name:
             name = self.name
-        elif isinstance(self.item, NameLeaf):
-            name = "name"
-        elif isinstance(self.item, StringLeaf):
-            name = "string"
-        else:
-            name = "tmp"
-        gen.print(f"({name} := {self.item.make_call()})")
+        return name, call
 
 
 class Opt:
@@ -482,8 +493,9 @@ class Opt:
     def __repr__(self):
         return f"Opt({self.node!r})"
 
-    def make_call(self) -> str:
-        return f"{self.node.make_call()},"
+    def make_call(self) -> Tuple[str, str]:
+        name, call = self.node.make_call()
+        return "opt", f"{call},"  # Note trailing comma!
 
 
 class Repeat:
@@ -500,8 +512,9 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
-    def make_call(self) -> str:
-        return f"{self.node.make_call()},"
+    def make_call(self) -> Tuple[str, str]:
+        name, call = self.node.make_call()
+        return name, f"{call},"  # Also a trailing comma!
 
 
 class Repeat1(Repeat):
@@ -511,8 +524,9 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
-    def make_call(self) -> str:
-        return f"{self.node.make_call()},"
+    def make_call(self) -> Tuple[str, str]:
+        name, call = self.node.make_call()
+        return name, f"{call}"  # But no trailing comma here!
 
 
 class Group:
@@ -525,8 +539,10 @@ class Group:
     def __repr__(self):
         return f"Group({self.alts!r})"
 
-    def make_call(self) -> str:
-        return f"XXX_Group_XXX"
+    def make_call(self) -> Tuple[str, str]:
+        if len(self.alts.alts) == 1 and len(self.alts.alts[0].items) == 1:
+            return self.alts.alts[0].items[0].make_call()
+        return "group", f"XXX"
 
 
 Plain = Union[Leaf, Group]
@@ -848,12 +864,13 @@ class ParserGenerator:
         raise RuntimeError(f"Unrecognized item {item!r}; item_name={item_name}")
 
 
-def dedupe(name: str, names: Container[str]) -> str:
+def dedupe(name: str, names: List[str]) -> str:
     origname = name
     counter = 0
     while name in names:
         counter += 1
         name = f"{origname}_{counter}"
+    names.append(name)
     return name
 
 
