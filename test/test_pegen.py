@@ -8,6 +8,12 @@ import pytest
 
 import pegen
 
+TokenInfo = tokenize.TokenInfo
+NAME = token.NAME
+NEWLINE = token.NEWLINE
+NUMBER = token.NUMBER
+OP = token.OP
+
 
 def generate_parser(rules):
     # Generate a parser.
@@ -63,11 +69,10 @@ def test_expr_grammar():
     """
     parser_class = make_parser(grammar)
     node = parse_string("42\n", parser_class)
-    assert node == [[[tokenize.TokenInfo(token.NUMBER, string='42', start=(1, 0), end=(1, 2), line='42\n')]],
-                    tokenize.TokenInfo(token.NEWLINE, string='\n', start=(1, 2), end=(1, 3), line='42\n')]
+    assert node == [[[TokenInfo(NUMBER, string='42', start=(1, 0), end=(1, 2), line='42\n')]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 2), end=(1, 3), line='42\n')]
 
 
-@pytest.mark.skip
 def test_optional_operator():
     grammar = """
     start: sum NEWLINE
@@ -76,9 +81,13 @@ def test_optional_operator():
     """
     parser_class = make_parser(grammar)
     node = parse_string("1+2\n", parser_class)
-    print(node)
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1+2\n')],
+                     [TokenInfo(OP, string='+', start=(1, 1), end=(1, 2), line='1+2\n'),
+                      [TokenInfo(NUMBER, string='2', start=(1, 2), end=(1, 3), line='1+2\n')]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 3), end=(1, 4), line='1+2\n')]
     node = parse_string("1\n", parser_class)
-    print(repr(node))
+    assert node == [[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')], None],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
 @pytest.mark.skip

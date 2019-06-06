@@ -381,7 +381,7 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
-    def make_call(self) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = self.value
         if name in ('NUMBER', 'STRING', 'CURLY_STUFF'):
             name = name.lower()
@@ -395,7 +395,7 @@ class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
-    def make_call(self) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return 'string', f"self.expect({self.value})"
 
 
@@ -413,9 +413,9 @@ class Alts:
             for alt in self.alts:
                 alt.gen_block(gen)
 
-    def make_call(self) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
-            return self.alts[0].items[0].make_call()
+            return self.alts[0].items[0].make_call(gen)
         return "alts", "XXX"
 
 
@@ -472,12 +472,12 @@ class NamedItem:
         return f"NamedItem({self.name!r}, {self.item!r})"
 
     def gen_item(self, gen: ParserGenerator, children: List[str]):
-        name, call = self.item.make_call()
+        name, call = self.item.make_call(gen)
         name = dedupe(name, children)
         gen.print(f"({name} := {call})")
 
-    def make_call(self):
-        name, call = self.item.make_call()
+    def make_call(self, gen: ParserGenerator):
+        name, call = self.item.make_call(gen)
         if self.name:
             name = self.name
         return name, call
@@ -493,8 +493,8 @@ class Opt:
     def __repr__(self):
         return f"Opt({self.node!r})"
 
-    def make_call(self) -> Tuple[str, str]:
-        name, call = self.node.make_call()
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name, call = self.node.make_call(gen)
         return "opt", f"{call},"  # Note trailing comma!
 
 
@@ -512,8 +512,8 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
-    def make_call(self) -> Tuple[str, str]:
-        name, call = self.node.make_call()
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name, call = self.node.make_call(gen)
         return name, f"{call},"  # Also a trailing comma!
 
 
@@ -524,8 +524,8 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
-    def make_call(self) -> Tuple[str, str]:
-        name, call = self.node.make_call()
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name, call = self.node.make_call(gen)
         return name, f"{call}"  # But no trailing comma here!
 
 
@@ -539,10 +539,11 @@ class Group:
     def __repr__(self):
         return f"Group({self.alts!r})"
 
-    def make_call(self) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         if len(self.alts.alts) == 1 and len(self.alts.alts[0].items) == 1:
-            return self.alts.alts[0].items[0].make_call()
-        return "group", f"XXX"
+            return self.alts.alts[0].items[0].make_call(gen)
+        name = gen.name_node(self.alts)
+        return name, f"self.{name}()"
 
 
 Plain = Union[Leaf, Group]
@@ -728,10 +729,10 @@ class ParserGenerator:
                     rule.gen_func(self, rulename)
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
-    def name_node(self, node: Node) -> str:
+    def name_node(self, alts: Alts) -> str:
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
-        self.todo[name] = Rule(name, node)
+        self.todo[name] = Rule(name, alts)
         return name
 
     def is_recursive(self, rulename: str, node: Node) -> bool:
