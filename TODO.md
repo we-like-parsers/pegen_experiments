@@ -2,7 +2,7 @@ TODO items
 ----------
 
 - [x] Show syntax errors nicely
-- [ ] Support for x?, x* and x+ in actions
+- [x] Support for x?, x* and x+ in actions
 - [x] Support naming items in alternatives
 - [ ] Make grammar parser bootstrappable
 - [x] Stop supporting PEG native grammar (<-, /)
