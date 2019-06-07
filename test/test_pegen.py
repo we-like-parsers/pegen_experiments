@@ -28,7 +28,8 @@ def generate_parser(rules):
 
 
 def run_parser(file, parser_class, *, verbose=False):
-    # Run the parser on a file (stream).
+    # Run a parser on a file (stream).
+    # Note that this always recognizes {...} as CURLY_STUFF.
     tokenizer = pegen.Tokenizer(pegen.grammar_tokenizer(tokenize.generate_tokens(file.readline)))
     parser = parser_class(tokenizer, verbose=verbose)
     return parser.start()
@@ -44,8 +45,8 @@ def parse_string(source, parser_class, *, dedent=True, verbose=False):
 
 def make_parser(source):
     # Combine parse_string() and generate_parser().
-    node = parse_string(source, pegen.GrammarParser)
-    return generate_parser(node)
+    rules = parse_string(source, pegen.GrammarParser)
+    return generate_parser(rules)
 
 
 def test_parse_grammar():
@@ -187,15 +188,26 @@ def test_repeat_1_complex():
     assert node is None
 
 
-@pytest.mark.skip
 def test_left_recursive():
     grammar = """
     start: expr NEWLINE
-    expr: expr '+' term | term
+    expr: '-' term | expr '+' term | term
     term: NUMBER
     """
-    parser_class = make_parser(grammar)
+    rules = parse_string(grammar, pegen.GrammarParser)
+    def is_rec(rule):
+        return rule.alts.is_recursive(rule.name)
+    assert not is_rec(rules[0])
+    assert is_rec(rules[1])
+    assert not is_rec(rules[2])
+    parser_class = generate_parser(rules)
     node = parse_string("1 + 2 + 3\n", parser_class)
+    assert node == [[[[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')]],
+                      TokenInfo(OP, string='+', start=(1, 2), end=(1, 3), line='1 + 2 + 3\n'),
+                      [TokenInfo(NUMBER, string='2', start=(1, 4), end=(1, 5), line='1 + 2 + 3\n')]],
+                     TokenInfo(OP, string='+', start=(1, 6), end=(1, 7), line='1 + 2 + 3\n'),
+                     [TokenInfo(NUMBER, string='3', start=(1, 8), end=(1, 9), line='1 + 2 + 3\n')]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 9), end=(1, 10), line='1 + 2 + 3\n')]
     print()
     print(str(node).replace("type=2 (NUMBER)", "NUMBER").replace("type=4 (NEWLINE)", "NEWLINE").replace("type=54 (OP)", "OP"))
 
