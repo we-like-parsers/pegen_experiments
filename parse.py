@@ -6,1845 +6,1327 @@ import ast
 import sys
 import tokenize
 
-from pegen import memoize, memoize_left_rec, Parser, Tokenizer, Tree
+from pegen import memoize, memoize_left_rec, Parser
 
 
 class GeneratedParser(Parser):
 
     @memoize
     def start(self):
+        # start: statements ENDMARKER
         mark = self.mark()
-        # Alt(NAME(value='statements'), NAME(value='ENDMARKER'))
         if (
             (statements := self.statements())
             and
-            self.expect('ENDMARKER')
+            (endmarker := self.expect('ENDMARKER'))
         ):
-            return Tree('start', statements)
+            return [statements, endmarker]
         self.reset(mark)
         return None
 
     @memoize
     def statements(self):
+        # statements: (statement)+
         mark = self.mark()
-        children = []
-        # statement
-        while (
-            (statement := self.statement())
+        if (
+            (_loop_1 := self._loop_1())
         ):
-            mark = self.mark()
-            children.append(Tree('statements', statement))
+            return [_loop_1]
         self.reset(mark)
-        if children:
-            return Tree('Repeat', *children)
         return None
 
     @memoize
     def statement(self):
+        # statement: simple_stmt | compound_stmt
         mark = self.mark()
-        # simple_stmt
         if (
             (simple_stmt := self.simple_stmt())
         ):
-            return Tree('statement', simple_stmt)
+            return [simple_stmt]
         self.reset(mark)
-        # compound_stmt
         if (
             (compound_stmt := self.compound_stmt())
         ):
-            return Tree('statement', compound_stmt)
+            return [compound_stmt]
         self.reset(mark)
         return None
 
     @memoize
     def simple_stmt(self):
+        # simple_stmt: small_stmt ((';' small_stmt))* NEWLINE
         mark = self.mark()
-        # Alt(NAME(value='small_stmt'), ZeroOrMore(Alt(STRING(value="';'"), NAME(value='small_stmt'))), NAME(value='NEWLINE'))
         if (
             (small_stmt := self.small_stmt())
             and
-            (_zeroormore__tmp_1 := self._zeroormore__tmp_1())
+            (_loop_2 := self._loop_2(),)
             and
-            self.expect('NEWLINE')
+            (newline := self.expect('NEWLINE'))
         ):
-            return Tree('simple_stmt', small_stmt, _zeroormore__tmp_1)
+            return [small_stmt, _loop_2, newline]
         self.reset(mark)
         return None
 
     @memoize
     def small_stmt(self):
+        # small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
         mark = self.mark()
-        # return_stmt
         if (
             (return_stmt := self.return_stmt())
         ):
-            return Tree('small_stmt', return_stmt)
+            return [return_stmt]
         self.reset(mark)
-        # import_stmt
         if (
             (import_stmt := self.import_stmt())
         ):
-            return Tree('small_stmt', import_stmt)
+            return [import_stmt]
         self.reset(mark)
-        # 'pass'
         if (
-            self.expect('pass')
+            (string := self.expect('pass'))
         ):
-            return Tree('small_stmt', )
+            return [string]
         self.reset(mark)
-        # assignment
         if (
             (assignment := self.assignment())
         ):
-            return Tree('small_stmt', assignment)
+            return [assignment]
         self.reset(mark)
-        # expression
         if (
             (expression := self.expression())
         ):
-            return Tree('small_stmt', expression)
+            return [expression]
         self.reset(mark)
         return None
 
     @memoize
     def compound_stmt(self):
+        # compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
         mark = self.mark()
-        # if_stmt
         if (
             (if_stmt := self.if_stmt())
         ):
-            return Tree('compound_stmt', if_stmt)
+            return [if_stmt]
         self.reset(mark)
-        # while_stmt
         if (
             (while_stmt := self.while_stmt())
         ):
-            return Tree('compound_stmt', while_stmt)
+            return [while_stmt]
         self.reset(mark)
-        # with_stmt
         if (
             (with_stmt := self.with_stmt())
         ):
-            return Tree('compound_stmt', with_stmt)
+            return [with_stmt]
         self.reset(mark)
-        # function_def
         if (
             (function_def := self.function_def())
         ):
-            return Tree('compound_stmt', function_def)
+            return [function_def]
         self.reset(mark)
-        # class_def
         if (
             (class_def := self.class_def())
         ):
-            return Tree('compound_stmt', class_def)
+            return [class_def]
         self.reset(mark)
         return None
 
     @memoize
     def assignment(self):
+        # assignment: target '=' expression
         mark = self.mark()
-        # Alt(NAME(value='target'), STRING(value="'='"), NAME(value='expression'))
         if (
             (target := self.target())
             and
-            self.expect('=')
+            (string := self.expect('='))
             and
             (expression := self.expression())
         ):
-            return Tree('assignment', target, expression)
+            return [target, string, expression]
         self.reset(mark)
         return None
 
     @memoize
     def import_stmt(self):
+        # import_stmt: 'import' names | 'from' NAME 'import' ('*' | names)
         mark = self.mark()
-        # Alt(STRING(value="'import'"), NAME(value='names'))
         if (
-            self.expect('import')
+            (string := self.expect('import'))
             and
             (names := self.names())
         ):
-            return Tree('import_stmt', names)
+            return [string, names]
         self.reset(mark)
-        # Alt(STRING(value="'from'"), NAME(value='NAME'), STRING(value="'import'"), Alts(STRING(value="'*'"), NAME(value='names')))
         if (
-            self.expect('from')
+            (string := self.expect('from'))
             and
             (name := self.name())
             and
-            self.expect('import')
+            (string_1 := self.expect('import'))
             and
-            (_tmp_2 := self._tmp_2())
+            (_tmp_3 := self._tmp_3())
         ):
-            return Tree('import_stmt', name, _tmp_2)
+            return [string, name, string_1, _tmp_3]
         self.reset(mark)
         return None
 
     @memoize
     def names(self):
+        # names: NAME ',' names | NAME
         mark = self.mark()
-        # Alt(NAME(value='NAME'), STRING(value="','"), NAME(value='names'))
         if (
             (name := self.name())
             and
-            self.expect(',')
+            (string := self.expect(','))
             and
             (names := self.names())
         ):
-            return Tree('names', name, names)
+            return [name, string, names]
         self.reset(mark)
-        # NAME
         if (
             (name := self.name())
         ):
-            return Tree('names', name)
+            return [name]
         self.reset(mark)
         return None
 
     @memoize
     def if_stmt(self):
+        # if_stmt: 'if' full_expression ':' block (elif_block)* else_block?
         mark = self.mark()
-        # Alt(STRING(value="'if'"), NAME(value='full_expression'), STRING(value="':'"), NAME(value='block'), ZeroOrMore(NAME(value='elif_block')), Opt(NAME(value='else_block')))
         if (
-            self.expect('if')
+            (string := self.expect('if'))
             and
             (full_expression := self.full_expression())
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
             and
-            (_zeroormore_elif_block := self._zeroormore_elif_block())
+            (_loop_4 := self._loop_4(),)
             and
-            (_opt_else_block := self._opt_else_block())
+            (opt := self.else_block(),)
         ):
-            return Tree('if_stmt', full_expression, block, _zeroormore_elif_block, _opt_else_block)
+            return [string, full_expression, string_1, block, _loop_4, opt]
         self.reset(mark)
         return None
 
     @memoize
     def elif_block(self):
+        # elif_block: 'elif' full_expression ':' block
         mark = self.mark()
-        # Alt(STRING(value="'elif'"), NAME(value='full_expression'), STRING(value="':'"), NAME(value='block'))
         if (
-            self.expect('elif')
+            (string := self.expect('elif'))
             and
             (full_expression := self.full_expression())
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return Tree('elif_block', full_expression, block)
+            return [string, full_expression, string_1, block]
         self.reset(mark)
         return None
 
     @memoize
     def else_block(self):
+        # else_block: 'else' ':' block
         mark = self.mark()
-        # Alt(STRING(value="'else'"), STRING(value="':'"), NAME(value='block'))
         if (
-            self.expect('else')
+            (string := self.expect('else'))
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return Tree('else_block', block)
+            return [string, string_1, block]
         self.reset(mark)
         return None
 
     @memoize
     def while_stmt(self):
+        # while_stmt: 'while' full_expression ':' block else_block?
         mark = self.mark()
-        # Alt(STRING(value="'while'"), NAME(value='full_expression'), STRING(value="':'"), NAME(value='block'), Opt(NAME(value='else_block')))
         if (
-            self.expect('while')
+            (string := self.expect('while'))
             and
             (full_expression := self.full_expression())
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
             and
-            (_opt_else_block := self._opt_else_block())
+            (opt := self.else_block(),)
         ):
-            return Tree('while_stmt', full_expression, block, _opt_else_block)
+            return [string, full_expression, string_1, block, opt]
         self.reset(mark)
         return None
 
     @memoize
     def with_stmt(self):
+        # with_stmt: 'with' expression 'as' target? ':' block
         mark = self.mark()
-        # Alt(STRING(value="'with'"), NAME(value='expression'), Opt(Alt(STRING(value="'as'"), NAME(value='target'))), STRING(value="':'"), NAME(value='block'))
         if (
-            self.expect('with')
+            (string := self.expect('with'))
             and
             (expression := self.expression())
             and
-            (_opt__tmp_3 := self._opt__tmp_3())
+            (opt := self._tmp_5(),)
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return Tree('with_stmt', expression, _opt__tmp_3, block)
+            return [string, expression, opt, string_1, block]
         self.reset(mark)
         return None
 
     @memoize
     def return_stmt(self):
+        # return_stmt: 'return' expressions?
         mark = self.mark()
-        # Alt(STRING(value="'return'"), Opt(NAME(value='expressions')))
         if (
-            self.expect('return')
+            (string := self.expect('return'))
             and
-            (_opt_expressions := self._opt_expressions())
+            (opt := self.expressions(),)
         ):
-            return Tree('return_stmt', _opt_expressions)
+            return [string, opt]
         self.reset(mark)
         return None
 
     @memoize
     def function_def(self):
+        # function_def: decorators? 'def' NAME '(' parameters? ')' ':' block
         mark = self.mark()
-        # Alt(Opt(NAME(value='decorators')), STRING(value="'def'"), NAME(value='NAME'), STRING(value="'('"), Opt(NAME(value='parameters')), STRING(value="')'"), STRING(value="':'"), NAME(value='block'))
         if (
-            (_opt_decorators := self._opt_decorators())
+            (opt := self.decorators(),)
             and
-            self.expect('def')
+            (string := self.expect('def'))
             and
             (name := self.name())
             and
-            self.expect('(')
+            (string_1 := self.expect('('))
             and
-            (_opt_parameters := self._opt_parameters())
+            (opt_1 := self.parameters(),)
             and
-            self.expect(')')
+            (string_2 := self.expect(')'))
             and
-            self.expect(':')
+            (string_3 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return Tree('function_def', _opt_decorators, name, _opt_parameters, block)
+            return [opt, string, name, string_1, opt_1, string_2, string_3, block]
         self.reset(mark)
         return None
 
     @memoize
     def parameters(self):
+        # parameters: kwparams | param ',' parameters??
         mark = self.mark()
-        # kwparams
         if (
             (kwparams := self.kwparams())
         ):
-            return Tree('parameters', kwparams)
+            return [kwparams]
         self.reset(mark)
-        # Alt(NAME(value='param'), Opt(Alt(STRING(value="','"), Opt(NAME(value='parameters')))))
         if (
             (param := self.param())
             and
-            (_opt__tmp_4 := self._opt__tmp_4())
+            (opt := self._tmp_6(),)
         ):
-            return Tree('parameters', param, _opt__tmp_4)
+            return [param, opt]
         self.reset(mark)
         return None
 
     @memoize
     def kwparams(self):
+        # kwparams: kwparam ',' kwparams??
         mark = self.mark()
-        # Alt(NAME(value='kwparam'), Opt(Alt(STRING(value="','"), Opt(NAME(value='kwparams')))))
         if (
             (kwparam := self.kwparam())
             and
-            (_opt__tmp_5 := self._opt__tmp_5())
+            (opt := self._tmp_7(),)
         ):
-            return Tree('kwparams', kwparam, _opt__tmp_5)
+            return [kwparam, opt]
         self.reset(mark)
         return None
 
     @memoize
     def kwparam(self):
+        # kwparam: NAME '=' expression | '**' NAME
         mark = self.mark()
-        # Alt(NAME(value='NAME'), STRING(value="'='"), NAME(value='expression'))
         if (
             (name := self.name())
             and
-            self.expect('=')
+            (string := self.expect('='))
             and
             (expression := self.expression())
         ):
-            return Tree('kwparam', name, expression)
+            return [name, string, expression]
         self.reset(mark)
-        # Alt(STRING(value="'**'"), NAME(value='NAME'))
         if (
-            self.expect('**')
+            (string := self.expect('**'))
             and
             (name := self.name())
         ):
-            return Tree('kwparam', name)
+            return [string, name]
         self.reset(mark)
         return None
 
     @memoize
     def param(self):
+        # param: NAME | '*' NAME
         mark = self.mark()
-        # NAME
         if (
             (name := self.name())
         ):
-            return Tree('param', name)
+            return [name]
         self.reset(mark)
-        # Alt(STRING(value="'*'"), NAME(value='NAME'))
         if (
-            self.expect('*')
+            (string := self.expect('*'))
             and
             (name := self.name())
         ):
-            return Tree('param', name)
+            return [string, name]
         self.reset(mark)
         return None
 
     @memoize
     def decorators(self):
+        # decorators: (('@' factor NEWLINE))+
         mark = self.mark()
-        children = []
-        # Alt(STRING(value="'@'"), NAME(value='factor'), NAME(value='NEWLINE'))
-        while (
-            self.expect('@')
-            and
-            (factor := self.factor())
-            and
-            self.expect('NEWLINE')
+        if (
+            (_loop_8 := self._loop_8())
         ):
-            mark = self.mark()
-            children.append(Tree('decorators', factor))
+            return [_loop_8]
         self.reset(mark)
-        if children:
-            return Tree('Repeat', *children)
         return None
 
     @memoize
     def class_def(self):
+        # class_def: decorators? 'class' NAME '(' full_expressions ')'? ':' block
         mark = self.mark()
-        # Alt(Opt(NAME(value='decorators')), STRING(value="'class'"), NAME(value='NAME'), Opt(Alt(STRING(value="'('"), NAME(value='full_expressions'), STRING(value="')'"))), STRING(value="':'"), NAME(value='block'))
         if (
-            (_opt_decorators := self._opt_decorators())
+            (opt := self.decorators(),)
             and
-            self.expect('class')
+            (string := self.expect('class'))
             and
             (name := self.name())
             and
-            (_opt__tmp_6 := self._opt__tmp_6())
+            (opt_1 := self._tmp_9(),)
             and
-            self.expect(':')
+            (string_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return Tree('class_def', _opt_decorators, name, _opt__tmp_6, block)
+            return [opt, string, name, opt_1, string_1, block]
         self.reset(mark)
         return None
 
     @memoize
     def block(self):
+        # block: simple_stmt | NEWLINE INDENT statements DEDENT
         mark = self.mark()
-        # simple_stmt
         if (
             (simple_stmt := self.simple_stmt())
         ):
-            return Tree('block', simple_stmt)
+            return [simple_stmt]
         self.reset(mark)
-        # Alt(NAME(value='NEWLINE'), NAME(value='INDENT'), NAME(value='statements'), NAME(value='DEDENT'))
         if (
-            self.expect('NEWLINE')
+            (newline := self.expect('NEWLINE'))
             and
-            self.expect('INDENT')
+            (indent := self.expect('INDENT'))
             and
             (statements := self.statements())
             and
-            self.expect('DEDENT')
+            (dedent := self.expect('DEDENT'))
         ):
-            return Tree('block', statements)
+            return [newline, indent, statements, dedent]
         self.reset(mark)
         return None
 
     @memoize
     def full_expressions(self):
+        # full_expressions: full_expression ((',' full_expression))* ','?
         mark = self.mark()
-        # Alt(NAME(value='full_expression'), ZeroOrMore(Alt(STRING(value="','"), NAME(value='full_expression'))), Opt(STRING(value="','")))
         if (
             (full_expression := self.full_expression())
             and
-            (_zeroormore__tmp_7 := self._zeroormore__tmp_7())
+            (_loop_10 := self._loop_10(),)
             and
-            (_opt__tmp_8 := self._opt__tmp_8())
+            (opt := self.expect(','),)
         ):
-            return Tree('full_expressions', full_expression, _zeroormore__tmp_7, _opt__tmp_8)
+            return [full_expression, _loop_10, opt]
         self.reset(mark)
         return None
 
     @memoize
     def full_expression(self):
+        # full_expression: NAME ':=' disjunction | disjunction
         mark = self.mark()
-        # Alt(NAME(value='NAME'), STRING(value="':='"), NAME(value='disjunction'))
         if (
             (name := self.name())
             and
-            self.expect(':=')
+            (string := self.expect(':='))
             and
             (disjunction := self.disjunction())
         ):
-            return Tree('full_expression', name, disjunction)
+            return [name, string, disjunction]
         self.reset(mark)
-        # disjunction
         if (
             (disjunction := self.disjunction())
         ):
-            return Tree('full_expression', disjunction)
+            return [disjunction]
         self.reset(mark)
         return None
 
     @memoize
     def disjunction(self):
+        # disjunction: conjunction (('or' conjunction))*
         mark = self.mark()
-        # Alt(NAME(value='conjunction'), ZeroOrMore(Alt(STRING(value="'or'"), NAME(value='conjunction'))))
         if (
             (conjunction := self.conjunction())
             and
-            (_zeroormore__tmp_9 := self._zeroormore__tmp_9())
+            (_loop_11 := self._loop_11(),)
         ):
-            return Tree('disjunction', conjunction, _zeroormore__tmp_9)
+            return [conjunction, _loop_11]
         self.reset(mark)
         return None
 
     @memoize
     def conjunction(self):
+        # conjunction: comparison (('and' comparison))*
         mark = self.mark()
-        # Alt(NAME(value='comparison'), ZeroOrMore(Alt(STRING(value="'and'"), NAME(value='comparison'))))
         if (
             (comparison := self.comparison())
             and
-            (_zeroormore__tmp_10 := self._zeroormore__tmp_10())
+            (_loop_12 := self._loop_12(),)
         ):
-            return Tree('conjunction', comparison, _zeroormore__tmp_10)
+            return [comparison, _loop_12]
         self.reset(mark)
         return None
 
     @memoize
     def comparison(self):
+        # comparison: ('not')* bitwise_or ((compare_op bitwise_or))*
         mark = self.mark()
-        # Alt(ZeroOrMore(STRING(value="'not'")), NAME(value='bitwise_or'), ZeroOrMore(Alt(NAME(value='compare_op'), NAME(value='bitwise_or'))))
         if (
-            (_zeroormore__tmp_11 := self._zeroormore__tmp_11())
+            (_loop_13 := self._loop_13(),)
             and
             (bitwise_or := self.bitwise_or())
             and
-            (_zeroormore__tmp_12 := self._zeroormore__tmp_12())
+            (_loop_14 := self._loop_14(),)
         ):
-            return Tree('comparison', _zeroormore__tmp_11, bitwise_or, _zeroormore__tmp_12)
+            return [_loop_13, bitwise_or, _loop_14]
         self.reset(mark)
         return None
 
     @memoize
     def compare_op(self):
+        # compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in'
         mark = self.mark()
-        # '<'
         if (
-            self.expect('<')
+            (string := self.expect('<'))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # '<='
         if (
-            self.expect('<=')
+            (string := self.expect('<='))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # '=='
         if (
-            self.expect('==')
+            (string := self.expect('=='))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # '>='
         if (
-            self.expect('>=')
+            (string := self.expect('>='))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # '>'
         if (
-            self.expect('>')
+            (string := self.expect('>'))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # '!='
         if (
-            self.expect('!=')
+            (string := self.expect('!='))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # 'in'
         if (
-            self.expect('in')
+            (string := self.expect('in'))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
-        # 'not in'
         if (
-            self.expect('not in')
+            (string := self.expect('not in'))
         ):
-            return Tree('compare_op', )
+            return [string]
         self.reset(mark)
         return None
 
     @memoize
     def bitwise_or(self):
+        # bitwise_or: bitwise_and (('|' bitwise_and))*
         mark = self.mark()
-        # Alt(NAME(value='bitwise_and'), ZeroOrMore(Alt(STRING(value="'|'"), NAME(value='bitwise_and'))))
         if (
             (bitwise_and := self.bitwise_and())
             and
-            (_zeroormore__tmp_13 := self._zeroormore__tmp_13())
+            (_loop_15 := self._loop_15(),)
         ):
-            return Tree('bitwise_or', bitwise_and, _zeroormore__tmp_13)
+            return [bitwise_and, _loop_15]
         self.reset(mark)
         return None
 
     @memoize
     def bitwise_and(self):
+        # bitwise_and: expression (('&' expression))*
         mark = self.mark()
-        # Alt(NAME(value='expression'), ZeroOrMore(Alt(STRING(value="'&'"), NAME(value='expression'))))
         if (
             (expression := self.expression())
             and
-            (_zeroormore__tmp_14 := self._zeroormore__tmp_14())
+            (_loop_16 := self._loop_16(),)
         ):
-            return Tree('bitwise_and', expression, _zeroormore__tmp_14)
+            return [expression, _loop_16]
         self.reset(mark)
         return None
 
     @memoize
     def expressions(self):
+        # expressions: expression ((',' expression))* ','?
         mark = self.mark()
-        # Alt(NAME(value='expression'), ZeroOrMore(Alt(STRING(value="','"), NAME(value='expression'))), Opt(STRING(value="','")))
         if (
             (expression := self.expression())
             and
-            (_zeroormore__tmp_15 := self._zeroormore__tmp_15())
+            (_loop_17 := self._loop_17(),)
             and
-            (_opt__tmp_16 := self._opt__tmp_16())
+            (opt := self.expect(','),)
         ):
-            return Tree('expressions', expression, _zeroormore__tmp_15, _opt__tmp_16)
+            return [expression, _loop_17, opt]
         self.reset(mark)
         return None
 
     @memoize
     def expression(self):
+        # expression: term ((('+' term | '-' term)))*
         mark = self.mark()
-        # Alt(NAME(value='term'), ZeroOrMore(Alts(Alt(STRING(value="'+'"), NAME(value='term')), Alt(STRING(value="'-'"), NAME(value='term')))))
         if (
             (term := self.term())
             and
-            (_zeroormore__tmp_17 := self._zeroormore__tmp_17())
+            (_loop_18 := self._loop_18(),)
         ):
-            return Tree('expression', term, _zeroormore__tmp_17)
+            return [term, _loop_18]
         self.reset(mark)
         return None
 
     @memoize
     def term(self):
+        # term: factor ((('*' factor | '/' factor)))*
         mark = self.mark()
-        # Alt(NAME(value='factor'), ZeroOrMore(Alts(Alt(STRING(value="'*'"), NAME(value='factor')), Alt(STRING(value="'/'"), NAME(value='factor')))))
         if (
             (factor := self.factor())
             and
-            (_zeroormore__tmp_18 := self._zeroormore__tmp_18())
+            (_loop_19 := self._loop_19(),)
         ):
-            return Tree('term', factor, _zeroormore__tmp_18)
+            return [factor, _loop_19]
         self.reset(mark)
         return None
 
     @memoize
     def factor(self):
+        # factor: primary (('.' NAME | '[' expression ']' | '(' arguments ','?? ')'))*
         mark = self.mark()
-        # Alt(NAME(value='primary'), ZeroOrMore(Alts(Alt(STRING(value="'.'"), NAME(value='NAME')), Alt(STRING(value="'['"), NAME(value='expression'), STRING(value="']'")), Alt(STRING(value="'('"), Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','")))), STRING(value="')'")))))
         if (
             (primary := self.primary())
             and
-            (_zeroormore__tmp_19 := self._zeroormore__tmp_19())
+            (_loop_20 := self._loop_20(),)
         ):
-            return Tree('factor', primary, _zeroormore__tmp_19)
+            return [primary, _loop_20]
         self.reset(mark)
         return None
 
     @memoize
     def primary(self):
+        # primary: list | tuple | group | NAME | STRING | NUMBER
         mark = self.mark()
-        # list
         if (
             (list := self.list())
         ):
-            return Tree('primary', list)
+            return [list]
         self.reset(mark)
-        # tuple
         if (
             (tuple := self.tuple())
         ):
-            return Tree('primary', tuple)
+            return [tuple]
         self.reset(mark)
-        # group
         if (
             (group := self.group())
         ):
-            return Tree('primary', group)
+            return [group]
         self.reset(mark)
-        # NAME
         if (
             (name := self.name())
         ):
-            return Tree('primary', name)
+            return [name]
         self.reset(mark)
-        # STRING
         if (
             (string := self.string())
         ):
-            return Tree('primary', string)
+            return [string]
         self.reset(mark)
-        # NUMBER
         if (
             (number := self.number())
         ):
-            return Tree('primary', number)
+            return [number]
         self.reset(mark)
         return None
 
     @memoize
     def list(self):
+        # list: '[' full_expressions? ']'
         mark = self.mark()
-        # Alt(STRING(value="'['"), Opt(NAME(value='full_expressions')), STRING(value="']'"))
         if (
-            self.expect('[')
+            (string := self.expect('['))
             and
-            (_opt_full_expressions := self._opt_full_expressions())
+            (opt := self.full_expressions(),)
             and
-            self.expect(']')
+            (string_1 := self.expect(']'))
         ):
-            return Tree('list', _opt_full_expressions)
+            return [string, opt, string_1]
         self.reset(mark)
         return None
 
     @memoize
     def tuple(self):
+        # tuple: '(' full_expression ',' full_expressions?? ')'
         mark = self.mark()
-        # Alt(STRING(value="'('"), Opt(Alt(NAME(value='full_expression'), STRING(value="','"), Opt(NAME(value='full_expressions')))), STRING(value="')'"))
         if (
-            self.expect('(')
+            (string := self.expect('('))
             and
-            (_opt__tmp_20 := self._opt__tmp_20())
+            (opt := self._tmp_21(),)
             and
-            self.expect(')')
+            (string_1 := self.expect(')'))
         ):
-            return Tree('tuple', _opt__tmp_20)
+            return [string, opt, string_1]
         self.reset(mark)
         return None
 
     @memoize
     def group(self):
+        # group: '(' full_expression ')'
         mark = self.mark()
-        # Alt(STRING(value="'('"), NAME(value='full_expression'), STRING(value="')'"))
         if (
-            self.expect('(')
+            (string := self.expect('('))
             and
             (full_expression := self.full_expression())
             and
-            self.expect(')')
+            (string_1 := self.expect(')'))
         ):
-            return Tree('group', full_expression)
+            return [string, full_expression, string_1]
         self.reset(mark)
         return None
 
     @memoize
     def arguments(self):
+        # arguments: kwargs | posarg ',' arguments?
         mark = self.mark()
-        # kwargs
         if (
             (kwargs := self.kwargs())
         ):
-            return Tree('arguments', kwargs)
+            return [kwargs]
         self.reset(mark)
-        # Alt(NAME(value='posarg'), Opt(Alt(STRING(value="','"), NAME(value='arguments'))))
         if (
             (posarg := self.posarg())
             and
-            (_opt__tmp_21 := self._opt__tmp_21())
+            (opt := self._tmp_22(),)
         ):
-            return Tree('arguments', posarg, _opt__tmp_21)
+            return [posarg, opt]
         self.reset(mark)
         return None
 
     @memoize
     def kwargs(self):
+        # kwargs: kwarg ((',' kwarg))*
         mark = self.mark()
-        # Alt(NAME(value='kwarg'), ZeroOrMore(Alt(STRING(value="','"), NAME(value='kwarg'))))
         if (
             (kwarg := self.kwarg())
             and
-            (_zeroormore__tmp_22 := self._zeroormore__tmp_22())
+            (_loop_23 := self._loop_23(),)
         ):
-            return Tree('kwargs', kwarg, _zeroormore__tmp_22)
+            return [kwarg, _loop_23]
         self.reset(mark)
         return None
 
     @memoize
     def posarg(self):
+        # posarg: full_expression | '*' disjunction
         mark = self.mark()
-        # full_expression
         if (
             (full_expression := self.full_expression())
         ):
-            return Tree('posarg', full_expression)
+            return [full_expression]
         self.reset(mark)
-        # Alt(STRING(value="'*'"), NAME(value='disjunction'))
         if (
-            self.expect('*')
+            (string := self.expect('*'))
             and
             (disjunction := self.disjunction())
         ):
-            return Tree('posarg', disjunction)
+            return [string, disjunction]
         self.reset(mark)
         return None
 
     @memoize
     def kwarg(self):
+        # kwarg: NAME '=' disjunction | '**' disjunction
         mark = self.mark()
-        # Alt(NAME(value='NAME'), STRING(value="'='"), NAME(value='disjunction'))
         if (
             (name := self.name())
             and
-            self.expect('=')
+            (string := self.expect('='))
             and
             (disjunction := self.disjunction())
         ):
-            return Tree('kwarg', name, disjunction)
+            return [name, string, disjunction]
         self.reset(mark)
-        # Alt(STRING(value="'**'"), NAME(value='disjunction'))
         if (
-            self.expect('**')
+            (string := self.expect('**'))
             and
             (disjunction := self.disjunction())
         ):
-            return Tree('kwarg', disjunction)
+            return [string, disjunction]
         self.reset(mark)
         return None
 
     @memoize
     def target(self):
+        # target: NAME
         mark = self.mark()
-        # NAME
         if (
             (name := self.name())
         ):
-            return Tree('target', name)
+            return [name]
         self.reset(mark)
         return None
 
     @memoize
-    def _tmp_1(self):
-        mark = self.mark()
-        # Alt(STRING(value="';'"), NAME(value='small_stmt'))
-        if (
-            self.expect(';')
-            and
-            (small_stmt := self.small_stmt())
-        ):
-            return small_stmt
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_1(self):
+    def _loop_1(self):
+        # _loop_1: statement
         mark = self.mark()
         children = []
-        # Alt(STRING(value="';'"), NAME(value='small_stmt'))
         while (
-            self.expect(';')
-            and
-            (small_stmt := self.small_stmt())
+            (statement := self.statement())
         ):
+            children.append([statement])
             mark = self.mark()
-            children.append(small_stmt)
         self.reset(mark)
-        return Tree('Repeat', *children)
+        return children
 
     @memoize
-    def _tmp_2(self):
-        mark = self.mark()
-        # '*'
-        if (
-            self.expect('*')
-        ):
-            return Tree('_tmp_2', )
-        self.reset(mark)
-        # names
-        if (
-            (names := self.names())
-        ):
-            return names
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore_elif_block(self):
+    def _loop_2(self):
+        # _loop_2: (';' small_stmt)
         mark = self.mark()
         children = []
-        # elif_block
         while (
-            (elif_block := self.elif_block())
+            (_tmp_24 := self._tmp_24())
         ):
+            children.append([_tmp_24])
             mark = self.mark()
-            children.append(elif_block)
         self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _opt_else_block(self):
-        mark = self.mark()
-        # Opt(NAME(value='else_block'))
-        if (
-            (else_block := self.else_block())
-        ):
-            return else_block
-        self.reset(mark)
-        return Tree('Empty')
+        return children
 
     @memoize
     def _tmp_3(self):
+        # _tmp_3: '*' | names
         mark = self.mark()
-        # Alt(STRING(value="'as'"), NAME(value='target'))
         if (
-            self.expect('as')
-            and
-            (target := self.target())
+            (string := self.expect('*'))
         ):
-            return target
+            return [string]
+        self.reset(mark)
+        if (
+            (names := self.names())
+        ):
+            return [names]
         self.reset(mark)
         return None
 
     @memoize
-    def _opt__tmp_3(self):
+    def _loop_4(self):
+        # _loop_4: elif_block
         mark = self.mark()
-        # Opt(Alt(STRING(value="'as'"), NAME(value='target')))
-        if (
-            (_tmp_23 := self._tmp_23())
+        children = []
+        while (
+            (elif_block := self.elif_block())
         ):
-            return _tmp_23
+            children.append([elif_block])
+            mark = self.mark()
         self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _opt_expressions(self):
-        mark = self.mark()
-        # Opt(NAME(value='expressions'))
-        if (
-            (expressions := self.expressions())
-        ):
-            return expressions
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _opt_decorators(self):
-        mark = self.mark()
-        # Opt(NAME(value='decorators'))
-        if (
-            (decorators := self.decorators())
-        ):
-            return decorators
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _opt_parameters(self):
-        mark = self.mark()
-        # Opt(NAME(value='parameters'))
-        if (
-            (parameters := self.parameters())
-        ):
-            return parameters
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_4(self):
-        mark = self.mark()
-        # Alt(STRING(value="','"), Opt(NAME(value='parameters')))
-        if (
-            self.expect(',')
-            and
-            (_opt_parameters := self._opt_parameters())
-        ):
-            return _opt_parameters
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_4(self):
-        mark = self.mark()
-        # Opt(Alt(STRING(value="','"), Opt(NAME(value='parameters'))))
-        if (
-            (_tmp_24 := self._tmp_24())
-        ):
-            return _tmp_24
-        self.reset(mark)
-        return Tree('Empty')
+        return children
 
     @memoize
     def _tmp_5(self):
+        # _tmp_5: 'as' target
         mark = self.mark()
-        # Alt(STRING(value="','"), Opt(NAME(value='kwparams')))
         if (
-            self.expect(',')
-            and
-            (_opt_kwparams := self._opt_kwparams())
-        ):
-            return _opt_kwparams
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_5(self):
-        mark = self.mark()
-        # Opt(Alt(STRING(value="','"), Opt(NAME(value='kwparams'))))
-        if (
-            (_tmp_25 := self._tmp_25())
-        ):
-            return _tmp_25
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_6(self):
-        mark = self.mark()
-        # Alt(STRING(value="'('"), NAME(value='full_expressions'), STRING(value="')'"))
-        if (
-            self.expect('(')
-            and
-            (full_expressions := self.full_expressions())
-            and
-            self.expect(')')
-        ):
-            return full_expressions
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_6(self):
-        mark = self.mark()
-        # Opt(Alt(STRING(value="'('"), NAME(value='full_expressions'), STRING(value="')'")))
-        if (
-            (_tmp_26 := self._tmp_26())
-        ):
-            return _tmp_26
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_7(self):
-        mark = self.mark()
-        # Alt(STRING(value="','"), NAME(value='full_expression'))
-        if (
-            self.expect(',')
-            and
-            (full_expression := self.full_expression())
-        ):
-            return full_expression
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_7(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="','"), NAME(value='full_expression'))
-        while (
-            self.expect(',')
-            and
-            (full_expression := self.full_expression())
-        ):
-            mark = self.mark()
-            children.append(full_expression)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_8(self):
-        mark = self.mark()
-        # ','
-        if (
-            self.expect(',')
-        ):
-            return Tree('_tmp_8', )
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_8(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_8', )
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_9(self):
-        mark = self.mark()
-        # Alt(STRING(value="'or'"), NAME(value='conjunction'))
-        if (
-            self.expect('or')
-            and
-            (conjunction := self.conjunction())
-        ):
-            return conjunction
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_9(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="'or'"), NAME(value='conjunction'))
-        while (
-            self.expect('or')
-            and
-            (conjunction := self.conjunction())
-        ):
-            mark = self.mark()
-            children.append(conjunction)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_10(self):
-        mark = self.mark()
-        # Alt(STRING(value="'and'"), NAME(value='comparison'))
-        if (
-            self.expect('and')
-            and
-            (comparison := self.comparison())
-        ):
-            return comparison
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_10(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="'and'"), NAME(value='comparison'))
-        while (
-            self.expect('and')
-            and
-            (comparison := self.comparison())
-        ):
-            mark = self.mark()
-            children.append(comparison)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_11(self):
-        mark = self.mark()
-        # 'not'
-        if (
-            self.expect('not')
-        ):
-            return Tree('_tmp_11', )
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_11(self):
-        mark = self.mark()
-        children = []
-        # 'not'
-        while (
-            self.expect('not')
-        ):
-            mark = self.mark()
-            children.append(Tree('_zeroormore__tmp_11', ))
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_12(self):
-        mark = self.mark()
-        # Alt(NAME(value='compare_op'), NAME(value='bitwise_or'))
-        if (
-            (compare_op := self.compare_op())
-            and
-            (bitwise_or := self.bitwise_or())
-        ):
-            return Tree('_tmp_12', compare_op, bitwise_or)
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_12(self):
-        mark = self.mark()
-        children = []
-        # Alt(NAME(value='compare_op'), NAME(value='bitwise_or'))
-        while (
-            (compare_op := self.compare_op())
-            and
-            (bitwise_or := self.bitwise_or())
-        ):
-            mark = self.mark()
-            children.append(Tree('_zeroormore__tmp_12', compare_op, bitwise_or))
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_13(self):
-        mark = self.mark()
-        # Alt(STRING(value="'|'"), NAME(value='bitwise_and'))
-        if (
-            self.expect('|')
-            and
-            (bitwise_and := self.bitwise_and())
-        ):
-            return bitwise_and
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_13(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="'|'"), NAME(value='bitwise_and'))
-        while (
-            self.expect('|')
-            and
-            (bitwise_and := self.bitwise_and())
-        ):
-            mark = self.mark()
-            children.append(bitwise_and)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_14(self):
-        mark = self.mark()
-        # Alt(STRING(value="'&'"), NAME(value='expression'))
-        if (
-            self.expect('&')
-            and
-            (expression := self.expression())
-        ):
-            return expression
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_14(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="'&'"), NAME(value='expression'))
-        while (
-            self.expect('&')
-            and
-            (expression := self.expression())
-        ):
-            mark = self.mark()
-            children.append(expression)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_15(self):
-        mark = self.mark()
-        # Alt(STRING(value="','"), NAME(value='expression'))
-        if (
-            self.expect(',')
-            and
-            (expression := self.expression())
-        ):
-            return expression
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_15(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="','"), NAME(value='expression'))
-        while (
-            self.expect(',')
-            and
-            (expression := self.expression())
-        ):
-            mark = self.mark()
-            children.append(expression)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_16(self):
-        mark = self.mark()
-        # ','
-        if (
-            self.expect(',')
-        ):
-            return Tree('_tmp_16', )
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_16(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_16', )
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_17(self):
-        mark = self.mark()
-        # Alt(STRING(value="'+'"), NAME(value='term'))
-        if (
-            self.expect('+')
-            and
-            (term := self.term())
-        ):
-            return term
-        self.reset(mark)
-        # Alt(STRING(value="'-'"), NAME(value='term'))
-        if (
-            self.expect('-')
-            and
-            (term := self.term())
-        ):
-            return term
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_17(self):
-        mark = self.mark()
-        children = []
-        # Alts(Alt(STRING(value="'+'"), NAME(value='term')), Alt(STRING(value="'-'"), NAME(value='term')))
-        while (
-            (_tmp_27 := self._tmp_27())
-        ):
-            mark = self.mark()
-            children.append(_tmp_27)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_18(self):
-        mark = self.mark()
-        # Alt(STRING(value="'*'"), NAME(value='factor'))
-        if (
-            self.expect('*')
-            and
-            (factor := self.factor())
-        ):
-            return factor
-        self.reset(mark)
-        # Alt(STRING(value="'/'"), NAME(value='factor'))
-        if (
-            self.expect('/')
-            and
-            (factor := self.factor())
-        ):
-            return factor
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_18(self):
-        mark = self.mark()
-        children = []
-        # Alts(Alt(STRING(value="'*'"), NAME(value='factor')), Alt(STRING(value="'/'"), NAME(value='factor')))
-        while (
-            (_tmp_28 := self._tmp_28())
-        ):
-            mark = self.mark()
-            children.append(_tmp_28)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_19(self):
-        mark = self.mark()
-        # Alt(STRING(value="'.'"), NAME(value='NAME'))
-        if (
-            self.expect('.')
-            and
-            (name := self.name())
-        ):
-            return name
-        self.reset(mark)
-        # Alt(STRING(value="'['"), NAME(value='expression'), STRING(value="']'"))
-        if (
-            self.expect('[')
-            and
-            (expression := self.expression())
-            and
-            self.expect(']')
-        ):
-            return expression
-        self.reset(mark)
-        # Alt(STRING(value="'('"), Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','")))), STRING(value="')'"))
-        if (
-            self.expect('(')
-            and
-            (_opt__tmp_29 := self._opt__tmp_29())
-            and
-            self.expect(')')
-        ):
-            return _opt__tmp_29
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_19(self):
-        mark = self.mark()
-        children = []
-        # Alts(Alt(STRING(value="'.'"), NAME(value='NAME')), Alt(STRING(value="'['"), NAME(value='expression'), STRING(value="']'")), Alt(STRING(value="'('"), Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','")))), STRING(value="')'")))
-        while (
-            (_tmp_30 := self._tmp_30())
-        ):
-            mark = self.mark()
-            children.append(_tmp_30)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _opt_full_expressions(self):
-        mark = self.mark()
-        # Opt(NAME(value='full_expressions'))
-        if (
-            (full_expressions := self.full_expressions())
-        ):
-            return full_expressions
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_20(self):
-        mark = self.mark()
-        # Alt(NAME(value='full_expression'), STRING(value="','"), Opt(NAME(value='full_expressions')))
-        if (
-            (full_expression := self.full_expression())
-            and
-            self.expect(',')
-            and
-            (_opt_full_expressions := self._opt_full_expressions())
-        ):
-            return Tree('_tmp_20', full_expression, _opt_full_expressions)
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_20(self):
-        mark = self.mark()
-        # Opt(Alt(NAME(value='full_expression'), STRING(value="','"), Opt(NAME(value='full_expressions'))))
-        if (
-            (_tmp_31 := self._tmp_31())
-        ):
-            return _tmp_31
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_21(self):
-        mark = self.mark()
-        # Alt(STRING(value="','"), NAME(value='arguments'))
-        if (
-            self.expect(',')
-            and
-            (arguments := self.arguments())
-        ):
-            return arguments
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_21(self):
-        mark = self.mark()
-        # Opt(Alt(STRING(value="','"), NAME(value='arguments')))
-        if (
-            (_tmp_32 := self._tmp_32())
-        ):
-            return _tmp_32
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_22(self):
-        mark = self.mark()
-        # Alt(STRING(value="','"), NAME(value='kwarg'))
-        if (
-            self.expect(',')
-            and
-            (kwarg := self.kwarg())
-        ):
-            return kwarg
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _zeroormore__tmp_22(self):
-        mark = self.mark()
-        children = []
-        # Alt(STRING(value="','"), NAME(value='kwarg'))
-        while (
-            self.expect(',')
-            and
-            (kwarg := self.kwarg())
-        ):
-            mark = self.mark()
-            children.append(kwarg)
-        self.reset(mark)
-        return Tree('Repeat', *children)
-
-    @memoize
-    def _tmp_23(self):
-        mark = self.mark()
-        # Alt(STRING(value="'as'"), NAME(value='target'))
-        if (
-            self.expect('as')
+            (string := self.expect('as'))
             and
             (target := self.target())
         ):
-            return target
+            return [string, target]
         self.reset(mark)
         return None
+
+    @memoize
+    def _tmp_6(self):
+        # _tmp_6: ',' parameters?
+        mark = self.mark()
+        if (
+            (string := self.expect(','))
+            and
+            (opt := self.parameters(),)
+        ):
+            return [string, opt]
+        self.reset(mark)
+        return None
+
+    @memoize
+    def _tmp_7(self):
+        # _tmp_7: ',' kwparams?
+        mark = self.mark()
+        if (
+            (string := self.expect(','))
+            and
+            (opt := self.kwparams(),)
+        ):
+            return [string, opt]
+        self.reset(mark)
+        return None
+
+    @memoize
+    def _loop_8(self):
+        # _loop_8: ('@' factor NEWLINE)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_25 := self._tmp_25())
+        ):
+            children.append([_tmp_25])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _tmp_9(self):
+        # _tmp_9: '(' full_expressions ')'
+        mark = self.mark()
+        if (
+            (string := self.expect('('))
+            and
+            (full_expressions := self.full_expressions())
+            and
+            (string_1 := self.expect(')'))
+        ):
+            return [string, full_expressions, string_1]
+        self.reset(mark)
+        return None
+
+    @memoize
+    def _loop_10(self):
+        # _loop_10: (',' full_expression)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_26 := self._tmp_26())
+        ):
+            children.append([_tmp_26])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_11(self):
+        # _loop_11: ('or' conjunction)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_27 := self._tmp_27())
+        ):
+            children.append([_tmp_27])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_12(self):
+        # _loop_12: ('and' comparison)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_28 := self._tmp_28())
+        ):
+            children.append([_tmp_28])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_13(self):
+        # _loop_13: 'not'
+        mark = self.mark()
+        children = []
+        while (
+            (string := self.expect('not'))
+        ):
+            children.append([string])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_14(self):
+        # _loop_14: (compare_op bitwise_or)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_29 := self._tmp_29())
+        ):
+            children.append([_tmp_29])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_15(self):
+        # _loop_15: ('|' bitwise_and)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_30 := self._tmp_30())
+        ):
+            children.append([_tmp_30])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_16(self):
+        # _loop_16: ('&' expression)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_31 := self._tmp_31())
+        ):
+            children.append([_tmp_31])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_17(self):
+        # _loop_17: (',' expression)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_32 := self._tmp_32())
+        ):
+            children.append([_tmp_32])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_18(self):
+        # _loop_18: (('+' term | '-' term))
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_33 := self._tmp_33())
+        ):
+            children.append([_tmp_33])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_19(self):
+        # _loop_19: (('*' factor | '/' factor))
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_34 := self._tmp_34())
+        ):
+            children.append([_tmp_34])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _loop_20(self):
+        # _loop_20: ('.' NAME | '[' expression ']' | '(' arguments ','?? ')')
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_35 := self._tmp_35())
+        ):
+            children.append([_tmp_35])
+            mark = self.mark()
+        self.reset(mark)
+        return children
+
+    @memoize
+    def _tmp_21(self):
+        # _tmp_21: full_expression ',' full_expressions?
+        mark = self.mark()
+        if (
+            (full_expression := self.full_expression())
+            and
+            (string := self.expect(','))
+            and
+            (opt := self.full_expressions(),)
+        ):
+            return [full_expression, string, opt]
+        self.reset(mark)
+        return None
+
+    @memoize
+    def _tmp_22(self):
+        # _tmp_22: ',' arguments
+        mark = self.mark()
+        if (
+            (string := self.expect(','))
+            and
+            (arguments := self.arguments())
+        ):
+            return [string, arguments]
+        self.reset(mark)
+        return None
+
+    @memoize
+    def _loop_23(self):
+        # _loop_23: (',' kwarg)
+        mark = self.mark()
+        children = []
+        while (
+            (_tmp_36 := self._tmp_36())
+        ):
+            children.append([_tmp_36])
+            mark = self.mark()
+        self.reset(mark)
+        return children
 
     @memoize
     def _tmp_24(self):
+        # _tmp_24: ';' small_stmt
         mark = self.mark()
-        # Alt(STRING(value="','"), Opt(NAME(value='parameters')))
         if (
-            self.expect(',')
+            (string := self.expect(';'))
             and
-            (_opt_parameters := self._opt_parameters())
+            (small_stmt := self.small_stmt())
         ):
-            return _opt_parameters
+            return [string, small_stmt]
         self.reset(mark)
         return None
 
     @memoize
-    def _opt_kwparams(self):
-        mark = self.mark()
-        # Opt(NAME(value='kwparams'))
-        if (
-            (kwparams := self.kwparams())
-        ):
-            return kwparams
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
     def _tmp_25(self):
+        # _tmp_25: '@' factor NEWLINE
         mark = self.mark()
-        # Alt(STRING(value="','"), Opt(NAME(value='kwparams')))
         if (
-            self.expect(',')
+            (string := self.expect('@'))
             and
-            (_opt_kwparams := self._opt_kwparams())
+            (factor := self.factor())
+            and
+            (newline := self.expect('NEWLINE'))
         ):
-            return _opt_kwparams
+            return [string, factor, newline]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_26(self):
+        # _tmp_26: ',' full_expression
         mark = self.mark()
-        # Alt(STRING(value="'('"), NAME(value='full_expressions'), STRING(value="')'"))
         if (
-            self.expect('(')
+            (string := self.expect(','))
             and
-            (full_expressions := self.full_expressions())
-            and
-            self.expect(')')
+            (full_expression := self.full_expression())
         ):
-            return full_expressions
+            return [string, full_expression]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_27(self):
+        # _tmp_27: 'or' conjunction
         mark = self.mark()
-        # Alt(STRING(value="'+'"), NAME(value='term'))
         if (
-            self.expect('+')
+            (string := self.expect('or'))
             and
-            (term := self.term())
+            (conjunction := self.conjunction())
         ):
-            return term
-        self.reset(mark)
-        # Alt(STRING(value="'-'"), NAME(value='term'))
-        if (
-            self.expect('-')
-            and
-            (term := self.term())
-        ):
-            return term
+            return [string, conjunction]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_28(self):
+        # _tmp_28: 'and' comparison
         mark = self.mark()
-        # Alt(STRING(value="'*'"), NAME(value='factor'))
         if (
-            self.expect('*')
+            (string := self.expect('and'))
             and
-            (factor := self.factor())
+            (comparison := self.comparison())
         ):
-            return factor
-        self.reset(mark)
-        # Alt(STRING(value="'/'"), NAME(value='factor'))
-        if (
-            self.expect('/')
-            and
-            (factor := self.factor())
-        ):
-            return factor
+            return [string, comparison]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_29(self):
+        # _tmp_29: compare_op bitwise_or
         mark = self.mark()
-        # Alt(NAME(value='arguments'), Opt(STRING(value="','")))
         if (
-            (arguments := self.arguments())
+            (compare_op := self.compare_op())
             and
-            (_opt__tmp_33 := self._opt__tmp_33())
+            (bitwise_or := self.bitwise_or())
         ):
-            return Tree('_tmp_29', arguments, _opt__tmp_33)
+            return [compare_op, bitwise_or]
         self.reset(mark)
         return None
 
     @memoize
-    def _opt__tmp_29(self):
-        mark = self.mark()
-        # Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','"))))
-        if (
-            (_tmp_34 := self._tmp_34())
-        ):
-            return _tmp_34
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
     def _tmp_30(self):
+        # _tmp_30: '|' bitwise_and
         mark = self.mark()
-        # Alt(STRING(value="'.'"), NAME(value='NAME'))
         if (
-            self.expect('.')
+            (string := self.expect('|'))
             and
-            (name := self.name())
+            (bitwise_and := self.bitwise_and())
         ):
-            return name
-        self.reset(mark)
-        # Alt(STRING(value="'['"), NAME(value='expression'), STRING(value="']'"))
-        if (
-            self.expect('[')
-            and
-            (expression := self.expression())
-            and
-            self.expect(']')
-        ):
-            return expression
-        self.reset(mark)
-        # Alt(STRING(value="'('"), Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','")))), STRING(value="')'"))
-        if (
-            self.expect('(')
-            and
-            (_opt__tmp_35 := self._opt__tmp_35())
-            and
-            self.expect(')')
-        ):
-            return _opt__tmp_35
+            return [string, bitwise_and]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_31(self):
+        # _tmp_31: '&' expression
         mark = self.mark()
-        # Alt(NAME(value='full_expression'), STRING(value="','"), Opt(NAME(value='full_expressions')))
         if (
-            (full_expression := self.full_expression())
+            (string := self.expect('&'))
             and
-            self.expect(',')
-            and
-            (_opt_full_expressions := self._opt_full_expressions())
+            (expression := self.expression())
         ):
-            return Tree('_tmp_31', full_expression, _opt_full_expressions)
+            return [string, expression]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_32(self):
+        # _tmp_32: ',' expression
         mark = self.mark()
-        # Alt(STRING(value="','"), NAME(value='arguments'))
         if (
-            self.expect(',')
+            (string := self.expect(','))
             and
-            (arguments := self.arguments())
+            (expression := self.expression())
         ):
-            return arguments
+            return [string, expression]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_33(self):
+        # _tmp_33: '+' term | '-' term
         mark = self.mark()
-        # ','
         if (
-            self.expect(',')
+            (string := self.expect('+'))
+            and
+            (term := self.term())
         ):
-            return Tree('_tmp_33', )
+            return [string, term]
+        self.reset(mark)
+        if (
+            (string := self.expect('-'))
+            and
+            (term := self.term())
+        ):
+            return [string, term]
         self.reset(mark)
         return None
 
     @memoize
-    def _opt__tmp_33(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_33', )
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
     def _tmp_34(self):
+        # _tmp_34: '*' factor | '/' factor
         mark = self.mark()
-        # Alt(NAME(value='arguments'), Opt(STRING(value="','")))
         if (
-            (arguments := self.arguments())
+            (string := self.expect('*'))
             and
-            (_opt__tmp_36 := self._opt__tmp_36())
+            (factor := self.factor())
         ):
-            return Tree('_tmp_34', arguments, _opt__tmp_36)
+            return [string, factor]
+        self.reset(mark)
+        if (
+            (string := self.expect('/'))
+            and
+            (factor := self.factor())
+        ):
+            return [string, factor]
         self.reset(mark)
         return None
 
     @memoize
     def _tmp_35(self):
+        # _tmp_35: '.' NAME | '[' expression ']' | '(' arguments ','?? ')'
         mark = self.mark()
-        # Alt(NAME(value='arguments'), Opt(STRING(value="','")))
         if (
-            (arguments := self.arguments())
+            (string := self.expect('.'))
             and
-            (_opt__tmp_37 := self._opt__tmp_37())
+            (name := self.name())
         ):
-            return Tree('_tmp_35', arguments, _opt__tmp_37)
+            return [string, name]
+        self.reset(mark)
+        if (
+            (string := self.expect('['))
+            and
+            (expression := self.expression())
+            and
+            (string_1 := self.expect(']'))
+        ):
+            return [string, expression, string_1]
+        self.reset(mark)
+        if (
+            (string := self.expect('('))
+            and
+            (opt := self._tmp_37(),)
+            and
+            (string_1 := self.expect(')'))
+        ):
+            return [string, opt, string_1]
         self.reset(mark)
         return None
-
-    @memoize
-    def _opt__tmp_35(self):
-        mark = self.mark()
-        # Opt(Alt(NAME(value='arguments'), Opt(STRING(value="','"))))
-        if (
-            (_tmp_38 := self._tmp_38())
-        ):
-            return _tmp_38
-        self.reset(mark)
-        return Tree('Empty')
 
     @memoize
     def _tmp_36(self):
+        # _tmp_36: ',' kwarg
         mark = self.mark()
-        # ','
         if (
-            self.expect(',')
+            (string := self.expect(','))
+            and
+            (kwarg := self.kwarg())
         ):
-            return Tree('_tmp_36', )
+            return [string, kwarg]
         self.reset(mark)
         return None
-
-    @memoize
-    def _opt__tmp_36(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_36', )
-        self.reset(mark)
-        return Tree('Empty')
 
     @memoize
     def _tmp_37(self):
+        # _tmp_37: arguments ','?
         mark = self.mark()
-        # ','
-        if (
-            self.expect(',')
-        ):
-            return Tree('_tmp_37', )
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_37(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_37', )
-        self.reset(mark)
-        return Tree('Empty')
-
-    @memoize
-    def _tmp_38(self):
-        mark = self.mark()
-        # Alt(NAME(value='arguments'), Opt(STRING(value="','")))
         if (
             (arguments := self.arguments())
             and
-            (_opt__tmp_39 := self._opt__tmp_39())
+            (opt := self.expect(','),)
         ):
-            return Tree('_tmp_38', arguments, _opt__tmp_39)
+            return [arguments, opt]
         self.reset(mark)
         return None
-
-    @memoize
-    def _tmp_39(self):
-        mark = self.mark()
-        # ','
-        if (
-            self.expect(',')
-        ):
-            return Tree('_tmp_39', )
-        self.reset(mark)
-        return None
-
-    @memoize
-    def _opt__tmp_39(self):
-        mark = self.mark()
-        # Opt(STRING(value="','"))
-        if (
-            self.expect(',')
-        ):
-            return Tree('_opt__tmp_39', )
-        self.reset(mark)
-        return Tree('Empty')
 
 
 if __name__ == '__main__':

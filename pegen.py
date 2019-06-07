@@ -17,50 +17,11 @@ import tokenize
 import traceback
 from typing import *
 
+T = TypeVar('T')
+
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
 Mark = int  # NewType('Mark', int)
-
-
-class Tree:
-    """Parse tree node.
-
-    There are two kinds of nodes:
-    - Leaf nodes have a value field that's not None.
-    - Interior nodes have an args field that's not empty.
-
-    This should be considered an immutable data type,
-    as it's used for the return type of memoized functions.
-    """
-
-    __slots__ = ('type', 'args', 'value')
-
-    def __init__(self, type: str, *args: Optional['Tree'], value: Optional[str] = None):
-        if value is not None:
-            assert not args, args
-        self.type = type
-        self.args = args
-        self.value = value
-
-    def __repr__(self) -> str:
-        if self.value is not None:
-            return "%s(value=%r)" % (self.type, self.value)
-        return "%s(%s)" % (self.type, ", ".join(repr(arg) for arg in self.args))
-
-    def __str__(self) -> str:
-        if self.value is not None:
-            return str(self.value)
-        return self.__repr__()
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Tree):
-            return NotImplemented
-        return (self.type == other.type and
-                self.args == other.args and
-                self.value == other.value)
-
-    def __hash__(self) -> int:
-        return hash((self.type, self.args, self.value))
 
 
 def shorttok(tok: tokenizer.TokenInfo) -> str:
@@ -138,11 +99,11 @@ class Tokenizer:
             print(f"{fill} {shorttok(tok)}")
 
 
-def memoize(method: Callable[[Parser], Optional[Tree]]):
+def memoize(method: Callable[[Parser], T]):
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> Optional[Tree]:
+    def symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -182,11 +143,11 @@ def memoize(method: Callable[[Parser], Optional[Tree]]):
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
+def memoize_left_rec(method: Callable[[Parser], T]):
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> Optional[Tree]:
+    def symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -211,6 +172,13 @@ def memoize_left_rec(method: Callable[[Parser], Optional[Tree]]):
             # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
             # (But we use the memoization cache instead of a static
             # variable.)
+            #
+            # TODO: Fix this for mutually-left-recursive rules!
+            # E.g.
+            #   start: foo '+' bar
+            #   foo: start
+            #   bar: NUMBER
+            # (We don't clear the cache for foo.)
 
             # Prime the cache with a failure.
             self._symbol_cache[key] = None, mark
@@ -293,7 +261,7 @@ def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> 
     return expect_wrapper
 
 
-class Parser:
+class Parser(Generic[T]):
     """Parsing base class."""
 
     def __init__(self, tokenizer: Tokenizer, *, verbose=False):
@@ -301,8 +269,8 @@ class Parser:
         self._verbose = verbose
         self._level = 0
         self._symbol_cache: Dict[Tuple[Mark,
-                                       Callable[[Parser], Optional[Tree]]],
-                                 Tuple[Optional[Tree], Mark]] = {}
+                                       Callable[[Parser], Optional[T]]],
+                                 Tuple[Optional[T], Mark]] = {}
         self._token_cache: Dict[Tuple[Mark, str], bool] = {}
         # Pass through common tokeniser methods.
         # TODO: Rename to _mark and _reset.
@@ -314,35 +282,31 @@ class Parser:
         return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
     @memoize
-    def name(self) -> Optional[Tree]:
+    def name(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.NAME:
-            self._tokenizer.getnext()
-            return Tree('NAME', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def number(self) -> Optional[Tree]:
+    def number(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.NUMBER:
-            self._tokenizer.getnext()
-            return Tree('NUMBER', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def string(self) -> Optional[Tree]:
+    def string(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.STRING:
-            self._tokenizer.getnext()
-            return Tree('STRING', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize
-    def curly_stuff(self) -> Optional[Tree]:
+    def curly_stuff(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == CURLY_STUFF:
-            self._tokenizer.getnext()
-            return Tree('CURLY_STUFF', value=tok.string)
+            return self._tokenizer.getnext()
         return None
 
     @memoize_expect
@@ -365,152 +329,384 @@ class Parser:
         return SyntaxError("pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line))
 
 
+class Rule:
+    def __init__(self, name: str, alts: Alts):
+        self.name = name
+        self.alts = alts
+
+    def __str__(self):
+        return f"{self.name}: {self.alts}"
+
+    def __repr__(self):
+        return f"Rule({self.name!r}, {self.alts!r})"
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        if not isinstance(other, Rule):
+            return NotImplemented
+        return repr(self) == repr(other)
+
+    def gen_func(self, gen: ParserGenerator, rulename: str):
+        is_loop = rulename.startswith('_loop_')
+        # If it's a single parenthesized group, flatten it.
+        alts = self.alts
+        if (not is_loop
+            and len(alts.alts) == 1
+            and len(alts.alts[0].items) == 1
+            and isinstance(alts.alts[0].items[0].item, Group)):
+            alts = alts.alts[0].items[0].item.alts
+        if alts.is_recursive(rulename):
+            gen.print("@memoize_left_rec")
+        else:
+            gen.print("@memoize")
+        gen.print(f"def {rulename}(self):")
+        with gen.indent():
+            gen.print(f"# {rulename}: {alts}")
+            gen.print("mark = self.mark()")
+            if is_loop:
+                gen.print("children = []")
+            alts.gen_body(gen, is_loop)
+            if is_loop:
+                gen.print("return children")
+            else:
+                gen.print("return None")
+
+
+class Leaf:
+    def __init__(self, name: str):
+        self.value = name
+
+    def __str__(self):
+        return self.value
+
+
+class NameLeaf(Leaf):
+    def __repr__(self):
+        return f"NameLeaf({self.value!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name = self.value
+        if name in ('NAME', 'NUMBER', 'STRING', 'CURLY_STUFF'):
+            name = name.lower()
+            return name, f"self.{name}()"
+        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+            return name.lower(), f"self.expect({name!r})"
+        return name, f"self.{name}()"
+
+    def is_recursive(self, rulename: str) -> bool:
+        return self.value == rulename
+
+
+class StringLeaf(Leaf):
+    def __repr__(self):
+        return f"StringLeaf({self.value!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        return 'string', f"self.expect({self.value})"
+
+    def is_recursive(self, rulename: str) -> bool:
+        return False
+
+
+class Alts:
+    def __init__(self, alts: List[Alt]):
+        self.alts = alts
+
+    def __str__(self):
+        return " | ".join(str(alt) for alt in self.alts)
+
+    def __repr__(self):
+        return f"Alts({self.alts!r})"
+
+    def gen_body(self, gen: ParserGenerator, is_loop: bool = False):
+        if is_loop:
+            assert len(self.alts) == 1
+        for alt in self.alts:
+            alt.gen_block(gen, is_loop)
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        if len(self.alts) == 1 and len(self.alts[0].items) == 1:
+            return self.alts[0].items[0].make_call(gen)
+        name = gen.name_node(self)
+        return name, f"self.{name}()"
+
+    def is_recursive(self, rulename: str) -> bool:
+        for alt in self.alts:
+            if alt.is_recursive(rulename):
+                return True
+        return False
+
+
+class Alt:
+    def __init__(self, items: List[NamedItem], action: Optional[str] = None):
+        self.items = items
+        self.action = action
+
+    def __str__(self):
+        core = " ".join(str(item) for item in self.items)
+        if self.action:
+            return f"{core} {self.action}"
+        else:
+            return core
+
+    def __repr__(self):
+        if self.action:
+            return f"Alt({self.items!r}, {self.action!r}"
+        else:
+            return f"Alt({self.items!r})"
+
+    def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
+        names = []
+        if is_loop:
+            gen.print("while (")
+        else:
+            gen.print("if (")
+        with gen.indent():
+            first = True
+            for item in self.items:
+                if first:
+                    first = False
+                else:
+                    gen.print("and")
+                item.gen_item(gen, names)
+        gen.print("):")
+        with gen.indent():
+            action = self.action
+            if not action:
+                action = f"[{', '.join(names)}]"
+            else:
+                assert action[0] == '{' and action[-1] == '}', repr(action)
+                action = action[1:-1].strip()
+            if is_loop:
+                gen.print(f"children.append({action})")
+                gen.print(f"mark = self.mark()")
+            else:
+                gen.print(f"return {action}")
+        gen.print("self.reset(mark)")
+
+    def is_recursive(self, rulename: str) -> bool:
+        return bool(self.items) and self.items[0].is_recursive(rulename)
+
+
+class NamedItem:
+    def __init__(self, name: Optional[str], item: Item):
+        self.name = name
+        self.item = item
+
+    def __str__(self):
+        if self.name:
+            return f"{self.name}={self.item}"
+        else:
+            return str(self.item)
+
+    def __repr__(self):
+        return f"NamedItem({self.name!r}, {self.item!r})"
+
+    def gen_item(self, gen: ParserGenerator, names: List[str]):
+        name, call = self.item.make_call(gen)
+        name = dedupe(name, names)
+        gen.print(f"({name} := {call})")
+
+    def make_call(self, gen: ParserGenerator):
+        name, call = self.item.make_call(gen)
+        if self.name:
+            name = self.name
+        return name, call
+
+    def is_recursive(self, rulename: str) -> bool:
+        return self.item.is_recursive(rulename)
+
+
+class Opt:
+    def __init__(self, node: Plain):
+        self.node = node
+
+    def __str__(self):
+        return f"{self.node}?"
+
+    def __repr__(self):
+        return f"Opt({self.node!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name, call = self.node.make_call(gen)
+        return "opt", f"{call},"  # Note trailing comma!
+
+    def is_recursive(self, rulename: str) -> bool:
+        return False
+
+
+class Repeat:
+    """Shared base class for x* and x+."""
+
+    def __init__(self, node: Plain):
+        self.node = node
+
+    def is_recursive(self, rulename: str) -> bool:
+        return False
+
+
+class Repeat0(Repeat):
+    def __str__(self):
+        return f"({self.node})*"
+
+    def __repr__(self):
+        return f"Repeat0({self.node!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name = gen.name_loop(self.node)
+        return name, f"self.{name}(),"  # Also a trailing comma!
+
+
+class Repeat1(Repeat):
+    def __str__(self):
+        return f"({self.node})+"
+
+    def __repr__(self):
+        return f"Repeat1({self.node!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        name = gen.name_loop(self.node)
+        return name, f"self.{name}()"  # But no trailing comma here!
+
+
+class Group:
+    def __init__(self, alts: Alts):
+        self.alts = alts
+
+    def __str__(self):
+        return f"({self.alts})"
+
+    def __repr__(self):
+        return f"Group({self.alts!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        return self.alts.make_call(gen)
+
+    def is_recursive(self, rulename: str) -> bool:
+        return self.alts.is_recursive(rulename)
+
+
+Plain = Union[Leaf, Group]
+Item = Union[Plain, Opt, Repeat]
+
+
 class GrammarParser(Parser):
-    """Parser for Grammar files."""
+    """Hand-written parser for Grammar files."""
 
     @memoize
-    def start(self) -> Optional[Tree]:
+    def start(self) -> Optional[List[Rule]]:
         """
-        start: '\n'* (rule '\n'+)+ EOF
+        start: rule+ ENDMARKER
         """
-        trees = []
-        while True:
+        mark = self.mark()
+        rules = []
+        while rule := self.rule():
+            rules.append(rule)
             mark = self.mark()
-            if (tree := self.rule()) and self.expect('NEWLINE'):
-                trees.append(tree)
-            else:
-                self.reset(mark)
-                if not self.expect('ENDMARKER'):
-                    return None
-                break
-
-        if trees:
-            return Tree('Grammar', *trees)
+        if self.expect('ENDMARKER'):
+            return rules
         return None
 
     @memoize
-    def rule(self) -> Optional[Tree]:
+    def rule(self) -> Optional[Rule]:
         """
-        rule: NAME ':' alternatives
+        rule: NAME ':' alternatives NEWLINE
         """
+        mark = self.mark()
         if ((name := self.name()) and
-            self.expect(':') and
-            (alts := self.alternatives())):
-            return Tree('Rule', name, alts)
+                self.expect(':') and
+                (alts := self.alternatives()) and
+                self.expect('NEWLINE')):
+            return Rule(name.string, alts)
+        self.reset(mark)
         return None
 
-    @memoize_left_rec
-    def alternatives(self) -> Optional[Tree]:
-        """
-        This is the actual (naive) code; it is not memoized.
-
-        alternatives: alternatives '|' alternative | alternative
-        """
-        mark = self.mark()
-        if ((left := self.alternatives()) and
-            self.expect('|') and
-            (right := self.alternative())):
-            if left.type == 'Alts':
-                alts = list(left.args)
-                alts.append(right)
-            else:
-                alts = [left, right]
-            return Tree('Alts', *alts)
-        self.reset(mark)
-        return self.alternative()
-
     @memoize
-    def alternative(self) -> Optional[Tree]:
+    def alternatives(self) -> Optional[Alts]:
         """
-        alternative: (named_item alternative | named_item) [CURLY_STUFF]
+        alternatives: alternative ('|' alternative)*
         """
         mark = self.mark()
-        if (item := self.named_item()) and (alt := self.alternative()):
-            items = [item]
-            if alt.type == 'Alt':
-                items.extend(alt.args)
-            else:
-                items.append(alt)
-            if c := self.curly_stuff():
-                items.append(c)
-            return Tree('Alt', *items)
-        self.reset(mark)
-        if not (item := self.named_item()):
+        alts = []
+        if alt := self.alternative():
+            alts.append(alt)
+        else:
             return None
-        if c := self.curly_stuff():
-            return Tree('Alt', item, c)
-        return item
+        mark = self.mark()
+        while self.expect('|') and (alt := self.alternative()):
+            alts.append(alt)
+            mark = self.mark()
+        self.reset(mark)
+        if not alts:
+            return None
+        return Alts(alts)
 
     @memoize
-    def named_item(self) -> Optional[Tree]:
+    def alternative(self) -> Optional[Alt]:
+        """
+        alternative: named_item+ [CURLY_STUFF]
+        """
+        mark = self.mark()
+        items = []
+        while item := self.named_item():
+            items.append(item)
+            mark = self.mark()
+        if not items:
+            return None
+        action = self.curly_stuff()
+        return Alt(items, action.string if action else None)
+
+    @memoize
+    def named_item(self) -> Optional[NamedItem]:
         """
         named_item: NAME '=' item | item
         """
         mark = self.mark()
         if (name := self.name()) and self.expect('=') and (item := self.item()):
-            return Tree('Named', name, item)
+            return NamedItem(name.string, item)
         self.reset(mark)
-        return self.item()
+        item = self.item()
+        if not item:
+            return None
+        return NamedItem(None, item)
 
     @memoize
-    def item(self) -> Optional[Tree]:
+    def item(self) -> Optional[Item]:
         """
-        item: optional | atom '*' | atom '+' | atom ' '* '?' | atom
-
-        Note that optional cannot be followed by * or + or ?.
-
-        Also note that '?' is an error to the Python tokenizer; every
-        space before it is also returned as an error in this case, so
-        we must ignore that.  (Somehow it seems important to support
-        this syntax though.)
+        item: '[' alternatives ']' | atom (' '* '?' | '*' | '+')?
         """
         mark = self.mark()
-        if (opt := self.optional()):
-            return opt
-        if (atom := self.atom()) and self.expect('*'):
-            return Tree('ZeroOrMore', atom)
-        self.reset(mark)
-        if (atom := self.atom()) and self.expect('+'):
-            return Tree('OneOrMore', atom)
+        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
+            return Opt(alts)
         self.reset(mark)
         if atom := self.atom():
+            mark = self.mark()
             while self.expect(' '):
                 pass
             if self.expect('?'):
-                return Tree('Opt', atom)
-        self.reset(mark)
-        return self.atom()
-
-    @memoize
-    def optional(self) -> Optional[Tree]:
-        """
-        optional: '[' alternatives ']'
-        """
-        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
-            return Tree('Opt', alts)
+                return Opt(atom)
+            if self.expect('*'):
+                return Repeat0(atom)
+            if self.expect('+'):
+                return Repeat1(atom)
+            return atom
         return None
 
     @memoize
-    def atom(self) -> Optional[Tree]:
+    def atom(self) -> Optional[Plain]:
         """
-        atom: group | NAME | STRING
+        atom: '(' alternatives ')' | NAME | STRING
         """
         mark = self.mark()
-        if (par := self.group()):
-            return par
-        if (name := self.name()):
-            return name
-        if (string := self.string()):
-            return string
-        return None
-
-    @memoize
-    def group(self) -> Optional[Tree]:
-        """
-        group: '(' alternatives ')'
-        """
         if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
-            return alts
+            return Group(alts)
+        self.reset(mark)
+        if name := self.name():
+            return NameLeaf(name.string)
+        if string := self.string():
+            return StringLeaf(string.string)
         return None
 
 
@@ -522,7 +718,7 @@ import ast
 import sys
 import tokenize
 
-from pegen import memoize, memoize_left_rec, Parser, Tokenizer, Tree
+from pegen import memoize, memoize_left_rec, Parser
 
 """
 
@@ -533,14 +729,12 @@ if __name__ == '__main__':
     simple_parser_main(GeneratedParser)
 """
 
+
 class ParserGenerator:
 
-    def __init__(self, grammar: Tree, filename: str = ""):
-        assert grammar.type == 'Grammar', (grammar.type, grammar.args, grammar.value)
-        self.grammar = grammar
-        self.filename = filename
-        self.input: Optional[str] = None
-        self.file: Optional[TextIO] = None
+    def __init__(self, rules: List[Rule], file: IO[Text]):
+        self.rules = rules
+        self.file = file
         self.level = 0
 
     @contextlib.contextmanager
@@ -562,184 +756,44 @@ class ParserGenerator:
         for line in lines.splitlines():
             self.print(line)
 
-    def set_output(self, filename: str) -> None:
-        self.file = open(filename, 'w')
-
-    def close(self) -> None:
-        file = self.file
-        if file:
-            self.file = None
-            file.close()
-
-    def generate_parser(self) -> None:
-        self.print(PARSER_PREFIX.format(filename=self.filename))
+    def generate_parser(self, filename: str) -> None:
+        self.print(PARSER_PREFIX.format(filename=filename))
         self.print("class GeneratedParser(Parser):")
-        self.todo: Dict[str, Tree] = {}  # Rules to generate
-        self.done: Dict[str, Tree] = {}  # Rules generated
+        self.todo: Dict[str, Rule] = {}  # Rules to generate
+        self.done: Dict[str, Rule] = {}  # Rules generated
         self.counter = 0
-        for rule in self.grammar.args:
-            self.todo[str(rule.args[0])] = rule.args[1]
+        for rule in self.rules:
+            self.todo[rule.name] = rule
         while self.todo:
-            for rulename, rhs in list(self.todo.items()):
-                self.done[rulename] = rhs
+            for rulename, rule in list(self.todo.items()):
+                self.done[rulename] = rule
                 del self.todo[rulename]
                 self.print()
                 with self.indent():
-                    self.gen_rule(rulename, rhs)
+                    rule.gen_func(self, rulename)
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
-    def name_tree(self, tree: Tree) -> str:
-        ## for k, v in self.todo.items() | self.done.items():
-        ##     if tree == v:
-        ##         return k
+    def name_node(self, alts: Alts) -> str:
+        print(f"name_node({alts})")
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
-        if name not in self.todo and name not in self.done:
-            self.todo[name] = tree
+        self.todo[name] = Rule(name, alts)
         return name
 
-    def is_recursive(self, rulename: str, rhs: Tree) -> bool:
-        # This is just a PoC -- we only find recursion if one of the
-        # alternatives directly starts with this rule.  I'm sure
-        # there's a real graph algorithm that can determine whether a
-        # node is recursive, I'm just too lazy to look it up.
-        if rhs.type == 'Alts':
-            alts = list(rhs.args)
-        else:
-            alts = [rhs]
-        for alt in alts:
-            if alt.type == 'Alt':
-                items = list(alt.args)
-            else:
-                items = [alt]
-            item = items[0]
-            if item.type == 'NAME' and item.value == rulename:
-                return True
-        return False
-
-    def gen_rule(self, rulename: str, rhs: Tree) -> None:
-        if self.is_recursive(rulename, rhs):
-            self.print("@memoize_left_rec")
-        else:
-            self.print("@memoize")
-        self.print(f"def {rulename}(self):")
-        with self.indent():
-            self.print("mark = self.mark()")
-            if rhs.type == 'Alts':
-                for alt in rhs.args:
-                    self.gen_alt(rulename, alt)
-            elif rhs.type in ('ZeroOrMore', 'OneOrMore'):
-                self.print("children = []")
-                self.gen_alt(rulename, rhs.args[0], special=rhs.type)
-            else:
-                self.gen_alt(rulename, rhs)
-            if rhs.type == 'Opt':
-                self.print("return Tree('Empty')")
-            elif rhs.type == 'ZeroOrMore':
-                self.print("return Tree('Repeat', *children)")
-            elif rhs.type == 'OneOrMore':
-                self.print("if children:")
-                with self.indent():
-                    self.print("return Tree('Repeat', *children)")
-                self.print("return None")
-            else:
-                self.print("return None")
-
-    def gen_alt(self, rulename: str, alt: Tree, *, special=None) -> None:
-        if alt.type == 'Alt':
-            items = list(alt.args)
-        elif alt.type == 'Opt':
-            items = [alt.args[0]]
-        else:
-            items = [alt]
-        if items[-1].type == "CURLY_STUFF":
-            curly_stuff = items.pop(-1)
-        else:
-            curly_stuff = None
-        self.print("#", str(alt))
-        if special in ('ZeroOrMore', 'OneOrMore'):
-            # TODO: Collect children.
-            self.print("while (")
-        else:
-            self.print("if (")
-        children = []
-        first = True
-        with self.indent():
-            for item in items:
-                if first:
-                    first = False
-                else:
-                    self.print("and")
-                child, text = self.gen_named_item(item, children)
-                if child:
-                    self.print(f"({child} := {text})")
-                    children.append(child)
-                else:
-                    self.print(text)
-        self.print("):")
-        with self.indent():
-            if curly_stuff:
-                code = curly_stuff.value
-                assert code[0] == '{' and code[-1] == '}', repr(code)
-                child = code[1:-1].strip()
-            elif rulename.startswith('_') and len(children) == 1:
-                child = f"{children[0]}"
-            else:
-                child = f"Tree({rulename!r}, {', '.join(children)})"
-            if special in ('ZeroOrMore', 'OneOrMore'):
-                self.print("mark = self.mark()")
-                self.print(f"children.append({child})")
-            else:
-                self.print(f"return {child}")
-        self.print("self.reset(mark)")
-
-    def gen_named_item(self, item: Tree, children: List[str]) -> Tuple[str, str]:
-        if item.type == 'Named':
-            item_name = item.args[0].value
-            item_proper = item.args[1]
-            return self.gen_item(item_name, item_proper, children)
-        else:
-            return self.gen_item(None, item, children)
-
-    def gen_item(self, item_name: str, item: Tree, children: List[str]) -> Tuple[str, str]:
-        if item.type == 'STRING':
-            return item_name, f"self.expect({item.value})"
-        if item.type == 'NAME':
-            name = item.value
-            if name in exact_token_types or name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
-                return item_name, f"self.expect({item.value!r})"
-            if name in ('NAME', 'STRING', 'NUMBER', 'CURLY_STUFF'):
-                name = name.lower()
-                return item_name or dedupe(name, children), f"self.{name}()"
-            if name in self.todo or name in self.done:
-                return item_name or dedupe(name, children), f"self.{name}()"
-            # TODO: Report as an error in the grammar, with line
-            # number and column of the reference.
-            raise RuntimeError(f"Don't know what {name!r} is")
-        if item.type in ('Opt', 'ZeroOrMore', 'OneOrMore'):
-            prefix = '_' + item.type.lower() + '_'
-            subitem = item.args[0]
-            if subitem.type == 'NAME':
-                subname = subitem.value
-            else:
-                subname = self.name_tree(subitem)
-            name = prefix + subname
-            if name not in self.todo and name not in self.done:
-                self.todo[name] = item
-            return item_name or dedupe(name, children), f"self.{name}()"
-        if item.type in ('Alts', 'Alt'):
-            name = self.name_tree(item)
-            return item_name or dedupe(name, children), f"self.{name}()"
-
-        raise RuntimeError(f"Unrecognized item {item!r}")
+    def name_loop(self, node: Plain):
+        self.counter += 1
+        name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
+        self.todo[name] = Rule(name, Alts([Alt([NamedItem(None, node)])]))
+        return name
 
 
-def dedupe(name: str, names: Container[str]) -> str:
+def dedupe(name: str, names: List[str]) -> str:
     origname = name
     counter = 0
     while name in names:
         counter += 1
         name = f"{origname}_{counter}"
+    names.append(name)
     return name
 
 
@@ -791,7 +845,6 @@ def grammar_tokenizer(token_generator):
                     if nest == 0:
                         end = tok.end
                         break
-            print(f"CURLY_STUFF: {' '.join(accumulated)}")
             yield tokenize.TokenInfo(CURLY_STUFF, " ".join(accumulated), start, end, "")
         else:
             yield tok
@@ -827,7 +880,13 @@ def simple_parser_main(parser_class):
         tokenizer = Tokenizer(tokengen, verbose=verbose_tokenizer)
         parser = parser_class(tokenizer, verbose=verbose_parser)
         tree = parser.start()
-        endpos = file.tell()
+        try:
+            if file.isatty():
+                endpos = 0
+            else:
+                endpos = file.tell()
+        except IOError:
+            endpos = 0
     finally:
         if file is not sys.stdin:
             file.close()
@@ -848,10 +907,11 @@ def simple_parser_main(parser_class):
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
             nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="")
+        print(f"Total time: {dt:.3f} sec; {nlines} lines", end="")
+        if endpos:
+             print(f" ({endpos} bytes)", end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt))
+            print(f"; {nlines/dt:.0f} lines/sec")
         else:
             print()
         print("Caches sizes:")
@@ -881,24 +941,23 @@ def main() -> None:
         tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)),
                               verbose=verbose_tokenizer)
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
-        tree = parser.start()
-        if not tree:
+        rules = parser.start()
+        if not rules:
             err = parser.make_syntax_error(args.filename)
             traceback.print_exception(err.__class__, err, None)
             sys.exit(1)
         endpos = file.tell()
 
     if not args.quiet:
-        if tree.type == 'Grammar':
-            for arg in tree.args:
-                print(arg)
-        else:
-            print(tree)
+        if args.verbose:
+            for rule in rules:
+                print(repr(rule))
+        for rule in rules:
+            print(rule)
 
-    genr = ParserGenerator(tree, args.filename)
-    genr.set_output(args.output)
-    genr.generate_parser()
-    os.chmod(args.output, 0o755)  # TODO: Honor umask.
+    with open(args.output, 'w') as file:
+        genr = ParserGenerator(rules, file)
+        genr.generate_parser(args.filename)
 
     t1 = time.time()
 
@@ -908,9 +967,11 @@ def main() -> None:
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
             nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos), end="")
+        print(f"Total time: {dt:.3f} sec; {nlines} lines", end="")
+        if endpos:
+             print(f" ({endpos} bytes)", end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt))
+            print(f"; {nlines/dt:.0f} lines/sec")
         else:
             print()
         print("Caches sizes:")

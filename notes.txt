@@ -152,3 +152,109 @@ What about an optional field containing alternatives?
 
 factor: atom ['*' atom | '/' atom] { $$ = $1 * $3 if $2 else $1 * $5 if $4 else $1 }
 
+-------------------------
+
+...New Python code generator, using new Node concept...
+
+- For each rule generate a function named after that rule, e.g.
+
+  # term: factor '*' factor {action1} | factor {action2}
+  @memoize
+  def term(self):
+      if self.factor() and self.expect('*') and self.factor():
+          ...
+  @memoize
+  def factor(self):
+      ...
+
+
+- For each complex item also generate a function, e.g. in this case
+
+  # term: factor ('*' | '/') factor {action1} | factor {action2}
+  @memoize
+  def term(self):
+      if self.factor() and self.tmp_1() and self.factor():
+          ...
+  @memoize
+  def factor(self):
+      ...
+  @memoize
+  def tmp_1(self):
+      return self.expect('*') or self.expect('/')
+
+- For [x] or x? generate a function that returns x or None (but the
+  latter is not failure).  If x is simple, this is just self.x().
+  If x is more complex, generate a function tmp_N for it.  The caller
+  has something like this:
+
+  # expr: left [op] right
+  @memoize
+  def foo(self):
+      if ((l := self.left()) and
+          ((op := self.op()) or True) and
+          (r := self.right())):
+        return [left, op, right]
+
+- For x* and x+ generate a function that returns a list of nodes; for
+  x+, the caller treats an empty list as error.  Either way the code
+  is like this:
+
+  # caller: left x* right
+  @memoize
+  def caller(self):
+      if (l := self.left()) and ((xs := self.tmp_x()) or True) and (r := self.right()):
+          return [l, xs, r]
+
+  @memoize
+  def tmp_x(self):
+      xs = []
+      while (x := self.x()):
+          xs.append(x)
+      return xs
+
+---
+
+Running into some problems...
+
+My current approach omits trivial parse tree nodes, e.g. if a rule has
+only one alternative it doesn't return an Alts() node, and if an
+alternative has only one item, it doesn't return an Alt() node.  But
+this makes code generation a bit tricky.  Maybe I should revert this
+design decision.  We'd get
+
+  Rule(name: str, rhs: Alts)
+  Alts(alts: List[Alt])
+  Alt(items: List[Union[NamedItem, Item]], action: str)
+  NamedItem(name: str, item: Item)
+  Item(x: Union[Plain, Opt, Repeat0, Repeat1])
+  Plain(x: Atom)
+  Opt(aa: Atom)
+  Repeat(aa: Atom)
+  Group(aa: Alts)
+
+  Atom = Union[Leaf, Group]
+  Leaf has subtypes NamedNode, StringNode
+  Repeat has subtypes Repeat0, Repeat1
+
+Or maybe:
+  Alts = List[Alt]
+  Plain = Atom
+
+So we get:
+
+  Rule(name: str, rhs: List[Alt])
+  Alt(items: List[NamedItem]], action: str)
+  NamedItem(name: Optional[str], item: Item)
+  Plain(a: Atom)
+  Opt(a: Atom)
+  Repeat(a: Atom)
+  Group(aa: List[Alt])
+
+  Item = Union[Plain, Opt, Repeat]
+  Atom = Union[Leaf, Group]
+
+  NamedNode <: Leaf
+  StringNode <: Leaf
+
+  Repeat0 <: Repeat
+  Repeat1 <: Repeat
