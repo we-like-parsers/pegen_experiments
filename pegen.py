@@ -743,132 +743,132 @@ class ParserGenerator:
 
     def is_recursive(self, rulename: str, node: Node) -> bool:
         return False  # XXXXXXXXXX  XXX  TODO
-        # This is just a PoC -- we only find recursion if one of the
-        # alternatives directly starts with this rule.  I'm sure
-        # there's a real graph algorithm that can determine whether a
-        # node is recursive, I'm just too lazy to look it up.
-        if rhs.type == 'Alts':
-            alts = list(rhs.args)
-        else:
-            alts = [rhs]
-        for alt in alts:
-            if alt.type == 'Alt':
-                items = list(alt.args)
-            else:
-                items = [alt]
-            item = items[0]
-            if item.type == 'NAME' and item.value == rulename:
-                return True
-        return False
+        ## # This is just a PoC -- we only find recursion if one of the
+        ## # alternatives directly starts with this rule.  I'm sure
+        ## # there's a real graph algorithm that can determine whether a
+        ## # node is recursive, I'm just too lazy to look it up.
+        ## if rhs.type == 'Alts':
+        ##     alts = list(rhs.args)
+        ## else:
+        ##     alts = [rhs]
+        ## for alt in alts:
+        ##     if alt.type == 'Alt':
+        ##         items = list(alt.args)
+        ##     else:
+        ##         items = [alt]
+        ##     item = items[0]
+        ##     if item.type == 'NAME' and item.value == rulename:
+        ##         return True
+        ## return False
 
-    def gen_rule(self, rulename: str, rhs: Node) -> None:
-        if self.is_recursive(rulename, rhs):
-            self.print("@memoize_left_rec")
-        else:
-            self.print("@memoize")
-        self.print(f"def {rulename}(self):")
-        with self.indent():
-            self.print("mark = self.mark()")
-            if isinstance(rhs, Alts):
-                for alt in rhs.nodes:
-                    self.gen_alt(rulename, alt)
-            elif isinstance(rhs, Repeat):
-                self.print("children = []")
-                self.gen_alt(rulename, rhs.node, repeat=True)
-            elif isinstance(rhs, Opt):
-                self.gen_alt(rulename, rhs.node, optional=True)
-            else:
-                self.gen_alt(rulename, rhs)
-            if isinstance(rhs, Repeat):
-                self.print("return children")
-            else:
-                self.print("return None")
+    ## def gen_rule(self, rulename: str, rhs: Node) -> None:
+    ##     if self.is_recursive(rulename, rhs):
+    ##         self.print("@memoize_left_rec")
+    ##     else:
+    ##         self.print("@memoize")
+    ##     self.print(f"def {rulename}(self):")
+    ##     with self.indent():
+    ##         self.print("mark = self.mark()")
+    ##         if isinstance(rhs, Alts):
+    ##             for alt in rhs.nodes:
+    ##                 self.gen_alt(rulename, alt)
+    ##         elif isinstance(rhs, Repeat):
+    ##             self.print("children = []")
+    ##             self.gen_alt(rulename, rhs.node, repeat=True)
+    ##         elif isinstance(rhs, Opt):
+    ##             self.gen_alt(rulename, rhs.node, optional=True)
+    ##         else:
+    ##             self.gen_alt(rulename, rhs)
+    ##         if isinstance(rhs, Repeat):
+    ##             self.print("return children")
+    ##         else:
+    ##             self.print("return None")
 
-    def gen_alt(self, rulename: str, alt: Node, *,
-                repeat: bool = False, optional: bool = False) -> None:
-        action = None
-        if isinstance(alt, Alt):
-            items = list(alt.nodes)
-            action = alt.action
-        else:
-            assert not isinstance(alt, Alts), repr(alt)
-            items = [alt]
-        self.print(f"# {rulename}: {alt}")
-        if repeat:
-            self.print("while (")
-        else:
-            self.print("if (")
-        children = []
-        first = True
-        with self.indent():
-            for item in items:
-                if first:
-                    first = False
-                else:
-                    self.print("and")
-                child, text = self.gen_named_item(item, children)
-                if child == '_opt__tmp_1': import pdb; pdb.set_trace()
-                if child:
-                    tail = "," if optional else ""
-                    self.print(f"({child} := {text}{tail})")
-                    children.append(child)
-                else:
-                    self.print(text)
-        self.print("):")
-        with self.indent():
-            if action:
-                assert action[0] == '{' and action[-1] == '}', repr(action)
-                child = action[1:-1].strip()
-            elif rulename.startswith('_') and len(children) == 1:
-                child = f"{children[0]}"
-            else:
-                child = f"({rulename!r}, {', '.join(children)})"
-            if repeat:
-                self.print("mark = self.mark()")
-                self.print(f"children.append({child})")
-            else:
-                self.print(f"return {child}")
-        self.print("self.reset(mark)")
+    ## def gen_alt(self, rulename: str, alt: Node, *,
+    ##             repeat: bool = False, optional: bool = False) -> None:
+    ##     action = None
+    ##     if isinstance(alt, Alt):
+    ##         items = list(alt.nodes)
+    ##         action = alt.action
+    ##     else:
+    ##         assert not isinstance(alt, Alts), repr(alt)
+    ##         items = [alt]
+    ##     self.print(f"# {rulename}: {alt}")
+    ##     if repeat:
+    ##         self.print("while (")
+    ##     else:
+    ##         self.print("if (")
+    ##     children = []
+    ##     first = True
+    ##     with self.indent():
+    ##         for item in items:
+    ##             if first:
+    ##                 first = False
+    ##             else:
+    ##                 self.print("and")
+    ##             child, text = self.gen_named_item(item, children)
+    ##             if child == '_opt__tmp_1': import pdb; pdb.set_trace()
+    ##             if child:
+    ##                 tail = "," if optional else ""
+    ##                 self.print(f"({child} := {text}{tail})")
+    ##                 children.append(child)
+    ##             else:
+    ##                 self.print(text)
+    ##     self.print("):")
+    ##     with self.indent():
+    ##         if action:
+    ##             assert action[0] == '{' and action[-1] == '}', repr(action)
+    ##             child = action[1:-1].strip()
+    ##         elif rulename.startswith('_') and len(children) == 1:
+    ##             child = f"{children[0]}"
+    ##         else:
+    ##             child = f"({rulename!r}, {', '.join(children)})"
+    ##         if repeat:
+    ##             self.print("mark = self.mark()")
+    ##             self.print(f"children.append({child})")
+    ##         else:
+    ##             self.print(f"return {child}")
+    ##     self.print("self.reset(mark)")
 
-    def gen_named_item(self, item: Node, names: List[str]) -> Tuple[str, str]:
-        if isinstance(item, NamedItem):
-            item_name = item.name
-            item_proper = item.node
-            return self.gen_item(item_name, item_proper, names)
-        else:
-            return self.gen_item(None, item, names)
+    ## def gen_named_item(self, item: Node, names: List[str]) -> Tuple[str, str]:
+    ##     if isinstance(item, NamedItem):
+    ##         item_name = item.name
+    ##         item_proper = item.node
+    ##         return self.gen_item(item_name, item_proper, names)
+    ##     else:
+    ##         return self.gen_item(None, item, names)
 
-    def gen_item(self, item_name: str, item: Node, names: List[str]) -> Tuple[str, str]:
-        if isinstance(item, StringLeaf):
-            return item_name, f"self.expect({item.value})"
-        if isinstance(item, NameLeaf):
-            name = item.value
-            if name in exact_token_types or name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
-                return item_name, f"self.expect({item.value!r})"
-            if name in ('NAME', 'STRING', 'NUMBER', 'CURLY_STUFF'):
-                name = name.lower()
-                return item_name or dedupe(name, names), f"self.{name}()"
-            if name in self.todo or name in self.done:
-                return item_name or dedupe(name, names), f"self.{name}()"
-            # TODO: Report as an error in the grammar, with line
-            # number and column of the reference.
-            raise RuntimeError(f"Don't know what {name!r} is; item_name={item_name}")
-        if isinstance(item, (Opt, Repeat)):
-            prefix = '_' + item.__class__.__name__.lower() + '_'
-            subitem = item.node
-            if isinstance(subitem, NameLeaf):
-                subname = subitem.value
-            else:
-                subname = self.name_node(subitem)
-            name = prefix + subname
-            if name not in self.todo and name not in self.done:
-                self.todo[name] = item
-            return item_name or dedupe(name, names), f"self.{name}()"
-        if isinstance(item, (Alts, Alt)):
-            name = self.name_node(item)
-            return item_name or dedupe(name, names), f"self.{name}()"
+    ## def gen_item(self, item_name: str, item: Node, names: List[str]) -> Tuple[str, str]:
+    ##     if isinstance(item, StringLeaf):
+    ##         return item_name, f"self.expect({item.value})"
+    ##     if isinstance(item, NameLeaf):
+    ##         name = item.value
+    ##         if name in exact_token_types or name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+    ##             return item_name, f"self.expect({item.value!r})"
+    ##         if name in ('NAME', 'STRING', 'NUMBER', 'CURLY_STUFF'):
+    ##             name = name.lower()
+    ##             return item_name or dedupe(name, names), f"self.{name}()"
+    ##         if name in self.todo or name in self.done:
+    ##             return item_name or dedupe(name, names), f"self.{name}()"
+    ##         # TODO: Report as an error in the grammar, with line
+    ##         # number and column of the reference.
+    ##         raise RuntimeError(f"Don't know what {name!r} is; item_name={item_name}")
+    ##     if isinstance(item, (Opt, Repeat)):
+    ##         prefix = '_' + item.__class__.__name__.lower() + '_'
+    ##         subitem = item.node
+    ##         if isinstance(subitem, NameLeaf):
+    ##             subname = subitem.value
+    ##         else:
+    ##             subname = self.name_node(subitem)
+    ##         name = prefix + subname
+    ##         if name not in self.todo and name not in self.done:
+    ##             self.todo[name] = item
+    ##         return item_name or dedupe(name, names), f"self.{name}()"
+    ##     if isinstance(item, (Alts, Alt)):
+    ##         name = self.name_node(item)
+    ##         return item_name or dedupe(name, names), f"self.{name}()"
 
-        raise RuntimeError(f"Unrecognized item {item!r}; item_name={item_name}")
+    ##     raise RuntimeError(f"Unrecognized item {item!r}; item_name={item_name}")
 
 
 def dedupe(name: str, names: List[str]) -> str:

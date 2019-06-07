@@ -186,6 +186,7 @@ def test_repeat_1_complex():
     node = parse_string("1\n", parser_class)
     assert node is None
 
+
 @pytest.mark.skip
 def test_left_recursive():
     grammar = """
@@ -194,14 +195,10 @@ def test_left_recursive():
     term: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 + 2 + 3\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('expr',
-                             Tree('expr',
-                                  Tree('expr',
-                                       Tree('term', Tree('NUMBER', value='1'))),
-                                  Tree('term', Tree('NUMBER', value='2'))),
-                             Tree('term', Tree('NUMBER', value='3'))))
+    node = parse_string("1 + 2 + 3\n", parser_class)
+    print()
+    print(str(node).replace("type=2 (NUMBER)", "NUMBER").replace("type=4 (NEWLINE)", "NEWLINE").replace("type=54 (OP)", "OP"))
+
 
 @pytest.mark.skip
 def test_python_expr():
@@ -223,8 +220,8 @@ def test_python_expr():
           )
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("(1 + 2*3 + 5)/(6 - 2)\n", parser_class)
-    ast.fix_missing_locations(tree)
-    code = compile(tree, "", "eval")
+    node = parse_string("(1 + 2*3 + 5)/(6 - 2)\n", parser_class)
+    ast.fix_missing_locations(node)
+    code = compile(node, "", "eval")
     val = eval(code)
     assert val == 3.0
