@@ -172,6 +172,13 @@ def memoize_left_rec(method: Callable[[Parser], T]):
             # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
             # (But we use the memoization cache instead of a static
             # variable.)
+            #
+            # TODO: Fix this for mutually-left-recursive rules!
+            # E.g.
+            #   start: foo '+' bar
+            #   foo: start
+            #   bar: NUMBER
+            # (We don't clear the cache for foo.)
 
             # Prime the cache with a failure.
             self._symbol_cache[key] = None, mark
@@ -343,17 +350,24 @@ class Rule:
 
     def gen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
-        if gen.is_recursive(rulename, self.alts):
+        # If it's a single parenthesized group, flatten it.
+        alts = self.alts
+        if (not is_loop
+            and len(alts.alts) == 1
+            and len(alts.alts[0].items) == 1
+            and isinstance(alts.alts[0].items[0].item, Group)):
+            alts = alts.alts[0].items[0].item.alts
+        if alts.is_recursive(rulename):
             gen.print("@memoize_left_rec")
         else:
             gen.print("@memoize")
         gen.print(f"def {rulename}(self):")
         with gen.indent():
-            gen.print(f"# {rulename}: {self.alts}")
+            gen.print(f"# {rulename}: {alts}")
             gen.print("mark = self.mark()")
             if is_loop:
                 gen.print("children = []")
-            self.alts.gen_body(gen, is_loop)
+            alts.gen_body(gen, is_loop)
             if is_loop:
                 gen.print("return children")
             else:
@@ -374,12 +388,15 @@ class NameLeaf(Leaf):
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = self.value
-        if name in ('NUMBER', 'STRING', 'CURLY_STUFF'):
+        if name in ('NAME', 'NUMBER', 'STRING', 'CURLY_STUFF'):
             name = name.lower()
             return name, f"self.{name}()"
         if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
+
+    def is_recursive(self, rulename: str) -> bool:
+        return self.value == rulename
 
 
 class StringLeaf(Leaf):
@@ -388,6 +405,9 @@ class StringLeaf(Leaf):
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return 'string', f"self.expect({self.value})"
+
+    def is_recursive(self, rulename: str) -> bool:
+        return False
 
 
 class Alts:
@@ -456,6 +476,9 @@ class Alt:
             action = self.action
             if not action:
                 action = f"[{', '.join(names)}]"
+            else:
+                assert action[0] == '{' and action[-1] == '}', repr(action)
+                action = action[1:-1].strip()
             if is_loop:
                 gen.print(f"children.append({action})")
                 gen.print(f"mark = self.mark()")
@@ -493,7 +516,7 @@ class NamedItem:
         return name, call
 
     def is_recursive(self, rulename: str) -> bool:
-        return isinstance(self.item, NameLeaf) and self.item.value == rulename
+        return self.item.is_recursive(rulename)
 
 
 class Opt:
@@ -510,12 +533,18 @@ class Opt:
         name, call = self.node.make_call(gen)
         return "opt", f"{call},"  # Note trailing comma!
 
+    def is_recursive(self, rulename: str) -> bool:
+        return False
+
 
 class Repeat:
     """Shared base class for x* and x+."""
 
     def __init__(self, node: Plain):
         self.node = node
+
+    def is_recursive(self, rulename: str) -> bool:
+        return False
 
 
 class Repeat0(Repeat):
@@ -554,6 +583,9 @@ class Group:
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return self.alts.make_call(gen)
+
+    def is_recursive(self, rulename: str) -> bool:
+        return self.alts.is_recursive(rulename)
 
 
 Plain = Union[Leaf, Group]
@@ -742,6 +774,7 @@ class ParserGenerator:
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
     def name_node(self, alts: Alts) -> str:
+        print(f"name_node({alts})")
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
         self.todo[name] = Rule(name, alts)
@@ -752,9 +785,6 @@ class ParserGenerator:
         name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
         self.todo[name] = Rule(name, Alts([Alt([NamedItem(None, node)])]))
         return name
-
-    def is_recursive(self, rulename: str, node: Alts) -> bool:
-        return node.is_recursive(rulename)
 
 
 def dedupe(name: str, names: List[str]) -> str:
@@ -850,7 +880,13 @@ def simple_parser_main(parser_class):
         tokenizer = Tokenizer(tokengen, verbose=verbose_tokenizer)
         parser = parser_class(tokenizer, verbose=verbose_parser)
         tree = parser.start()
-        endpos = file.tell()
+        try:
+            if file.isatty():
+                endpos = 0
+            else:
+                endpos = file.tell()
+        except IOError:
+            endpos = 0
     finally:
         if file is not sys.stdin:
             file.close()
@@ -871,10 +907,11 @@ def simple_parser_main(parser_class):
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
             nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos),
-              end="")
+        print(f"Total time: {dt:.3f} sec; {nlines} lines", end="")
+        if endpos:
+             print(f" ({endpos} bytes)", end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt))
+            print(f"; {nlines/dt:.0f} lines/sec")
         else:
             print()
         print("Caches sizes:")
@@ -930,9 +967,11 @@ def main() -> None:
         nlines = diag.end[0]
         if diag.type == token.ENDMARKER:
             nlines -= 1
-        print("Total time: %.3f sec; %d lines (%d bytes)" % (dt, nlines, endpos), end="")
+        print(f"Total time: {dt:.3f} sec; {nlines} lines", end="")
+        if endpos:
+             print(f" ({endpos} bytes)", end="")
         if dt:
-            print("; %.3f lines/sec" % (nlines / dt))
+            print(f"; {nlines/dt:.0f} lines/sec")
         else:
             print()
         print("Caches sizes:")

@@ -10,6 +10,6 @@ term: ( term '*' factor { ast.BinOp(term, ast.Mult(), factor) }
 factor: ('(' expr ')' { expr }
         | atom { atom }
         )
-atom: ( NAME { ast.Name(id=name.value, ctx=ast.Load()) }
-      | NUMBER { ast.Constant(value=ast.literal_eval(number.value)) }
+atom: ( NAME { ast.Name(id=name.string, ctx=ast.Load()) }
+      | NUMBER { ast.Constant(value=ast.literal_eval(number.string)) }
       )

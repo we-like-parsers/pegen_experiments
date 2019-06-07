@@ -167,8 +167,8 @@ def test_repeat_1_simple():
                     [[[TokenInfo(NUMBER, string='2', start=(1, 2), end=(1, 3), line='1 2 3\n')]],
                      [[TokenInfo(NUMBER, string='3', start=(1, 4), end=(1, 5), line='1 2 3\n')]]],
                     TokenInfo(NEWLINE, string='\n', start=(1, 5), end=(1, 6), line='1 2 3\n')]
-    tree = parse_string("1\n", parser_class)
-    assert tree is None
+    node = parse_string("1\n", parser_class)
+    assert node is None
 
 
 def test_repeat_1_complex():
@@ -191,15 +191,16 @@ def test_repeat_1_complex():
 def test_left_recursive():
     grammar = """
     start: expr NEWLINE
-    expr: '-' term | expr '+' term | term
+    expr: ('-' term | expr '+' term | term)
     term: NUMBER
+    foo: NAME+
+    bar: NAME*
+    baz: NAME?
     """
     rules = parse_string(grammar, pegen.GrammarParser)
     def is_rec(rule):
         return rule.alts.is_recursive(rule.name)
-    assert not is_rec(rules[0])
-    assert is_rec(rules[1])
-    assert not is_rec(rules[2])
+    assert all(is_rec(rule) == (rule.name == 'expr') for rule in rules)
     parser_class = generate_parser(rules)
     node = parse_string("1 + 2 + 3\n", parser_class)
     assert node == [[[[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')]],
@@ -208,11 +209,8 @@ def test_left_recursive():
                      TokenInfo(OP, string='+', start=(1, 6), end=(1, 7), line='1 + 2 + 3\n'),
                      [TokenInfo(NUMBER, string='3', start=(1, 8), end=(1, 9), line='1 + 2 + 3\n')]],
                     TokenInfo(NEWLINE, string='\n', start=(1, 9), end=(1, 10), line='1 + 2 + 3\n')]
-    print()
-    print(str(node).replace("type=2 (NUMBER)", "NUMBER").replace("type=4 (NEWLINE)", "NEWLINE").replace("type=54 (OP)", "OP"))
 
 
-@pytest.mark.skip
 def test_python_expr():
     grammar = """
     start: expr NEWLINE? ENDMARKER { ast.Expression(expr, lineno=1, col_offset=0) }
@@ -227,8 +225,8 @@ def test_python_expr():
     factor: ( '(' expr ')' { expr }
             | atom { atom }
             )
-    atom: ( NAME { ast.Name(id=name.value, ctx=ast.Load()) }
-          | NUMBER { ast.Constant(value=ast.literal_eval(number.value)) }
+    atom: ( NAME { ast.Name(id=name.string, ctx=ast.Load()) }
+          | NUMBER { ast.Constant(value=ast.literal_eval(number.string)) }
           )
     """
     parser_class = make_parser(grammar)
