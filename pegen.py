@@ -774,7 +774,6 @@ class ParserGenerator:
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
     def name_node(self, alts: Alts) -> str:
-        print(f"name_node({alts})")
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
         self.todo[name] = Rule(name, alts)
@@ -862,8 +861,8 @@ def simple_parser_main(parser_class):
 
     args = argparser.parse_args()
     verbose = args.verbose
-    verbose_tokenizer = verbose >= 2
-    verbose_parser = verbose == 1 or verbose >= 3
+    verbose_tokenizer = verbose >= 3
+    verbose_parser = verbose == 2 or verbose >= 4
 
     t0 = time.time()
 
@@ -933,8 +932,8 @@ argparser.add_argument('filename', help="Grammar description")
 def main() -> None:
     args = argparser.parse_args()
     verbose = args.verbose
-    verbose_tokenizer = verbose >= 2
-    verbose_parser = verbose == 1 or verbose >= 3
+    verbose_tokenizer = verbose >= 3
+    verbose_parser = verbose == 2 or verbose >= 4
     t0 = time.time()
 
     with open(args.filename) as file:
@@ -961,7 +960,7 @@ def main() -> None:
 
     t1 = time.time()
 
-    if not args.quiet:
+    if args.verbose:
         dt = t1 - t0
         diag = tokenizer.diagnose()
         nlines = diag.end[0]
