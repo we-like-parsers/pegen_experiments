@@ -123,85 +123,68 @@ def test_alt_optional_operator():
                     TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
-@pytest.mark.skip
 def test_repeat_0_simple():
     grammar = """
     start: thing thing* NEWLINE
     thing: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 2 3\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('thing',
-                             Tree('NUMBER', value='1')),
-                        Tree('Repeat',
-                             Tree('thing',
-                                  Tree('NUMBER', value='2')),
-                             Tree('thing',
-                                  Tree('NUMBER', value='3'))))
-    tree = parse_string("1\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('thing',
-                             Tree('NUMBER', value='1')),
-                        Tree('Repeat'))
+    node = parse_string("1 2 3\n", parser_class)
+    assert node == [[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 2 3\n')],
+                    [[[TokenInfo(NUMBER, string='2', start=(1, 2), end=(1, 3), line='1 2 3\n')]],
+                     [[TokenInfo(NUMBER, string='3', start=(1, 4), end=(1, 5), line='1 2 3\n')]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 5), end=(1, 6), line='1 2 3\n')]
+    node = parse_string("1\n", parser_class)
+    assert node == [[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1\n')],
+                    [],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 1), end=(1, 2), line='1\n')]
 
 
-@pytest.mark.skip
 def test_repeat_0_complex():
     grammar = """
     start: term ('+' term)* NEWLINE
     term: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 + 2 + 3\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('term',
-                             Tree('NUMBER', value='1')),
-                        Tree('Repeat',
-                             Tree('term',
-                                  Tree('NUMBER', value='2')),
-                             Tree('term',
-                                  Tree('NUMBER', value='3'))))
+    node = parse_string("1 + 2 + 3\n", parser_class)
+    assert node == [[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')],
+                    [[[TokenInfo(OP, string='+', start=(1, 2), end=(1, 3), line='1 + 2 + 3\n'),
+                       [TokenInfo(NUMBER, string='2', start=(1, 4), end=(1, 5), line='1 + 2 + 3\n')]]],
+                     [[TokenInfo(OP, string='+', start=(1, 6), end=(1, 7), line='1 + 2 + 3\n'),
+                       [TokenInfo(NUMBER, string='3', start=(1, 8), end=(1, 9), line='1 + 2 + 3\n')]]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 9), end=(1, 10), line='1 + 2 + 3\n')]
 
 
-@pytest.mark.skip
 def test_repeat_1_simple():
     grammar = """
     start: thing thing+ NEWLINE
     thing: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 2 3\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('thing',
-                             Tree('NUMBER', value='1')),
-                        Tree('Repeat',
-                             Tree('thing',
-                                  Tree('NUMBER', value='2')),
-                             Tree('thing',
-                                  Tree('NUMBER', value='3'))))
+    node = parse_string("1 2 3\n", parser_class)
+    assert node == [[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 2 3\n')],
+                    [[[TokenInfo(NUMBER, string='2', start=(1, 2), end=(1, 3), line='1 2 3\n')]],
+                     [[TokenInfo(NUMBER, string='3', start=(1, 4), end=(1, 5), line='1 2 3\n')]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 5), end=(1, 6), line='1 2 3\n')]
     tree = parse_string("1\n", parser_class)
     assert tree is None
 
 
-@pytest.mark.skip
 def test_repeat_1_complex():
     grammar = """
     start: term ('+' term)+ NEWLINE
     term: NUMBER
     """
     parser_class = make_parser(grammar)
-    tree = parse_string("1 + 2 + 3\n", parser_class)
-    assert tree == Tree('start',
-                        Tree('term',
-                             Tree('NUMBER', value='1')),
-                        Tree('Repeat',
-                             Tree('term',
-                                  Tree('NUMBER', value='2')),
-                             Tree('term',
-                                  Tree('NUMBER', value='3'))))
-    tree = parse_string("1\n", parser_class)
-    assert tree is None
+    node = parse_string("1 + 2 + 3\n", parser_class)
+    assert node == [[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')],
+                    [[[TokenInfo(OP, string='+', start=(1, 2), end=(1, 3), line='1 + 2 + 3\n'),
+                       [TokenInfo(NUMBER, string='2', start=(1, 4), end=(1, 5), line='1 + 2 + 3\n')]]],
+                     [[TokenInfo(OP, string='+', start=(1, 6), end=(1, 7), line='1 + 2 + 3\n'),
+                       [TokenInfo(NUMBER, string='3', start=(1, 8), end=(1, 9), line='1 + 2 + 3\n')]]]],
+                    TokenInfo(NEWLINE, string='\n', start=(1, 9), end=(1, 10), line='1 + 2 + 3\n')]
+    node = parse_string("1\n", parser_class)
+    assert node is None
 
 @pytest.mark.skip
 def test_left_recursive():

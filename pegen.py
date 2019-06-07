@@ -342,6 +342,7 @@ class Rule:
         return repr(self) == repr(other)
 
     def gen_func(self, gen: ParserGenerator, rulename: str):
+        is_loop = rulename.startswith('_loop_')
         if gen.is_recursive(rulename, self.alts):
             gen.print("@memoize_left_rec")
         else:
@@ -350,23 +351,13 @@ class Rule:
         with gen.indent():
             gen.print(f"# {rulename}: {self.alts}")
             gen.print("mark = self.mark()")
-            self.alts.gen_body(gen)
-            gen.print("return None")
-
-            ## if isinstance(rhs, Alts):
-            ##     for alt in rhs.nodes:
-            ##         self.gen_alt(rulename, alt)
-            ## elif isinstance(rhs, Repeat):
-            ##     gen.print("children = []")
-            ##     self.gen_alt(rulename, rhs.node, repeat=True)
-            ## elif isinstance(rhs, Opt):
-            ##     self.gen_alt(rulename, rhs.node, optional=True)
-            ## else:
-            ##     self.gen_alt(rulename, rhs)
-            ## if isinstance(rhs, Repeat):
-            ##     gen.print("return children")
-            ## else:
-            ##     gen.print("return None")
+            if is_loop:
+                gen.print("children = []")
+            self.alts.gen_body(gen, is_loop)
+            if is_loop:
+                gen.print("return children")
+            else:
+                gen.print("return None")
 
 
 class Leaf:
@@ -409,9 +400,11 @@ class Alts:
     def __repr__(self):
         return f"Alts({self.alts!r})"
 
-    def gen_body(self, gen: ParserGenerator):
-            for alt in self.alts:
-                alt.gen_block(gen)
+    def gen_body(self, gen: ParserGenerator, is_loop: bool = False):
+        if is_loop:
+            assert len(self.alts) == 1
+        for alt in self.alts:
+            alt.gen_block(gen, is_loop)
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
@@ -438,9 +431,12 @@ class Alt:
         else:
             return f"Alt({self.items!r})"
 
-    def gen_block(self, gen: ParserGenerator):
-        children = []
-        gen.print("if (")
+    def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
+        names = []
+        if is_loop:
+            gen.print("while (")
+        else:
+            gen.print("if (")
         with gen.indent():
             first = True
             for item in self.items:
@@ -448,18 +444,22 @@ class Alt:
                     first = False
                 else:
                     gen.print("and")
-                item.gen_item(gen, children)
+                item.gen_item(gen, names)
         gen.print("):")
         with gen.indent():
             action = self.action
             if not action:
-                action = f"[{', '.join(children)}]"
-            gen.print(f"return {action}")
+                action = f"[{', '.join(names)}]"
+            if is_loop:
+                gen.print(f"children.append({action})")
+                gen.print(f"mark = self.mark()")
+            else:
+                gen.print(f"return {action}")
         gen.print("self.reset(mark)")
 
 
 class NamedItem:
-    def __init__(self, name: str, item: Item):
+    def __init__(self, name: Optional[str], item: Item):
         self.name = name
         self.item = item
 
@@ -472,9 +472,9 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
-    def gen_item(self, gen: ParserGenerator, children: List[str]):
+    def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
-        name = dedupe(name, children)
+        name = dedupe(name, names)
         gen.print(f"({name} := {call})")
 
     def make_call(self, gen: ParserGenerator):
@@ -514,8 +514,8 @@ class Repeat0(Repeat):
         return f"Repeat0({self.node!r})"
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        name, call = self.node.make_call(gen)
-        return name, f"{call},"  # Also a trailing comma!
+        name = gen.name_loop(self.node)
+        return name, f"self.{name}(),"  # Also a trailing comma!
 
 
 class Repeat1(Repeat):
@@ -526,8 +526,8 @@ class Repeat1(Repeat):
         return f"Repeat1({self.node!r})"
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        name, call = self.node.make_call(gen)
-        return name, f"{call}"  # But no trailing comma here!
+        name = gen.name_loop(self.node)
+        return name, f"self.{name}()"  # But no trailing comma here!
 
 
 class Group:
@@ -735,6 +735,12 @@ class ParserGenerator:
         self.todo[name] = Rule(name, alts)
         return name
 
+    def name_loop(self, node: Plain):
+        self.counter += 1
+        name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
+        self.todo[name] = Rule(name, Alts([Alt([NamedItem(None, node)])]))
+        return name
+
     def is_recursive(self, rulename: str, node: Node) -> bool:
         return False  # XXXXXXXXXX  XXX  TODO
         # This is just a PoC -- we only find recursion if one of the
@@ -824,15 +830,15 @@ class ParserGenerator:
                 self.print(f"return {child}")
         self.print("self.reset(mark)")
 
-    def gen_named_item(self, item: Node, children: List[str]) -> Tuple[str, str]:
+    def gen_named_item(self, item: Node, names: List[str]) -> Tuple[str, str]:
         if isinstance(item, NamedItem):
             item_name = item.name
             item_proper = item.node
-            return self.gen_item(item_name, item_proper, children)
+            return self.gen_item(item_name, item_proper, names)
         else:
-            return self.gen_item(None, item, children)
+            return self.gen_item(None, item, names)
 
-    def gen_item(self, item_name: str, item: Node, children: List[str]) -> Tuple[str, str]:
+    def gen_item(self, item_name: str, item: Node, names: List[str]) -> Tuple[str, str]:
         if isinstance(item, StringLeaf):
             return item_name, f"self.expect({item.value})"
         if isinstance(item, NameLeaf):
@@ -841,9 +847,9 @@ class ParserGenerator:
                 return item_name, f"self.expect({item.value!r})"
             if name in ('NAME', 'STRING', 'NUMBER', 'CURLY_STUFF'):
                 name = name.lower()
-                return item_name or dedupe(name, children), f"self.{name}()"
+                return item_name or dedupe(name, names), f"self.{name}()"
             if name in self.todo or name in self.done:
-                return item_name or dedupe(name, children), f"self.{name}()"
+                return item_name or dedupe(name, names), f"self.{name}()"
             # TODO: Report as an error in the grammar, with line
             # number and column of the reference.
             raise RuntimeError(f"Don't know what {name!r} is; item_name={item_name}")
@@ -857,10 +863,10 @@ class ParserGenerator:
             name = prefix + subname
             if name not in self.todo and name not in self.done:
                 self.todo[name] = item
-            return item_name or dedupe(name, children), f"self.{name}()"
+            return item_name or dedupe(name, names), f"self.{name}()"
         if isinstance(item, (Alts, Alt)):
             name = self.name_node(item)
-            return item_name or dedupe(name, children), f"self.{name}()"
+            return item_name or dedupe(name, names), f"self.{name}()"
 
         raise RuntimeError(f"Unrecognized item {item!r}; item_name={item_name}")
 
