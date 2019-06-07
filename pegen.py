@@ -330,15 +330,15 @@ class Parser(Generic[T]):
 
 
 class Rule:
-    def __init__(self, name: str, alts: Alts):
+    def __init__(self, name: str, rhs: Alts):
         self.name = name
-        self.alts = alts
+        self.rhs = rhs
 
     def __str__(self):
-        return f"{self.name}: {self.alts}"
+        return f"{self.name}: {self.rhs}"
 
     def __repr__(self):
-        return f"Rule({self.name!r}, {self.alts!r})"
+        return f"Rule({self.name!r}, {self.rhs!r})"
 
     def __hash__(self):
         return hash(str(self))
@@ -351,27 +351,30 @@ class Rule:
     def gen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
         # If it's a single parenthesized group, flatten it.
-        alts = self.alts
+        rhs = self.rhs
         if (not is_loop
-            and len(alts.alts) == 1
-            and len(alts.alts[0].items) == 1
-            and isinstance(alts.alts[0].items[0].item, Group)):
-            alts = alts.alts[0].items[0].item.alts
-        if alts.is_recursive(rulename):
+            and len(rhs.alts) == 1
+            and len(rhs.alts[0].items) == 1
+            and isinstance(rhs.alts[0].items[0].item, Group)):
+            rhs = rhs.alts[0].items[0].item.alts
+        if rhs.is_recursive(rulename):
             gen.print("@memoize_left_rec")
         else:
             gen.print("@memoize")
         gen.print(f"def {rulename}(self):")
         with gen.indent():
-            gen.print(f"# {rulename}: {alts}")
+            gen.print(f"# {rulename}: {rhs}")
             gen.print("mark = self.mark()")
             if is_loop:
                 gen.print("children = []")
-            alts.gen_body(gen, is_loop)
+            rhs.gen_body(gen, is_loop)
             if is_loop:
                 gen.print("return children")
             else:
                 gen.print("return None")
+
+    def is_recursive(self) -> bool:
+        return self.rhs.is_recursive(self.name)
 
 
 class Leaf:

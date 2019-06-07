@@ -199,7 +199,7 @@ def test_left_recursive():
     """
     rules = parse_string(grammar, pegen.GrammarParser)
     def is_rec(rule):
-        return rule.alts.is_recursive(rule.name)
+        return rule.is_recursive()
     assert all(is_rec(rule) == (rule.name == 'expr') for rule in rules)
     parser_class = generate_parser(rules)
     node = parse_string("1 + 2 + 3\n", parser_class)
