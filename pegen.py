@@ -342,14 +342,6 @@ class Rule:
     def __repr__(self):
         return f"Rule({self.name!r}, {self.rhs!r})"
 
-    ## def __hash__(self):
-    ##     return hash(str(self))
-
-    ## def __eq__(self, other):
-    ##     if not isinstance(other, Rule):
-    ##         return NotImplemented
-    ##     return repr(self) == repr(other)
-
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
         if self.visited:
             return self.nullable
@@ -367,7 +359,7 @@ class Rule:
             and len(rhs.alts[0].items) == 1
             and isinstance(rhs.alts[0].items[0].item, Group)):
             rhs = rhs.alts[0].items[0].item.rhs
-        if rhs.is_recursive(rulename):
+        if self.is_left_rec():
             gen.print("@memoize_left_rec")
         else:
             gen.print("@memoize")
@@ -385,8 +377,8 @@ class Rule:
             else:
                 gen.print("return None")
 
-    def is_recursive(self) -> bool:
-        return self.rhs.is_recursive(self.name)
+    def is_left_rec(self, names: List[str] = []) -> bool:
+        return self.rhs.is_left_rec(names + [self.name]) and not names
 
 
 class Leaf:
@@ -416,8 +408,8 @@ class NameLeaf(Leaf):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
 
-    def is_recursive(self, rulename: str) -> bool:
-        return self.value == rulename
+    def is_left_rec(self, names: List[str]) -> bool:
+        return self.value in names
 
 
 class StringLeaf(Leaf):
@@ -431,7 +423,7 @@ class StringLeaf(Leaf):
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return 'string', f"self.expect({self.value})"
 
-    def is_recursive(self, rulename: str) -> bool:
+    def is_left_rec(self, names: List[str]) -> bool:
         return False
 
 
@@ -463,9 +455,9 @@ class Rhs:
         name = gen.name_node(self)
         return name, f"self.{name}()"
 
-    def is_recursive(self, rulename: str) -> bool:
+    def is_left_rec(self, names: List[str]) -> bool:
         for alt in self.alts:
-            if alt.is_recursive(rulename):
+            if alt.is_left_rec(names):
                 return True
         return False
 
@@ -523,14 +515,18 @@ class Alt:
                 gen.print(f"return {action}")
         gen.print("self.reset(mark)")
 
-    def is_recursive(self, rulename: str) -> bool:
-        return bool(self.items) and self.items[0].is_recursive(rulename)
+    def is_left_rec(self, names: List[str]) -> bool:
+        for item in self.items:
+            if not item.nullable:
+                return item.is_left_rec(names)
+        return False
 
 
 class NamedItem:
     def __init__(self, name: Optional[str], item: Item):
         self.name = name
         self.item = item
+        self.nullable = None
 
     def __str__(self):
         if self.name:
@@ -542,7 +538,8 @@ class NamedItem:
         return f"NamedItem({self.name!r}, {self.item!r})"
 
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
-        return self.item.visit(allrules)
+        self.nullable = self.item.visit(allrules)
+        return self.nullable
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
@@ -555,8 +552,8 @@ class NamedItem:
             name = self.name
         return name, call
 
-    def is_recursive(self, rulename: str) -> bool:
-        return self.item.is_recursive(rulename)
+    def is_left_rec(self, names: List[str]) -> bool:
+        return self.item.is_left_rec(names)
 
 
 class Opt:
@@ -576,7 +573,7 @@ class Opt:
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
         return True
 
-    def is_recursive(self, rulename: str) -> bool:
+    def is_left_rec(self, names: List[str]) -> bool:
         return False
 
 
@@ -586,7 +583,7 @@ class Repeat:
     def __init__(self, node: Plain):
         self.node = node
 
-    def is_recursive(self, rulename: str) -> bool:
+    def is_left_rec(self, names: List[str]) -> bool:
         return False
 
 
@@ -637,8 +634,8 @@ class Group:
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return self.rhs.make_call(gen)
 
-    def is_recursive(self, rulename: str) -> bool:
-        return self.rhs.is_recursive(rulename)
+    def is_left_rec(self, names: List[str]) -> bool:
+        return self.rhs.is_left_rec(names)
 
 
 Plain = Union[Leaf, Group]

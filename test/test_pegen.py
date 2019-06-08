@@ -198,9 +198,7 @@ def test_left_recursive():
     baz: NAME?
     """
     rules = parse_string(grammar, pegen.GrammarParser)
-    def is_rec(rule):
-        return rule.is_recursive()
-    assert all(is_rec(rule) == (rule.name == 'expr') for rule in rules)
+    assert all(rule.is_left_rec() == (rule.name == 'expr') for rule in rules)
     parser_class = generate_parser(rules)
     node = parse_string("1 + 2 + 3\n", parser_class)
     assert node == [[[[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')]],
@@ -247,3 +245,17 @@ def test_nullable():
     genr = pegen.ParserGenerator(rules, out)
     assert rules[0].nullable is False  # Not None!
     assert rules[1].nullable
+
+
+def test_advanced_left_recursive():
+    grammar = """
+    start: NUMBER | sign start
+    sign: ['-']
+    """
+    rules = parse_string(grammar, pegen.GrammarParser)
+    out = io.StringIO()
+    genr = pegen.ParserGenerator(rules, out)
+    assert rules[0].nullable is False  # Not None!
+    assert rules[1].nullable
+    assert rules[0].is_left_rec()
+    assert not rules[1].is_left_rec()
