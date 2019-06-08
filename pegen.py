@@ -330,7 +330,7 @@ class Parser(Generic[T]):
 
 
 class Rule:
-    def __init__(self, name: str, rhs: Alts):
+    def __init__(self, name: str, rhs: Rhs):
         self.name = name
         self.rhs = rhs
         self.visited = False
@@ -366,7 +366,7 @@ class Rule:
             and len(rhs.alts) == 1
             and len(rhs.alts[0].items) == 1
             and isinstance(rhs.alts[0].items[0].item, Group)):
-            rhs = rhs.alts[0].items[0].item.alts
+            rhs = rhs.alts[0].items[0].item.rhs
         if rhs.is_recursive(rulename):
             gen.print("@memoize_left_rec")
         else:
@@ -435,7 +435,7 @@ class StringLeaf(Leaf):
         return False
 
 
-class Alts:
+class Rhs:
     def __init__(self, alts: List[Alt]):
         self.alts = alts
 
@@ -443,7 +443,7 @@ class Alts:
         return " | ".join(str(alt) for alt in self.alts)
 
     def __repr__(self):
-        return f"Alts({self.alts!r})"
+        return f"Rhs({self.alts!r})"
 
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
         for alt in self.alts:
@@ -622,23 +622,23 @@ class Repeat1(Repeat):
 
 
 class Group:
-    def __init__(self, alts: Alts):
-        self.alts = alts
+    def __init__(self, rhs: Rhs):
+        self.rhs = rhs
 
     def __str__(self):
-        return f"({self.alts})"
+        return f"({self.rhs})"
 
     def __repr__(self):
-        return f"Group({self.alts!r})"
+        return f"Group({self.rhs!r})"
 
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
-        return self.alts.visit(allrules)
+        return self.rhs.visit(allrules)
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        return self.alts.make_call(gen)
+        return self.rhs.make_call(gen)
 
     def is_recursive(self, rulename: str) -> bool:
-        return self.alts.is_recursive(rulename)
+        return self.rhs.is_recursive(rulename)
 
 
 Plain = Union[Leaf, Group]
@@ -677,7 +677,7 @@ class GrammarParser(Parser):
         return None
 
     @memoize
-    def alternatives(self) -> Optional[Alts]:
+    def alternatives(self) -> Optional[Rhs]:
         """
         alternatives: alternative ('|' alternative)*
         """
@@ -694,7 +694,7 @@ class GrammarParser(Parser):
         self.reset(mark)
         if not alts:
             return None
-        return Alts(alts)
+        return Rhs(alts)
 
     @memoize
     def alternative(self) -> Optional[Alt]:
@@ -832,7 +832,7 @@ class ParserGenerator:
                     rule.gen_func(self, rulename)
         self.print(PARSER_SUFFIX.rstrip('\n'))
 
-    def name_node(self, alts: Alts) -> str:
+    def name_node(self, alts: Rhs) -> str:
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
         self.todo[name] = Rule(name, alts)
@@ -841,7 +841,7 @@ class ParserGenerator:
     def name_loop(self, node: Plain):
         self.counter += 1
         name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
-        self.todo[name] = Rule(name, Alts([Alt([NamedItem(None, node)])]))
+        self.todo[name] = Rule(name, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
 

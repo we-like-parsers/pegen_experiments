@@ -59,7 +59,7 @@ def test_parse_grammar():
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules[0]) == "start: sum NEWLINE"
     assert str(rules[1]) == "sum: t1=term '+' t2=term { action } | term"
-    assert repr(rules[2]) == "Rule('term', Alts([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
+    assert repr(rules[2]) == "Rule('term', Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
 
 
 def test_expr_grammar():
