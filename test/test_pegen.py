@@ -235,3 +235,15 @@ def test_python_expr():
     code = compile(node, "", "eval")
     val = eval(code)
     assert val == 3.0
+
+
+def test_nullable():
+    grammar = """
+    start: sign NUMBER
+    sign: ['-' | '+']
+    """
+    rules = parse_string(grammar, pegen.GrammarParser)
+    out = io.StringIO()
+    genr = pegen.ParserGenerator(rules, out)
+    assert rules[0].nullable is False  # Not None!
+    assert rules[1].nullable

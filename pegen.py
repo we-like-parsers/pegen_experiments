@@ -333,6 +333,8 @@ class Rule:
     def __init__(self, name: str, rhs: Alts):
         self.name = name
         self.rhs = rhs
+        self.visited = False
+        self.nullable = None
 
     def __str__(self):
         return f"{self.name}: {self.rhs}"
@@ -340,13 +342,21 @@ class Rule:
     def __repr__(self):
         return f"Rule({self.name!r}, {self.rhs!r})"
 
-    def __hash__(self):
-        return hash(str(self))
+    ## def __hash__(self):
+    ##     return hash(str(self))
 
-    def __eq__(self, other):
-        if not isinstance(other, Rule):
-            return NotImplemented
-        return repr(self) == repr(other)
+    ## def __eq__(self, other):
+    ##     if not isinstance(other, Rule):
+    ##         return NotImplemented
+    ##     return repr(self) == repr(other)
+
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        if self.visited:
+            return self.nullable
+        self.visited = True
+        self.nullable = self.rhs.visit(allrules)
+        assert self.nullable is not None
+        return self.nullable
 
     def gen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
@@ -364,6 +374,8 @@ class Rule:
         gen.print(f"def {rulename}(self):")
         with gen.indent():
             gen.print(f"# {rulename}: {rhs}")
+            if self.nullable:
+                gen.print(f"# nullable={self.nullable}")
             gen.print("mark = self.mark()")
             if is_loop:
                 gen.print("children = []")
@@ -389,6 +401,12 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        if self.value in allrules:
+            return allrules[self.value].visit(allrules)
+        # Token or unknown; never empty.
+        return False
+
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = self.value
         if name in ('NAME', 'NUMBER', 'STRING', 'CURLY_STUFF'):
@@ -406,6 +424,10 @@ class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        # The string token '' is considered empty.
+        return not self.value
+
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return 'string', f"self.expect({self.value})"
 
@@ -422,6 +444,12 @@ class Alts:
 
     def __repr__(self):
         return f"Alts({self.alts!r})"
+
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        for alt in self.alts:
+            if alt.visit(allrules):
+                return True
+        return False
 
     def gen_body(self, gen: ParserGenerator, is_loop: bool = False):
         if is_loop:
@@ -459,6 +487,12 @@ class Alt:
             return f"Alt({self.items!r}, {self.action!r}"
         else:
             return f"Alt({self.items!r})"
+
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        for item in self.items:
+            if not item.visit(allrules):
+                return False
+        return True
 
     def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
         names = []
@@ -507,6 +541,9 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        return self.item.visit(allrules)
+
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
         name = dedupe(name, names)
@@ -536,6 +573,9 @@ class Opt:
         name, call = self.node.make_call(gen)
         return "opt", f"{call},"  # Note trailing comma!
 
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        return True
+
     def is_recursive(self, rulename: str) -> bool:
         return False
 
@@ -557,6 +597,9 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        return True
+
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = gen.name_loop(self.node)
         return name, f"self.{name}(),"  # Also a trailing comma!
@@ -568,6 +611,10 @@ class Repeat1(Repeat):
 
     def __repr__(self):
         return f"Repeat1({self.node!r})"
+
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        # TODO: What if self.node is itself nullable?
+        return False
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = gen.name_loop(self.node)
@@ -583,6 +630,9 @@ class Group:
 
     def __repr__(self):
         return f"Group({self.alts!r})"
+
+    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        return self.alts.visit(allrules)
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return self.alts.make_call(gen)
@@ -739,6 +789,7 @@ class ParserGenerator:
         self.rules = rules
         self.file = file
         self.level = 0
+        self.compute_nullables()
 
     @contextlib.contextmanager
     def indent(self) -> None:
@@ -758,6 +809,11 @@ class ParserGenerator:
     def printblock(self, lines):
         for line in lines.splitlines():
             self.print(line)
+
+    def compute_nullables(self):
+        allrules = {rule.name: rule for rule in self.rules}
+        for rule in self.rules:
+            rule.visit(allrules)
 
     def generate_parser(self, filename: str) -> None:
         self.print(PARSER_PREFIX.format(filename=filename))
