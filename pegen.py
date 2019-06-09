@@ -51,6 +51,8 @@ class Tokenizer:
             tok = next(self._tokengen)
             if tok.type in (token.NL, token.COMMENT):
                 continue
+            if tok.type == token.ERRORTOKEN and tok.string.isspace():
+                continue
             self._tokens.append(tok)
             cached = False
         tok = self._tokens[self._index]
@@ -738,7 +740,7 @@ class GrammarParser(Parser):
     @memoize
     def item(self) -> Optional[Item]:
         """
-        item: '[' alternatives ']' | atom (' '* '?' | '*' | '+')?
+        item: '[' alternatives ']' | atom ('?' | '*' | '+')?
         """
         mark = self.mark()
         if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
