@@ -57,9 +57,9 @@ def test_parse_grammar():
     """
     rules = parse_string(grammar, pegen.GrammarParser)
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
-    assert str(rules[0]) == "start: sum NEWLINE"
-    assert str(rules[1]) == "sum: t1=term '+' t2=term { action } | term"
-    assert repr(rules[2]) == "Rule('term', Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
+    assert str(rules['start']) == "start: sum NEWLINE"
+    assert str(rules['sum']) == "sum: t1=term '+' t2=term { action } | term"
+    assert repr(rules['term']) == "Rule('term', Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
 
 
 def test_expr_grammar():
@@ -198,7 +198,7 @@ def test_left_recursive():
     baz: NAME?
     """
     rules = parse_string(grammar, pegen.GrammarParser)
-    assert all(rule.is_left_rec() == (rule.name == 'expr') for rule in rules)
+    assert all(rule.is_left_rec() == (rule.name == 'expr') for rule in rules.values())
     parser_class = generate_parser(rules)
     node = parse_string("1 + 2 + 3\n", parser_class)
     assert node == [[[[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')]],
@@ -243,8 +243,8 @@ def test_nullable():
     rules = parse_string(grammar, pegen.GrammarParser)
     out = io.StringIO()
     genr = pegen.ParserGenerator(rules, out)
-    assert rules[0].nullable is False  # Not None!
-    assert rules[1].nullable
+    assert rules['start'].nullable is False  # Not None!
+    assert rules['sign'].nullable
 
 
 def test_advanced_left_recursive():
@@ -255,10 +255,10 @@ def test_advanced_left_recursive():
     rules = parse_string(grammar, pegen.GrammarParser)
     out = io.StringIO()
     genr = pegen.ParserGenerator(rules, out)
-    assert rules[0].nullable is False  # Not None!
-    assert rules[1].nullable
-    assert rules[0].is_left_rec()
-    assert not rules[1].is_left_rec()
+    assert rules['start'].nullable is False  # Not None!
+    assert rules['sign'].nullable
+    assert rules['start'].is_left_rec()
+    assert not rules['sign'].is_left_rec()
 
 
 @pytest.mark.skip
@@ -271,9 +271,9 @@ def test_mutually_left_recursive():
     rules = parse_string(grammar, pegen.GrammarParser)
     out = io.StringIO()
     genr = pegen.ParserGenerator(rules, out)
-    assert not rules[0].is_left_rec()
-    assert rules[1].is_left_rec()
-    assert rules[2].is_left_rec()
+    assert not rules['start'].is_left_rec()
+    assert rules['foo'].is_left_rec()
+    assert rules['bar'].is_left_rec()
     genr.generate_parser("<string>")
     ns = {}
     exec(out.getvalue(), ns)

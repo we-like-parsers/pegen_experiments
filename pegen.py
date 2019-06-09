@@ -342,11 +342,11 @@ class Rule:
     def __repr__(self):
         return f"Rule({self.name!r}, {self.rhs!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         if self.visited:
             return self.nullable
         self.visited = True
-        self.nullable = self.rhs.visit(allrules)
+        self.nullable = self.rhs.visit(rules)
         assert self.nullable is not None
         return self.nullable
 
@@ -393,16 +393,16 @@ class Leaf:
 
 
 class NameLeaf(Leaf):
-    __allrules: Optional[Dict[str, Rule]] = None
+    __rules: Optional[Dict[str, Rule]] = None
 
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
-        # Hack: squirrel away a reference to allrules for use by is_left_rec().
-        self.__allrules = allrules
-        if self.value in allrules:
-            return allrules[self.value].visit(allrules)
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+        # Hack: squirrel away a reference to rules for use by is_left_rec().
+        self.__rules = rules
+        if self.value in rules:
+            return rules[self.value].visit(rules)
         # Token or unknown; never empty.
         return False
 
@@ -418,8 +418,8 @@ class NameLeaf(Leaf):
     def is_left_rec(self, names: List[str]) -> bool:
         if self.value in names:
             return True
-        if self.__allrules is not None:
-            rule = self.__allrules.get(self.value)
+        if self.__rules is not None:
+            rule = self.__rules.get(self.value)
             if rule is not None:
                 return rule.is_left_rec(names)
         return False
@@ -429,7 +429,7 @@ class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         # The string token '' is considered empty.
         return not self.value
 
@@ -450,9 +450,9 @@ class Rhs:
     def __repr__(self):
         return f"Rhs({self.alts!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         for alt in self.alts:
-            if alt.visit(allrules):
+            if alt.visit(rules):
                 return True
         return False
 
@@ -493,9 +493,9 @@ class Alt:
         else:
             return f"Alt({self.items!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         for item in self.items:
-            if not item.visit(allrules):
+            if not item.visit(rules):
                 return False
         return True
 
@@ -550,8 +550,8 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
-        self.nullable = self.item.visit(allrules)
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+        self.nullable = self.item.visit(rules)
         return self.nullable
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
@@ -583,7 +583,7 @@ class Opt:
         name, call = self.node.make_call(gen)
         return "opt", f"{call},"  # Note trailing comma!
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return True
 
     def is_left_rec(self, names: List[str]) -> bool:
@@ -607,7 +607,7 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return True
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
@@ -622,7 +622,7 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         # TODO: What if self.node is itself nullable?
         return False
 
@@ -641,8 +641,8 @@ class Group:
     def __repr__(self):
         return f"Group({self.rhs!r})"
 
-    def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
-        return self.rhs.visit(allrules)
+    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+        return self.rhs.visit(rules)
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return self.rhs.make_call(gen)
@@ -659,14 +659,14 @@ class GrammarParser(Parser):
     """Hand-written parser for Grammar files."""
 
     @memoize
-    def start(self) -> Optional[List[Rule]]:
+    def start(self) -> Optional[Dict[str, Rule]]:
         """
         start: rule+ ENDMARKER
         """
         mark = self.mark()
-        rules = []
+        rules = {}
         while rule := self.rule():
-            rules.append(rule)
+            rules[rule.name] = rule
             mark = self.mark()
         if self.expect('ENDMARKER'):
             return rules
@@ -795,7 +795,7 @@ if __name__ == '__main__':
 
 class ParserGenerator:
 
-    def __init__(self, rules: List[Rule], file: IO[Text]):
+    def __init__(self, rules: Dict[str, Rule], file: IO[Text]):
         self.rules = rules
         self.file = file
         self.level = 0
@@ -822,18 +822,15 @@ class ParserGenerator:
 
     def compute_nullables(self):
         # Thanks to TatSu (tatsu/leftrec.py) for inspiration.
-        allrules = {rule.name: rule for rule in self.rules}
-        for rule in self.rules:
-            rule.visit(allrules)
+        for rule in self.rules.values():
+            rule.visit(self.rules)
 
     def generate_parser(self, filename: str) -> None:
         self.print(PARSER_PREFIX.format(filename=filename))
         self.print("class GeneratedParser(Parser):")
-        self.todo: Dict[str, Rule] = {}  # Rules to generate
+        self.todo = self.rules.copy()  # Rules to generate
         self.done: Dict[str, Rule] = {}  # Rules generated
         self.counter = 0
-        for rule in self.rules:
-            self.todo[rule.name] = rule
         while self.todo:
             for rulename, rule in list(self.todo.items()):
                 self.done[rulename] = rule
@@ -1019,9 +1016,9 @@ def main() -> None:
 
     if not args.quiet:
         if args.verbose:
-            for rule in rules:
+            for rule in rules.values():
                 print(repr(rule))
-        for rule in rules:
+        for rule in rules.values():
             print(rule)
 
     with open(args.output, 'w') as file:
