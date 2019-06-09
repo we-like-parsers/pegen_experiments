@@ -259,3 +259,26 @@ def test_advanced_left_recursive():
     assert rules[1].nullable
     assert rules[0].is_left_rec()
     assert not rules[1].is_left_rec()
+
+
+@pytest.mark.skip
+def test_mutually_left_recursive():
+    grammar = """
+    start: foo 'E'
+    foo: bar 'A' | 'B'
+    bar: foo 'C' | 'D'
+    """
+    rules = parse_string(grammar, pegen.GrammarParser)
+    out = io.StringIO()
+    genr = pegen.ParserGenerator(rules, out)
+    assert not rules[0].is_left_rec()
+    assert rules[1].is_left_rec()
+    assert rules[2].is_left_rec()
+    genr.generate_parser("<string>")
+    ns = {}
+    exec(out.getvalue(), ns)
+    parser_class = ns['GeneratedParser']
+    node = parse_string("D A C A E", parser_class)
+    assert node == []
+    node = parse_string("B C A E", parser_class)
+    assert node == []

@@ -173,9 +173,9 @@ def memoize_left_rec(method: Callable[[Parser], T]):
             # (But we use the memoization cache instead of a static
             # variable.)
             #
-            # TODO: Fix this for mutually-left-recursive rules!
+            # TODO: Fix this for indirectly left-recursive rules!
             # E.g.
-            #   start: foo '+' bar
+            #   start: foo '+' bar | bar
             #   foo: start
             #   bar: NUMBER
             # (We don't clear the cache for foo.)
@@ -378,7 +378,10 @@ class Rule:
                 gen.print("return None")
 
     def is_left_rec(self, names: List[str] = []) -> bool:
-        return self.rhs.is_left_rec(names + [self.name]) and not names
+        # TODO: Make this work properly for indirect left recursion.
+        # Right now it's awfully broken that case.  (But so is the
+        # parsing implementation.)
+        return self.rhs.is_left_rec(names + [self.name])
 
 
 class Leaf:
@@ -390,10 +393,14 @@ class Leaf:
 
 
 class NameLeaf(Leaf):
+    __allrules: Optional[Dict[str, Rule]] = None
+
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
     def visit(self, allrules: Dict[str, Rule]) -> Optional[bool]:
+        # Hack: squirrel away a reference to allrules for use by is_left_rec().
+        self.__allrules = allrules
         if self.value in allrules:
             return allrules[self.value].visit(allrules)
         # Token or unknown; never empty.
@@ -409,7 +416,13 @@ class NameLeaf(Leaf):
         return name, f"self.{name}()"
 
     def is_left_rec(self, names: List[str]) -> bool:
-        return self.value in names
+        if self.value in names:
+            return True
+        if self.__allrules is not None:
+            rule = self.__allrules.get(self.value)
+            if rule is not None:
+                return rule.is_left_rec(names)
+        return False
 
 
 class StringLeaf(Leaf):
@@ -808,6 +821,7 @@ class ParserGenerator:
             self.print(line)
 
     def compute_nullables(self):
+        # Thanks to TatSu (tatsu/leftrec.py) for inspiration.
         allrules = {rule.name: rule for rule in self.rules}
         for rule in self.rules:
             rule.visit(allrules)
