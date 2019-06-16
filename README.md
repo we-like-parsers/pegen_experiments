@@ -15,7 +15,7 @@ various ways:
   - Use `:` instead of `<-`
   - Use `|` instead of `/`
   - Notation for tokens is the same as in CPython's Grammar too
-- No support yet for `&X` and `!X`, nor for "cut", `~`
+- No support yet for "cut", `~`
 - Handling of operators and reserved words is a bit janky
 
 Both the generator and the generated parsers require Python 3.8 -- it

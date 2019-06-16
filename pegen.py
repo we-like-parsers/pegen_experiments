@@ -67,6 +67,8 @@ class Tokenizer:
             tok = next(self._tokengen)
             if tok.type in (token.NL, token.COMMENT):
                 continue
+            if tok.type == token.ERRORTOKEN and tok.string.isspace():
+                continue
             self._tokens.append(tok)
         return self._tokens[self._index]
 
@@ -326,6 +328,18 @@ class Parser(Generic[T]):
             return self._tokenizer.getnext()
         return None
 
+    def positive_lookahead(self, func: Callable[..., T], *args) -> Optional[T]:
+        mark = self.mark()
+        ok = func(*args)
+        self.reset(mark)
+        return ok
+
+    def negative_lookahead(self, func: Callable[..., T], *args) -> bool:
+        mark = self.mark()
+        ok = func(*args)
+        self.reset(mark)
+        return not ok
+
     def make_syntax_error(self, filename="<unknown>") -> NoReturn:
         tok = self._tokenizer.diagnose()
         return SyntaxError("pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line))
@@ -558,8 +572,11 @@ class NamedItem:
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
-        name = dedupe(name, names)
-        gen.print(f"({name} := {call})")
+        if name is None:
+            gen.print(call)
+        else:
+            name = dedupe(name, names)
+            gen.print(f"({name} := {call})")
 
     def make_call(self, gen: ParserGenerator):
         name, call = self.item.make_call(gen)
@@ -569,6 +586,51 @@ class NamedItem:
 
     def is_left_rec(self, names: List[str]) -> bool:
         return self.item.is_left_rec(names)
+
+
+class Lookahead:
+    def __init__(self, node: Plain, sign: str):
+        self.node = node
+        self.sign = sign
+
+    def __str__(self):
+        return f"{self.sign}{self.node}"
+
+    def visit(self, rules: Dict[str, Rule]) -> bool:
+        return True
+
+    def is_left_rec(self, names: List[str]) -> bool:
+        return False
+
+    def make_call_helper(self, gen: ParserGenerator) -> str:
+        name, call = self.node.make_call(gen)
+        head, tail = call.split('(', 1)
+        assert tail[-1] == ')'
+        tail = tail[:-1]
+        return head, tail
+
+
+class PositiveLookahead(Lookahead):
+    def __init__(self, node: Plain):
+        super().__init__(node, '&')
+
+    def __repr__(self):
+        return f"PositiveLookahead({self.node!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        head, tail = self.make_call_helper(gen)
+        return None, f"self.positive_lookahead({head}, {tail})"
+
+class NegativeLookahead(Lookahead):
+    def __init__(self, node: Plain):
+        super().__init__(node, '!')
+
+    def __repr__(self):
+        return f"NegativeLookahead({self.node!r})"
+
+    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+        head, tail = self.make_call_helper(gen)
+        return None, f"self.negative_lookahead({head}, {tail})"
 
 
 class Opt:
@@ -740,16 +802,20 @@ class GrammarParser(Parser):
     @memoize
     def item(self) -> Optional[Item]:
         """
-        item: '[' alternatives ']' | atom ('?' | '*' | '+')?
+        item: '[' alternatives ']' | ('&' | '!') atom | atom ('?' | '*' | '+')?
         """
         mark = self.mark()
         if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
             return Opt(alts)
         self.reset(mark)
+        if (lookahead := (self.expect('&') or self.expect('!'))) and (atom := self.atom()):
+            if lookahead.string == '&':
+                return PositiveLookahead(atom)
+            else:
+                return NegativeLookahead(atom)
+        self.reset(mark)
         if atom := self.atom():
             mark = self.mark()
-            while self.expect(' '):
-                pass
             if self.expect('?'):
                 return Opt(atom)
             if self.expect('*'):

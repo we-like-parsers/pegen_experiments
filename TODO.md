@@ -1,7 +1,7 @@
 TODO items
 ----------
 
-- [ ] Implement !x, &x
+- [x] Implement !x, &x
 - [ ] Implement cut (~)
 - [ ] Compute indirect (mutual) left-recursion correctly,
       see https://github.com/neogeny/TatSu/blob/master/tatsu/leftrec.py

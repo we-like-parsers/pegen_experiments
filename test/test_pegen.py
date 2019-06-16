@@ -282,3 +282,21 @@ def test_mutually_left_recursive():
     assert node == []
     node = parse_string("B C A E", parser_class)
     assert node == []
+
+
+def test_lookahead():
+    grammar = """
+    start: (expr_stmt | assign_stmt) &'.'
+    expr_stmt: !(target '=') expr
+    assign_stmt: target '=' expr
+    expr: term ('+' term)*
+    target: NAME
+    term: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    node = parse_string("foo = 12 + 12 .", parser_class)
+    assert node == [[[[TokenInfo(NAME, string='foo', start=(1, 0), end=(1, 3), line='foo = 12 + 12 .')],
+                      TokenInfo(OP, string='=', start=(1, 4), end=(1, 5), line='foo = 12 + 12 .'),
+                      [[TokenInfo(NUMBER, string='12', start=(1, 6), end=(1, 8), line='foo = 12 + 12 .')],
+                       [[[TokenInfo(OP, string='+', start=(1, 9), end=(1, 10), line='foo = 12 + 12 .'),
+                          [TokenInfo(NUMBER, string='12', start=(1, 11), end=(1, 13), line='foo = 12 + 12 .')]]]]]]]]
