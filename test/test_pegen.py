@@ -32,7 +32,10 @@ def run_parser(file, parser_class, *, verbose=False):
     # Note that this always recognizes {...} as CURLY_STUFF.
     tokenizer = pegen.Tokenizer(pegen.grammar_tokenizer(tokenize.generate_tokens(file.readline)))
     parser = parser_class(tokenizer, verbose=verbose)
-    return parser.start()
+    result = parser.start()
+    if result is None:
+        raise parser.make_syntax_error()
+    return result
 
 
 def parse_string(source, parser_class, *, dedent=True, verbose=False):
@@ -167,8 +170,8 @@ def test_repeat_1_simple():
                     [[[TokenInfo(NUMBER, string='2', start=(1, 2), end=(1, 3), line='1 2 3\n')]],
                      [[TokenInfo(NUMBER, string='3', start=(1, 4), end=(1, 5), line='1 2 3\n')]]],
                     TokenInfo(NEWLINE, string='\n', start=(1, 5), end=(1, 6), line='1 2 3\n')]
-    node = parse_string("1\n", parser_class)
-    assert node is None
+    with pytest.raises(SyntaxError):
+        parse_string("1\n", parser_class)
 
 
 def test_repeat_1_complex():
@@ -184,8 +187,8 @@ def test_repeat_1_complex():
                      [[TokenInfo(OP, string='+', start=(1, 6), end=(1, 7), line='1 + 2 + 3\n'),
                        [TokenInfo(NUMBER, string='3', start=(1, 8), end=(1, 9), line='1 + 2 + 3\n')]]]],
                     TokenInfo(NEWLINE, string='\n', start=(1, 9), end=(1, 10), line='1 + 2 + 3\n')]
-    node = parse_string("1\n", parser_class)
-    assert node is None
+    with pytest.raises(SyntaxError):
+        parse_string("1\n", parser_class)
 
 
 def test_left_recursive():
@@ -300,3 +303,11 @@ def test_lookahead():
                       [[TokenInfo(NUMBER, string='12', start=(1, 6), end=(1, 8), line='foo = 12 + 12 .')],
                        [[[TokenInfo(OP, string='+', start=(1, 9), end=(1, 10), line='foo = 12 + 12 .'),
                           [TokenInfo(NUMBER, string='12', start=(1, 11), end=(1, 13), line='foo = 12 + 12 .')]]]]]]]]
+
+
+def test_named_lookahead_error():
+    grammar = """
+    start: foo=!'x' NAME
+    """
+    with pytest.raises(SyntaxError):
+        make_parser(grammar)

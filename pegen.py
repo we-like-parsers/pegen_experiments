@@ -788,7 +788,7 @@ class GrammarParser(Parser):
     @memoize
     def named_item(self) -> Optional[NamedItem]:
         """
-        named_item: NAME '=' item | item
+        named_item: NAME '=' item | item | lookahead
         """
         mark = self.mark()
         if (name := self.name()) and self.expect('=') and (item := self.item()):
@@ -796,23 +796,34 @@ class GrammarParser(Parser):
         self.reset(mark)
         item = self.item()
         if not item:
-            return None
+            self.reset(mark)  # Redundant?
+            item = self.lookahead()
+            if not item:
+                return None
         return NamedItem(None, item)
 
     @memoize
-    def item(self) -> Optional[Item]:
+    def lookahead(self) -> Optional[NamedItem]:
         """
-        item: '[' alternatives ']' | ('&' | '!') atom | atom ('?' | '*' | '+')?
+        lookahead: ('&' | '!') atom
         """
         mark = self.mark()
-        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
-            return Opt(alts)
-        self.reset(mark)
         if (lookahead := (self.expect('&') or self.expect('!'))) and (atom := self.atom()):
             if lookahead.string == '&':
                 return PositiveLookahead(atom)
             else:
                 return NegativeLookahead(atom)
+        self.reset(mark)
+        return None
+
+    @memoize
+    def item(self) -> Optional[Item]:
+        """
+        item: '[' alternatives ']' | atom ('?' | '*' | '+')?
+        """
+        mark = self.mark()
+        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
+            return Opt(alts)
         self.reset(mark)
         if atom := self.atom():
             mark = self.mark()
