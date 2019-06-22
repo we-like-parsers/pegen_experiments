@@ -360,7 +360,8 @@ class Rule:
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         if self.visited:
-            return self.nullable
+            # A left-recursive rule is considered non-nullable.
+            return False
         self.visited = True
         self.nullable = self.rhs.visit(rules)
         assert self.nullable is not None
@@ -568,6 +569,7 @@ class NamedItem:
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         self.nullable = self.item.visit(rules)
+        assert self.nullable is not None
         return self.nullable
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
