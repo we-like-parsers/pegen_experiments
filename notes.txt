@@ -1,3 +1,114 @@
+Design for the C code
+=====================
+
+Let's do recursive descent first.  It's simple and we can try to limit
+the stack manually (currently CPython only allows about 100 nested
+parentheses so that's okay).
+
+Parser structure
+----------------
+
+Also needs to point to a PyArena, used for allocating AST nodes and
+other things.  And maybe some flag indicating there's an allocation
+error and a convention to bail if there is one.
+
+Possibly return Py_None for "no match" rather than NULL?  That will
+allow NULL to mean "error" (other than syntax error or EOF).
+
+- tok: Pointer to tokenizer, CPython's struct tok_state
+- input: Pointer to input bytes (char *), same as tok->input (owned by tok).
+         (Not used though.  And tokenizing from file won't have it.)
+- tokens: Pointer to array of Token structs
+- mark: index into array of Tokens
+- fill: number of valid entries in array of Tokens
+- size: total number of entries in array of Tokens
+
+Token structure
+---------------
+
+These are in an array linked from Parser.  (Or linked list???)
+
+- type: int, token type (needs only 8 bits)
+- value: bytes object [or maybe just two indices into parser->input?)
+- line, col, endline, endcol: int
+- memo: Pointer to linked list Memo
+
+Memo structure
+--------------
+
+Linked list, optimized for quickly finding a given type.  (Or array???)
+
+- type: int, either a token or a rule (rules start at 256)
+- node: NULL or pointer to AST node OR pointer to token object (TODO)
+- mark: if node != NULL, index into Parser's array of tokens
+- next: NULL or pointer to next Memo structure
+
+C function for a rule
+---------------------
+
+Similar to the Python functions, but memoziation is done here.
+
+#define type_expr  321  // Some constant representing the rule 'expr'
+
+static AST*
+rule_expr(Parser *p)
+{
+    AST *res = NULL;
+    int mark = p->mark;
+    if (res = is_memoized(p, type_expr))
+        return res;
+    // Alternatives start here
+    if ((a = rule_a(p)) && (b = rule_b(p)) && (c = rule_c(p))) {
+        // On success
+        res = <make new AST node from (a, b, c)>
+        insert_memo(p, mark, type_expr, res);
+        return res;
+    }
+    p->mark = mark;
+    // More alternatives...
+    ...
+    // At the end
+    // Memoize negative result too!
+    insert_memo(p, mark, type_expr, NULL);
+    return NULL;
+}
+
+// Here, mark is the start of the node, while p->mark is the end.
+// If node==NULL, they should be the same.
+static void
+insert_memo(Parser *p, int mark, int type, AST *node)
+{
+    // Simplest: insert in front
+    Memo *m = malloc(sizeof(Memo));
+    if (m == NULL)
+        panic();  // TODO: How to handle malloc failures
+    m->type = type;
+    m->node = node;
+    m->mark = p->mark;
+    m->next = p->tokens[mark].memo;
+    p->tokens[mark].memo = m;
+}
+
+static AST *
+is_memoized(Parser *p, int type)
+{
+    // Possible optimization: sort Memos by type.
+    Token *t = &p->tokens[p->mark];
+    Memo *m;
+    for (m = t->memo; m != NULL; m = m->next) {
+        if (m->type == type) {
+            if (m->node = NULL)
+                return NULL;
+            p->mark = m->mark;
+            return m->node;
+        }
+    }
+    return NULL;
+}
+
+OLD NOTES
+=========
+
 Design for the VM
 
 opcodes:
