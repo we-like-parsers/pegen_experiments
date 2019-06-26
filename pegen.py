@@ -574,6 +574,8 @@ class NamedItem:
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
+        if self.name:
+            name = self.name
         if name is None:
             gen.print(call)
         else:

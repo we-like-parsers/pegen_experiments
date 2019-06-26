@@ -3,7 +3,7 @@ expr: ( expr '+' term { ast.BinOp(expr, ast.Add(), term) }
       | expr '-' term { ast.BinOp(expr, ast.Sub(), term) }
       | term { term }
       )
-term: ( term '*' factor { ast.BinOp(term, ast.Mult(), factor) }
+term: ( l=term '*' r=factor { ast.BinOp(l, ast.Mult(), r) }
       | term '/' factor { ast.BinOp(term, ast.Div(), factor) }
       | factor { factor }
       )
