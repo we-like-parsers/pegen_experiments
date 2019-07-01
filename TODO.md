@@ -4,7 +4,7 @@ TODO items
 - [x] Implement !x, &x
 - [ ] Implement cut (~)
 - [ ] Compute indirect (mutual) left-recursion correctly,
-      see https://github.com/neogeny/TatSu/blob/master/tatsu/leftrec.py
+      see https://github.com/neogeny/TatSu/pull/139#issuecomment-506978507
 - [ ] Rename ENDMARKER to $ (apparently standard)
 - [ ] Rename all Parser methods to have a leading underscore
 - [ ] Change memoize so as to minumize mark()/reset() calls (assume all functions are atomic)
