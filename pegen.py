@@ -948,15 +948,26 @@ def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, Set[str]]
         if len(scc) > 1:
             for name in scc:
                 rules[name].left_recursive = True
-            # The leader is the name whose rule comes first.
-            # TODO: This is incorrect if there are subcycles
-            # that don't involve the leader.
+            leaders = set()
+            referrers = {}
             for name in rules:
-                if name in scc:
-                    rules[name].leader = True
-                    break
-            else:
-                assert False, f"No name in {scc} occurs in rules?!"
+                if name not in scc:
+                    starts = scc & graph[name]
+                    if starts:
+                        referrers[name] = starts
+                        leaders.update(starts)
+            print(leaders, "for", scc)
+            if not leaders:
+                if 'start' in scc:
+                    leaders = {'start'}
+                else:
+                    # This means there's bad code somewhere above.
+                    assert False, f"No name in {scc} occurs in any other rules?!"
+            if len(leaders) > 1:
+                # This means the grammar is beyond our current ability.
+                raise ValueError(f"SCC {scc} has multiple leaders: {leaders};\n  referrers: {referrers}")
+            for name in leaders:
+                rules[name].leader = True
         else:
             name = next(iter(scc))
             if name in graph[name]:

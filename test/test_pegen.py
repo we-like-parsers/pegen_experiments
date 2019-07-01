@@ -322,3 +322,23 @@ def test_named_lookahead_error():
     """
     with pytest.raises(SyntaxError):
         make_parser(grammar)
+
+
+def test_start_leader():
+    grammar = """
+    start: attr | NAME
+    attr: start '.' NAME
+    """
+    # Would assert False without a special case in compute_left_recursives().
+    make_parser(grammar)
+
+
+def test_left_recursion_too_complex():
+    grammar = """
+    start: foo | bar
+    foo: bar '+' | '+'
+    bar: foo '-' | '-'
+    """
+    with pytest.raises(ValueError) as errinfo:
+        make_parser(grammar)
+    assert "has multiple leaders" in str(errinfo.value)
