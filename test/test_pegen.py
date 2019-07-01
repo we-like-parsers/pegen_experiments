@@ -268,7 +268,6 @@ def test_advanced_left_recursive():
     assert not rules['sign'].left_recursive
 
 
-@pytest.mark.skip
 def test_mutually_left_recursive():
     grammar = """
     start: foo 'E'
@@ -286,9 +285,17 @@ def test_mutually_left_recursive():
     exec(out.getvalue(), ns)
     parser_class = ns['GeneratedParser']
     node = parse_string("D A C A E", parser_class)
-    assert node == []
+    assert node == [[[[[TokenInfo(type=NAME, string='D', start=(1, 0), end=(1, 1), line='D A C A E')],
+                       TokenInfo(type=NAME, string='A', start=(1, 2), end=(1, 3), line='D A C A E')],
+                      TokenInfo(type=NAME, string='C', start=(1, 4), end=(1, 5), line='D A C A E')],
+                     TokenInfo(type=NAME, string='A', start=(1, 6), end=(1, 7), line='D A C A E')],
+                    TokenInfo(type=NAME, string='E', start=(1, 8), end=(1, 9), line='D A C A E')]
     node = parse_string("B C A E", parser_class)
-    assert node == []
+    assert node != None
+    assert node == [[[[TokenInfo(type=NAME, string='B', start=(1, 0), end=(1, 1), line='B C A E')],
+                      TokenInfo(type=NAME, string='C', start=(1, 2), end=(1, 3), line='B C A E')],
+                     TokenInfo(type=NAME, string='A', start=(1, 4), end=(1, 5), line='B C A E')],
+                    TokenInfo(type=NAME, string='E', start=(1, 6), end=(1, 7), line='B C A E')]
 
 
 def test_lookahead():

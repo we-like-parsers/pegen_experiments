@@ -354,6 +354,7 @@ class Rule:
         self.visited = False
         self.nullable = None
         self.left_recursive = False
+        self.leader = False
 
     def __str__(self):
         return f"{self.name}: {self.rhs}"
@@ -383,7 +384,9 @@ class Rule:
             and isinstance(rhs.alts[0].items[0].item, Group)):
             rhs = rhs.alts[0].items[0].item.rhs
         if self.left_recursive:
-            gen.print("@memoize_left_rec")
+            if self.leader:
+                gen.print("@memoize_left_rec")
+            # Non-leader rules in a cycle are not memoized
         else:
             gen.print("@memoize")
         gen.print(f"def {rulename}(self):")
@@ -948,10 +951,20 @@ def compute_left_recursives(rules: Dict[str, Rule],
         if len(scc) > 1:
             for name in scc:
                 rules[name].left_recursive = True
+            # The leader is the name whose rule comes first.
+            # TODO: This is incorrect if there are subcycles
+            # that don't involve the leader.
+            for name in rules:
+                if name in scc:
+                    rules[name].leader = True
+                    break
+            else:
+                assert False, f"No name in {scc} occurs in rules?!"
         else:
             name = next(iter(scc))
             if name in first_graph[name]:
                 rules[name].left_recursive = True
+                rules[name].leader = True
 
 
 def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, str]:
