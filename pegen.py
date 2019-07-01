@@ -880,10 +880,7 @@ class ParserGenerator:
         self.file = file
         self.level = 0
         compute_nullables(rules)
-        self.first_graph = make_first_graph(rules)
-        self.first_sccs = list(
-            sccutils.strongly_connected_components(self.first_graph.keys(), self.first_graph))
-        compute_left_recursives(self.rules, self.first_graph, self.first_sccs)
+        self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
 
     @contextlib.contextmanager
     def indent(self) -> None:
@@ -944,10 +941,10 @@ def compute_nullables(rules: Dict[str, Rule]) -> None:
         rule.visit(rules)
 
 
-def compute_left_recursives(rules: Dict[str, Rule],
-                            first_graph: Dict[str, Set[str]],
-                            first_sccs: List[Set[str]]) -> None:
-    for scc in first_sccs:
+def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, Set[str]], List[Set[str]]]:
+    graph = make_first_graph(rules)
+    sccs = list(sccutils.strongly_connected_components(graph.keys(), graph))
+    for scc in sccs:
         if len(scc) > 1:
             for name in scc:
                 rules[name].left_recursive = True
@@ -962,9 +959,10 @@ def compute_left_recursives(rules: Dict[str, Rule],
                 assert False, f"No name in {scc} occurs in rules?!"
         else:
             name = next(iter(scc))
-            if name in first_graph[name]:
+            if name in graph[name]:
                 rules[name].left_recursive = True
                 rules[name].leader = True
+    return graph, sccs
 
 
 def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, str]:
