@@ -3,7 +3,8 @@ TODO items
 
 - [x] Implement !x, &x
 - [ ] Implement cut (~)
-- [ ] Compute indirect (mutual) left-recursion correctly,
+- [x] Compute indirect (mutual) left-recursion correctly
+- [ ] Correctly parse indirectly left-recursive rules,
       see https://github.com/neogeny/TatSu/pull/139#issuecomment-506978507
 - [ ] Rename ENDMARKER to $ (apparently standard)
 - [ ] Rename all Parser methods to have a leading underscore

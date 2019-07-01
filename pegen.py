@@ -17,6 +17,8 @@ import tokenize
 import traceback
 from typing import *
 
+import sccutils
+
 T = TypeVar('T')
 
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
@@ -351,6 +353,7 @@ class Rule:
         self.rhs = rhs
         self.visited = False
         self.nullable = None
+        self.left_recursive = False
 
     def __str__(self):
         return f"{self.name}: {self.rhs}"
@@ -367,6 +370,9 @@ class Rule:
         assert self.nullable is not None
         return self.nullable
 
+    def initial_names(self) -> AbstractSet[str]:
+        return self.rhs.initial_names()
+
     def gen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
         # If it's a single parenthesized group, flatten it.
@@ -376,7 +382,7 @@ class Rule:
             and len(rhs.alts[0].items) == 1
             and isinstance(rhs.alts[0].items[0].item, Group)):
             rhs = rhs.alts[0].items[0].item.rhs
-        if self.is_left_rec():
+        if self.left_recursive:
             gen.print("@memoize_left_rec")
         else:
             gen.print("@memoize")
@@ -394,12 +400,6 @@ class Rule:
             else:
                 gen.print("return None")
 
-    def is_left_rec(self, names: List[str] = []) -> bool:
-        # TODO: Make this work properly for indirect left recursion.
-        # Right now it's awfully broken that case.  (But so is the
-        # parsing implementation.)
-        return self.rhs.is_left_rec(names + [self.name])
-
 
 class Leaf:
     def __init__(self, name: str):
@@ -416,12 +416,13 @@ class NameLeaf(Leaf):
         return f"NameLeaf({self.value!r})"
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
-        # Hack: squirrel away a reference to rules for use by is_left_rec().
-        self.__rules = rules
         if self.value in rules:
             return rules[self.value].visit(rules)
         # Token or unknown; never empty.
         return False
+
+    def initial_names(self) -> AbstractSet[str]:
+        return {self.value}
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = self.value
@@ -432,15 +433,6 @@ class NameLeaf(Leaf):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        if self.value in names:
-            return True
-        if self.__rules is not None:
-            rule = self.__rules.get(self.value)
-            if rule is not None:
-                return rule.is_left_rec(names)
-        return False
-
 
 class StringLeaf(Leaf):
     def __repr__(self):
@@ -450,11 +442,11 @@ class StringLeaf(Leaf):
         # The string token '' is considered empty.
         return not self.value
 
+    def initial_names(self) -> AbstractSet[str]:
+        return set()
+
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return 'string', f"self.expect({self.value})"
-
-    def is_left_rec(self, names: List[str]) -> bool:
-        return False
 
 
 class Rhs:
@@ -473,6 +465,12 @@ class Rhs:
                 return True
         return False
 
+    def initial_names(self) -> AbstractSet[str]:
+        names = set()
+        for alt in self.alts:
+            names |= alt.initial_names()
+        return names
+
     def gen_body(self, gen: ParserGenerator, is_loop: bool = False):
         if is_loop:
             assert len(self.alts) == 1
@@ -484,12 +482,6 @@ class Rhs:
             return self.alts[0].items[0].make_call(gen)
         name = gen.name_node(self)
         return name, f"self.{name}()"
-
-    def is_left_rec(self, names: List[str]) -> bool:
-        for alt in self.alts:
-            if alt.is_left_rec(names):
-                return True
-        return False
 
 
 class Alt:
@@ -515,6 +507,14 @@ class Alt:
             if not item.visit(rules):
                 return False
         return True
+
+    def initial_names(self) -> AbstractSet[str]:
+        names = set()
+        for item in self.items:
+            names |= item.initial_names()
+            if not item.nullable:
+                break
+        return names
 
     def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
         names = []
@@ -545,12 +545,6 @@ class Alt:
                 gen.print(f"return {action}")
         gen.print("self.reset(mark)")
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        for item in self.items:
-            if not item.nullable:
-                return item.is_left_rec(names)
-        return False
-
 
 class NamedItem:
     def __init__(self, name: Optional[str], item: Item):
@@ -572,6 +566,9 @@ class NamedItem:
         assert self.nullable is not None
         return self.nullable
 
+    def initial_names(self) -> AbstractSet[str]:
+        return self.item.initial_names()
+
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen)
         if self.name:
@@ -588,9 +585,6 @@ class NamedItem:
             name = self.name
         return name, call
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        return self.item.is_left_rec(names)
-
 
 class Lookahead:
     def __init__(self, node: Plain, sign: str):
@@ -603,8 +597,8 @@ class Lookahead:
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        return False
+    def initial_names(self) -> AbstractSet[str]:
+        return set()
 
     def make_call_helper(self, gen: ParserGenerator) -> str:
         name, call = self.node.make_call(gen)
@@ -654,8 +648,8 @@ class Opt:
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return True
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        return False
+    def initial_names(self) -> AbstractSet[str]:
+        return self.node.initial_names()
 
 
 class Repeat:
@@ -664,8 +658,8 @@ class Repeat:
     def __init__(self, node: Plain):
         self.node = node
 
-    def is_left_rec(self, names: List[str]) -> bool:
-        return False
+    def initial_names(self) -> AbstractSet[str]:
+        return self.node.initial_names()
 
 
 class Repeat0(Repeat):
@@ -712,11 +706,11 @@ class Group:
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return self.rhs.visit(rules)
 
+    def initial_names(self) -> AbstractSet[str]:
+        return self.rhs.initial_names()
+
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         return self.rhs.make_call(gen)
-
-    def is_left_rec(self, names: List[str]) -> bool:
-        return self.rhs.is_left_rec(names)
 
 
 Plain = Union[Leaf, Group]
@@ -883,6 +877,10 @@ class ParserGenerator:
         self.file = file
         self.level = 0
         compute_nullables(rules)
+        self.first_graph = make_first_graph(rules)
+        self.first_sccs = list(
+            sccutils.strongly_connected_components(self.first_graph.keys(), self.first_graph))
+        compute_left_recursives(self.rules, self.first_graph, self.first_sccs)
 
     @contextlib.contextmanager
     def indent(self) -> None:
@@ -932,11 +930,46 @@ class ParserGenerator:
 
 
 def compute_nullables(rules: Dict[str, Rule]) -> None:
-    # Thanks to TatSu (tatsu/leftrec.py) for inspiration.
-    # NOTE: This has the side effect of setting self.__rules for all
-    # NameLeaf instances.
+    """Compute which rules in a grammar are nullable.
+
+    This has the side effect of setting self.__rules for all NameLeaf
+    instances.
+
+    Thanks to TatSu (tatsu/leftrec.py) for inspiration.
+    """
     for rule in rules.values():
         rule.visit(rules)
+
+
+def compute_left_recursives(rules: Dict[str, Rule],
+                            first_graph: Dict[str, Set[str]],
+                            first_sccs: List[Set[str]]) -> None:
+    for scc in first_sccs:
+        if len(scc) > 1:
+            for name in scc:
+                rules[name].left_recursive = True
+        else:
+            name = next(iter(scc))
+            if name in first_graph[name]:
+                rules[name].left_recursive = True
+
+
+def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, str]:
+    """Compute the graph of left-invocations.
+
+    There's an edge from A to B if A may invoke B at its initial
+    position.
+
+    Note that this requires the nullable flags to have been computed.
+    """
+    graph = {}
+    vertices = set()
+    for rulename, rhs in rules.items():
+        graph[rulename] = names = rhs.initial_names()
+        vertices |= names
+    for vertex in vertices:
+        graph.setdefault(vertex, set())
+    return graph
 
 
 def dedupe(name: str, names: List[str]) -> str:
@@ -1102,14 +1135,32 @@ def main() -> None:
 
     if not args.quiet:
         if args.verbose:
+            print("Raw Grammar:")
             for rule in rules.values():
-                print(repr(rule))
+                print(" ", repr(rule))
+        print("Clean Grammar:")
         for rule in rules.values():
-            print(rule)
+            print(" ", rule)
 
     with open(args.output, 'w') as file:
         genr = ParserGenerator(rules, file)
         genr.generate_parser(args.filename)
+
+    if args.verbose:
+        print("First Graph:")
+        for src, dsts in genr.first_graph.items():
+            print(f"  {src} -> {', '.join(dsts)}")
+        print("First SCCS:")
+        for scc in genr.first_sccs:
+            print(" ", scc, end="")
+            if len(scc) > 1:
+                print("  # Indirectly left-recursive")
+            else:
+                name = next(iter(scc))
+                if name in genr.first_graph[name]:
+                    print("  # Left-recursive")
+                else:
+                    print()
 
     t1 = time.time()
 
