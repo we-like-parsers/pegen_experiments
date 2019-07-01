@@ -418,6 +418,11 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
+    def __str__(self):
+        if self.value == 'ENDMARKER':
+            return '$'
+        return super().__str__()
+
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         if self.value in rules:
             return rules[self.value].visit(rules)
@@ -774,7 +779,7 @@ class GrammarParser(Parser):
     @memoize
     def alternative(self) -> Optional[Alt]:
         """
-        alternative: named_item+ [CURLY_STUFF]
+        alternative: named_item+ ['$'] [CURLY_STUFF]
         """
         mark = self.mark()
         items = []
@@ -783,6 +788,8 @@ class GrammarParser(Parser):
             mark = self.mark()
         if not items:
             return None
+        if self.expect('$'):
+            items.append(NamedItem(None, NameLeaf('ENDMARKER')))
         action = self.curly_stuff()
         return Alt(items, action.string if action else None)
 

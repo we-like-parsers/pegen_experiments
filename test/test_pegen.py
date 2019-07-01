@@ -219,7 +219,7 @@ def test_left_recursive():
 
 def test_python_expr():
     grammar = """
-    start: expr NEWLINE? ENDMARKER { ast.Expression(expr, lineno=1, col_offset=0) }
+    start: expr NEWLINE? $ { ast.Expression(expr, lineno=1, col_offset=0) }
     expr: ( expr '+' term { ast.BinOp(expr, ast.Add(), term, lineno=expr.lineno, col_offset=expr.col_offset, end_lineno=term.end_lineno, end_col_offset=term.end_col_offset) }
           | expr '-' term { ast.BinOp(expr, ast.Sub(), term, lineno=expr.lineno, col_offset=expr.col_offset, end_lineno=term.end_lineno, end_col_offset=term.end_col_offset) }
           | term { term }

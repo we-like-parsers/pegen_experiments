@@ -4,9 +4,9 @@ TODO items
 - [x] Implement !x, &x
 - [ ] Implement cut (~)
 - [x] Compute indirect (mutual) left-recursion correctly
-- [ ] Correctly parse indirectly left-recursive rules,
+- [x] Correctly parse indirectly left-recursive rules,
       see https://github.com/neogeny/TatSu/pull/139#issuecomment-506978507
-- [ ] Rename ENDMARKER to $ (apparently standard)
+- [x] Rename ENDMARKER to $ (apparently standard)
 - [ ] Rename all Parser methods to have a leading underscore
 - [ ] Change memoize so as to minumize mark()/reset() calls (assume all functions are atomic)
 - [ ] Move special cases in expect() (e.g. NEWLINE) to generation-time
