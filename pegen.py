@@ -878,11 +878,11 @@ if __name__ == '__main__':
 
 class ParserGenerator:
 
-    def __init__(self, rules: Dict[str, Rule], file: IO[Text]):
+    def __init__(self, rules: Dict[str, Rule], file: Optional[IO[Text]]):
         self.rules = rules
         self.file = file
         self.level = 0
-        self.compute_nullables()
+        compute_nullables(rules)
 
     @contextlib.contextmanager
     def indent(self) -> None:
@@ -902,11 +902,6 @@ class ParserGenerator:
     def printblock(self, lines):
         for line in lines.splitlines():
             self.print(line)
-
-    def compute_nullables(self):
-        # Thanks to TatSu (tatsu/leftrec.py) for inspiration.
-        for rule in self.rules.values():
-            rule.visit(self.rules)
 
     def generate_parser(self, filename: str) -> None:
         self.print(PARSER_PREFIX.format(filename=filename))
@@ -934,6 +929,14 @@ class ParserGenerator:
         name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
         self.todo[name] = Rule(name, Rhs([Alt([NamedItem(None, node)])]))
         return name
+
+
+def compute_nullables(rules: Dict[str, Rule]) -> None:
+    # Thanks to TatSu (tatsu/leftrec.py) for inspiration.
+    # NOTE: This has the side effect of setting self.__rules for all
+    # NameLeaf instances.
+    for rule in rules.values():
+        rule.visit(rules)
 
 
 def dedupe(name: str, names: List[str]) -> str:

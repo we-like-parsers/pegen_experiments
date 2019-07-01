@@ -201,8 +201,13 @@ def test_left_recursive():
     baz: NAME?
     """
     rules = parse_string(grammar, pegen.GrammarParser)
-    assert all(rule.is_left_rec() == (rule.name == 'expr') for rule in rules.values())
     parser_class = generate_parser(rules)
+    ## assert not rules['start'].is_left_rec()
+    assert rules['expr'].is_left_rec()
+    assert not rules['term'].is_left_rec()
+    assert not rules['foo'].is_left_rec()
+    assert not rules['bar'].is_left_rec()
+    assert not rules['baz'].is_left_rec()
     node = parse_string("1 + 2 + 3\n", parser_class)
     assert node == [[[[[TokenInfo(NUMBER, string='1', start=(1, 0), end=(1, 1), line='1 + 2 + 3\n')]],
                       TokenInfo(OP, string='+', start=(1, 2), end=(1, 3), line='1 + 2 + 3\n'),
