@@ -335,13 +335,14 @@ def test_start_leader():
 
 def test_left_recursion_too_complex():
     grammar = """
-    start: foo | bar
-    foo: bar '+' | '+'
-    bar: foo '-' | '-'
+    start: foo
+    foo: bar '+' | baz '+' | '+'
+    bar: baz '-' | foo '-' | '-'
+    baz: foo '*' | bar '*' | '*'
     """
     with pytest.raises(ValueError) as errinfo:
         make_parser(grammar)
-    assert "has multiple leaders" in str(errinfo.value)
+    assert "no leader" in str(errinfo.value)
 
 
 def test_cut():

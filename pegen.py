@@ -982,28 +982,19 @@ def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, Set[str]]
         if len(scc) > 1:
             for name in scc:
                 rules[name].left_recursive = True
-            leaders = set()
-            referrers = {}
-            for name in rules:
-                if name not in scc:
-                    starts = scc & graph[name]
-                    if starts:
-                        referrers[name] = starts
-                        leaders.update(starts)
-            print(leaders, "for", scc)
-            if not leaders:
-                if 'start' in scc:
-                    leaders = {'start'}
-                else:
-                    # This means there's bad code somewhere above.
-                    assert False, f"No name in {scc} occurs in any other rules?!"
-            if len(leaders) > 1:
-                # This means the grammar is beyond our current ability.
-                raise ValueError(f"SCC {scc} has multiple leaders: {leaders};\n  referrers: {referrers}")
-            for name in leaders:
-                rules[name].leader = True
+            # Try to find a leader such that all cycles go through it.
+            leaders = set(scc)
+            for start in scc:
+                for cycle in sccutils.find_cycles_in_scc(graph, scc, start):
+                    ## print("Cycle:", " -> ".join(cycle))
+                    leaders -= (scc - set(cycle))
+                    if not leaders:
+                        raise ValueError(f"SCC {scc} has no leadership candidate (no element is included in all cycles)")
+            ## print("Leaders:", leaders)
+            leader = min(leaders)  # Pick an arbitrary leader from the candidates.
+            rules[leader].leader = True
         else:
-            name = next(iter(scc))
+            name = min(scc)  # The only element.
             if name in graph[name]:
                 rules[name].left_recursive = True
                 rules[name].leader = True
