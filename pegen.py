@@ -287,6 +287,12 @@ class Parser(Generic[T]):
         tok = self._tokenizer.peek()
         return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
+    def cut(self):
+        if self._verbose:
+            fill = '  ' * self._level
+            print(f"{fill}CUT ... (looking at {self.showpeek()})")
+        return True
+
     @memoize
     def name(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
@@ -415,13 +421,15 @@ class Leaf:
 class NameLeaf(Leaf):
     __rules: Optional[Dict[str, Rule]] = None
 
-    def __repr__(self):
-        return f"NameLeaf({self.value!r})"
-
     def __str__(self):
         if self.value == 'ENDMARKER':
             return '$'
+        if self.value == 'CUT':
+            return '~'
         return super().__str__()
+
+    def __repr__(self):
+        return f"NameLeaf({self.value!r})"
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         if self.value in rules:
@@ -434,7 +442,7 @@ class NameLeaf(Leaf):
 
     def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
         name = self.value
-        if name in ('NAME', 'NUMBER', 'STRING', 'CURLY_STUFF'):
+        if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
             name = name.lower()
             return name, f"self.{name}()"
         if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
@@ -493,8 +501,9 @@ class Rhs:
 
 
 class Alt:
-    def __init__(self, items: List[NamedItem], action: Optional[str] = None):
+    def __init__(self, items: List[NamedItem], *, icut: int = -1, action: Optional[str] = None):
         self.items = items
+        self.icut = icut
         self.action = action
 
     def __str__(self):
@@ -505,10 +514,12 @@ class Alt:
             return core
 
     def __repr__(self):
+        args = [repr(self.items)]
+        if self.icut >= 0:
+            args.append(f"icut={self.icut}")
         if self.action:
-            return f"Alt({self.items!r}, {self.action!r}"
-        else:
-            return f"Alt({self.items!r})"
+            args.append(f"action={self.action!r}")
+        return f"Alt({', '.join(args)})"
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         for item in self.items:
@@ -526,6 +537,7 @@ class Alt:
 
     def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
         names = []
+        gen.print("cut = False")  # TODO: Only if needed.
         if is_loop:
             gen.print("while (")
         else:
@@ -552,6 +564,8 @@ class Alt:
             else:
                 gen.print(f"return {action}")
         gen.print("self.reset(mark)")
+        # Skip remaining alternatives if a cut was reached.
+        gen.print("if cut: return None")  # TODO: Only if needed.
 
 
 class NamedItem:
@@ -584,7 +598,8 @@ class NamedItem:
         if name is None:
             gen.print(call)
         else:
-            name = dedupe(name, names)
+            if name != 'cut':
+                name = dedupe(name, names)
             gen.print(f"({name} := {call})")
 
     def make_call(self, gen: ParserGenerator):
@@ -779,19 +794,31 @@ class GrammarParser(Parser):
     @memoize
     def alternative(self) -> Optional[Alt]:
         """
-        alternative: named_item+ ['$'] [CURLY_STUFF]
+        alternative: named_item+ ('~' (named_item+ ['$'] | '$') | ['$']) [CURLY_STUFF]
         """
-        mark = self.mark()
+        mark = ubermark = self.mark()
         items = []
         while item := self.named_item():
             items.append(item)
             mark = self.mark()
         if not items:
             return None
+        icut = -1
+        if self.expect('~'):
+            items.append(NamedItem(None, NameLeaf('CUT')))
+            icut = len(items)
+            mark = self.mark()
+            while item := self.named_item():
+                items.append(item)
+                mark = self.mark()
         if self.expect('$'):
             items.append(NamedItem(None, NameLeaf('ENDMARKER')))
+        if icut == len(items):
+            # Can't have "cut" as the last item
+            self.reset(ubermark)
+            return None
         action = self.curly_stuff()
-        return Alt(items, action.string if action else None)
+        return Alt(items, icut=icut, action=action.string if action else None)
 
     @memoize
     def named_item(self) -> Optional[NamedItem]:

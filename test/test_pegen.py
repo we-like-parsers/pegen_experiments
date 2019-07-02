@@ -342,3 +342,15 @@ def test_left_recursion_too_complex():
     with pytest.raises(ValueError) as errinfo:
         make_parser(grammar)
     assert "has multiple leaders" in str(errinfo.value)
+
+
+def test_cut():
+    grammar = """
+    start: '(' ~ expr ')'
+    expr: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    node = parse_string("(1)", parser_class, verbose=True)
+    assert node == [TokenInfo(OP, string='(', start=(1, 0), end=(1, 1), line='(1)'),
+                    [TokenInfo(NUMBER, string='1', start=(1, 1), end=(1, 2), line='(1)')],
+                    TokenInfo(OP, string=')', start=(1, 2), end=(1, 3), line='(1)')]

@@ -13,8 +13,9 @@ class GeneratedParser(Parser):
 
     @memoize
     def start(self):
-        # start: statements ENDMARKER
+        # start: statements $
         mark = self.mark()
+        cut = False
         if (
             (statements := self.statements())
             and
@@ -22,39 +23,47 @@ class GeneratedParser(Parser):
         ):
             return [statements, endmarker]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def statements(self):
         # statements: (statement)+
         mark = self.mark()
+        cut = False
         if (
             (_loop_1 := self._loop_1())
         ):
             return [_loop_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def statement(self):
         # statement: simple_stmt | compound_stmt
         mark = self.mark()
+        cut = False
         if (
             (simple_stmt := self.simple_stmt())
         ):
             return [simple_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (compound_stmt := self.compound_stmt())
         ):
             return [compound_stmt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def simple_stmt(self):
         # simple_stmt: small_stmt ((';' small_stmt))* NEWLINE
         mark = self.mark()
+        cut = False
         if (
             (small_stmt := self.small_stmt())
             and
@@ -64,74 +73,96 @@ class GeneratedParser(Parser):
         ):
             return [small_stmt, _loop_2, newline]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def small_stmt(self):
         # small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
         mark = self.mark()
+        cut = False
         if (
             (return_stmt := self.return_stmt())
         ):
             return [return_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (import_stmt := self.import_stmt())
         ):
             return [import_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('pass'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (assignment := self.assignment())
         ):
             return [assignment]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (expression := self.expression())
         ):
             return [expression]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def compound_stmt(self):
         # compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
         mark = self.mark()
+        cut = False
         if (
             (if_stmt := self.if_stmt())
         ):
             return [if_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (while_stmt := self.while_stmt())
         ):
             return [while_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (with_stmt := self.with_stmt())
         ):
             return [with_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (function_def := self.function_def())
         ):
             return [function_def]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (class_def := self.class_def())
         ):
             return [class_def]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def assignment(self):
         # assignment: target '=' expression
         mark = self.mark()
+        cut = False
         if (
             (target := self.target())
             and
@@ -141,12 +172,14 @@ class GeneratedParser(Parser):
         ):
             return [target, string, expression]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def import_stmt(self):
         # import_stmt: 'import' names | 'from' NAME 'import' ('*' | names)
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('import'))
             and
@@ -154,6 +187,8 @@ class GeneratedParser(Parser):
         ):
             return [string, names]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('from'))
             and
@@ -165,12 +200,14 @@ class GeneratedParser(Parser):
         ):
             return [string, name, string_1, _tmp_3]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def names(self):
         # names: NAME ',' names | NAME
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
             and
@@ -180,17 +217,21 @@ class GeneratedParser(Parser):
         ):
             return [name, string, names]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (name := self.name())
         ):
             return [name]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def if_stmt(self):
         # if_stmt: 'if' full_expression ':' block (elif_block)* else_block?
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('if'))
             and
@@ -206,12 +247,14 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expression, string_1, block, _loop_4, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def elif_block(self):
         # elif_block: 'elif' full_expression ':' block
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('elif'))
             and
@@ -223,12 +266,14 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expression, string_1, block]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def else_block(self):
         # else_block: 'else' ':' block
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('else'))
             and
@@ -238,12 +283,14 @@ class GeneratedParser(Parser):
         ):
             return [string, string_1, block]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def while_stmt(self):
         # while_stmt: 'while' full_expression ':' block else_block?
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('while'))
             and
@@ -257,12 +304,14 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expression, string_1, block, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def with_stmt(self):
         # with_stmt: 'with' expression 'as' target? ':' block
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('with'))
             and
@@ -276,12 +325,14 @@ class GeneratedParser(Parser):
         ):
             return [string, expression, opt, string_1, block]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def return_stmt(self):
         # return_stmt: 'return' expressions?
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('return'))
             and
@@ -289,12 +340,14 @@ class GeneratedParser(Parser):
         ):
             return [string, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def function_def(self):
         # function_def: decorators? 'def' NAME '(' parameters? ')' ':' block
         mark = self.mark()
+        cut = False
         if (
             (opt := self.decorators(),)
             and
@@ -314,17 +367,21 @@ class GeneratedParser(Parser):
         ):
             return [opt, string, name, string_1, opt_1, string_2, string_3, block]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def parameters(self):
         # parameters: kwparams | param ',' parameters??
         mark = self.mark()
+        cut = False
         if (
             (kwparams := self.kwparams())
         ):
             return [kwparams]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (param := self.param())
             and
@@ -332,12 +389,14 @@ class GeneratedParser(Parser):
         ):
             return [param, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def kwparams(self):
         # kwparams: kwparam ',' kwparams??
         mark = self.mark()
+        cut = False
         if (
             (kwparam := self.kwparam())
             and
@@ -345,12 +404,14 @@ class GeneratedParser(Parser):
         ):
             return [kwparam, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def kwparam(self):
         # kwparam: NAME '=' expression | '**' NAME
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
             and
@@ -360,6 +421,8 @@ class GeneratedParser(Parser):
         ):
             return [name, string, expression]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('**'))
             and
@@ -367,17 +430,21 @@ class GeneratedParser(Parser):
         ):
             return [string, name]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def param(self):
         # param: NAME | '*' NAME
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
         ):
             return [name]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('*'))
             and
@@ -385,23 +452,27 @@ class GeneratedParser(Parser):
         ):
             return [string, name]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def decorators(self):
         # decorators: (('@' factor NEWLINE))+
         mark = self.mark()
+        cut = False
         if (
             (_loop_8 := self._loop_8())
         ):
             return [_loop_8]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def class_def(self):
         # class_def: decorators? 'class' NAME '(' full_expressions ')'? ':' block
         mark = self.mark()
+        cut = False
         if (
             (opt := self.decorators(),)
             and
@@ -417,17 +488,21 @@ class GeneratedParser(Parser):
         ):
             return [opt, string, name, opt_1, string_1, block]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def block(self):
         # block: simple_stmt | NEWLINE INDENT statements DEDENT
         mark = self.mark()
+        cut = False
         if (
             (simple_stmt := self.simple_stmt())
         ):
             return [simple_stmt]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (newline := self.expect('NEWLINE'))
             and
@@ -439,12 +514,14 @@ class GeneratedParser(Parser):
         ):
             return [newline, indent, statements, dedent]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def full_expressions(self):
         # full_expressions: full_expression ((',' full_expression))* ','?
         mark = self.mark()
+        cut = False
         if (
             (full_expression := self.full_expression())
             and
@@ -454,12 +531,14 @@ class GeneratedParser(Parser):
         ):
             return [full_expression, _loop_10, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def full_expression(self):
         # full_expression: NAME ':=' disjunction | disjunction
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
             and
@@ -469,17 +548,21 @@ class GeneratedParser(Parser):
         ):
             return [name, string, disjunction]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (disjunction := self.disjunction())
         ):
             return [disjunction]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def disjunction(self):
         # disjunction: conjunction (('or' conjunction))*
         mark = self.mark()
+        cut = False
         if (
             (conjunction := self.conjunction())
             and
@@ -487,12 +570,14 @@ class GeneratedParser(Parser):
         ):
             return [conjunction, _loop_11]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def conjunction(self):
         # conjunction: comparison (('and' comparison))*
         mark = self.mark()
+        cut = False
         if (
             (comparison := self.comparison())
             and
@@ -500,12 +585,14 @@ class GeneratedParser(Parser):
         ):
             return [comparison, _loop_12]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def comparison(self):
         # comparison: ('not')* bitwise_or ((compare_op bitwise_or))*
         mark = self.mark()
+        cut = False
         if (
             (_loop_13 := self._loop_13(),)
             and
@@ -515,58 +602,76 @@ class GeneratedParser(Parser):
         ):
             return [_loop_13, bitwise_or, _loop_14]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def compare_op(self):
         # compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('<'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('<='))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('=='))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('>='))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('>'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('!='))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('in'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('not in'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def bitwise_or(self):
         # bitwise_or: bitwise_and (('|' bitwise_and))*
         mark = self.mark()
+        cut = False
         if (
             (bitwise_and := self.bitwise_and())
             and
@@ -574,12 +679,14 @@ class GeneratedParser(Parser):
         ):
             return [bitwise_and, _loop_15]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def bitwise_and(self):
         # bitwise_and: expression (('&' expression))*
         mark = self.mark()
+        cut = False
         if (
             (expression := self.expression())
             and
@@ -587,12 +694,14 @@ class GeneratedParser(Parser):
         ):
             return [expression, _loop_16]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def expressions(self):
         # expressions: expression ((',' expression))* ','?
         mark = self.mark()
+        cut = False
         if (
             (expression := self.expression())
             and
@@ -602,12 +711,14 @@ class GeneratedParser(Parser):
         ):
             return [expression, _loop_17, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def expression(self):
         # expression: term ((('+' term | '-' term)))*
         mark = self.mark()
+        cut = False
         if (
             (term := self.term())
             and
@@ -615,12 +726,14 @@ class GeneratedParser(Parser):
         ):
             return [term, _loop_18]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def term(self):
         # term: factor ((('*' factor | '/' factor)))*
         mark = self.mark()
+        cut = False
         if (
             (factor := self.factor())
             and
@@ -628,12 +741,14 @@ class GeneratedParser(Parser):
         ):
             return [factor, _loop_19]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def factor(self):
         # factor: primary (('.' NAME | '[' expression ']' | '(' arguments ','?? ')'))*
         mark = self.mark()
+        cut = False
         if (
             (primary := self.primary())
             and
@@ -641,48 +756,62 @@ class GeneratedParser(Parser):
         ):
             return [primary, _loop_20]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def primary(self):
         # primary: list | tuple | group | NAME | STRING | NUMBER
         mark = self.mark()
+        cut = False
         if (
             (list := self.list())
         ):
             return [list]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (tuple := self.tuple())
         ):
             return [tuple]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (group := self.group())
         ):
             return [group]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (name := self.name())
         ):
             return [name]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.string())
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (number := self.number())
         ):
             return [number]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def list(self):
         # list: '[' full_expressions? ']'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('['))
             and
@@ -692,12 +821,14 @@ class GeneratedParser(Parser):
         ):
             return [string, opt, string_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def tuple(self):
         # tuple: '(' full_expression ',' full_expressions?? ')'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('('))
             and
@@ -707,12 +838,14 @@ class GeneratedParser(Parser):
         ):
             return [string, opt, string_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def group(self):
         # group: '(' full_expression ')'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('('))
             and
@@ -722,17 +855,21 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expression, string_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def arguments(self):
         # arguments: kwargs | posarg ',' arguments?
         mark = self.mark()
+        cut = False
         if (
             (kwargs := self.kwargs())
         ):
             return [kwargs]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (posarg := self.posarg())
             and
@@ -740,12 +877,14 @@ class GeneratedParser(Parser):
         ):
             return [posarg, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def kwargs(self):
         # kwargs: kwarg ((',' kwarg))*
         mark = self.mark()
+        cut = False
         if (
             (kwarg := self.kwarg())
             and
@@ -753,17 +892,21 @@ class GeneratedParser(Parser):
         ):
             return [kwarg, _loop_23]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def posarg(self):
         # posarg: full_expression | '*' disjunction
         mark = self.mark()
+        cut = False
         if (
             (full_expression := self.full_expression())
         ):
             return [full_expression]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('*'))
             and
@@ -771,12 +914,14 @@ class GeneratedParser(Parser):
         ):
             return [string, disjunction]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def kwarg(self):
         # kwarg: NAME '=' disjunction | '**' disjunction
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
             and
@@ -786,6 +931,8 @@ class GeneratedParser(Parser):
         ):
             return [name, string, disjunction]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('**'))
             and
@@ -793,17 +940,20 @@ class GeneratedParser(Parser):
         ):
             return [string, disjunction]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def target(self):
         # target: NAME
         mark = self.mark()
+        cut = False
         if (
             (name := self.name())
         ):
             return [name]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
@@ -811,12 +961,14 @@ class GeneratedParser(Parser):
         # _loop_1: statement
         mark = self.mark()
         children = []
+        cut = False
         while (
             (statement := self.statement())
         ):
             children.append([statement])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -824,28 +976,34 @@ class GeneratedParser(Parser):
         # _loop_2: (';' small_stmt)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_24 := self._tmp_24())
         ):
             children.append([_tmp_24])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
     def _tmp_3(self):
         # _tmp_3: '*' | names
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('*'))
         ):
             return [string]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (names := self.names())
         ):
             return [names]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
@@ -853,18 +1011,21 @@ class GeneratedParser(Parser):
         # _loop_4: elif_block
         mark = self.mark()
         children = []
+        cut = False
         while (
             (elif_block := self.elif_block())
         ):
             children.append([elif_block])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
     def _tmp_5(self):
         # _tmp_5: 'as' target
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('as'))
             and
@@ -872,12 +1033,14 @@ class GeneratedParser(Parser):
         ):
             return [string, target]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_6(self):
         # _tmp_6: ',' parameters?
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -885,12 +1048,14 @@ class GeneratedParser(Parser):
         ):
             return [string, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_7(self):
         # _tmp_7: ',' kwparams?
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -898,6 +1063,7 @@ class GeneratedParser(Parser):
         ):
             return [string, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
@@ -905,18 +1071,21 @@ class GeneratedParser(Parser):
         # _loop_8: ('@' factor NEWLINE)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_25 := self._tmp_25())
         ):
             children.append([_tmp_25])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
     def _tmp_9(self):
         # _tmp_9: '(' full_expressions ')'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('('))
             and
@@ -926,6 +1095,7 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expressions, string_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
@@ -933,12 +1103,14 @@ class GeneratedParser(Parser):
         # _loop_10: (',' full_expression)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_26 := self._tmp_26())
         ):
             children.append([_tmp_26])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -946,12 +1118,14 @@ class GeneratedParser(Parser):
         # _loop_11: ('or' conjunction)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_27 := self._tmp_27())
         ):
             children.append([_tmp_27])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -959,12 +1133,14 @@ class GeneratedParser(Parser):
         # _loop_12: ('and' comparison)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_28 := self._tmp_28())
         ):
             children.append([_tmp_28])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -972,12 +1148,14 @@ class GeneratedParser(Parser):
         # _loop_13: 'not'
         mark = self.mark()
         children = []
+        cut = False
         while (
             (string := self.expect('not'))
         ):
             children.append([string])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -985,12 +1163,14 @@ class GeneratedParser(Parser):
         # _loop_14: (compare_op bitwise_or)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_29 := self._tmp_29())
         ):
             children.append([_tmp_29])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -998,12 +1178,14 @@ class GeneratedParser(Parser):
         # _loop_15: ('|' bitwise_and)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_30 := self._tmp_30())
         ):
             children.append([_tmp_30])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -1011,12 +1193,14 @@ class GeneratedParser(Parser):
         # _loop_16: ('&' expression)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_31 := self._tmp_31())
         ):
             children.append([_tmp_31])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -1024,12 +1208,14 @@ class GeneratedParser(Parser):
         # _loop_17: (',' expression)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_32 := self._tmp_32())
         ):
             children.append([_tmp_32])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -1037,12 +1223,14 @@ class GeneratedParser(Parser):
         # _loop_18: (('+' term | '-' term))
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_33 := self._tmp_33())
         ):
             children.append([_tmp_33])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -1050,12 +1238,14 @@ class GeneratedParser(Parser):
         # _loop_19: (('*' factor | '/' factor))
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_34 := self._tmp_34())
         ):
             children.append([_tmp_34])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
@@ -1063,18 +1253,21 @@ class GeneratedParser(Parser):
         # _loop_20: ('.' NAME | '[' expression ']' | '(' arguments ','?? ')')
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_35 := self._tmp_35())
         ):
             children.append([_tmp_35])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
     def _tmp_21(self):
         # _tmp_21: full_expression ',' full_expressions?
         mark = self.mark()
+        cut = False
         if (
             (full_expression := self.full_expression())
             and
@@ -1084,12 +1277,14 @@ class GeneratedParser(Parser):
         ):
             return [full_expression, string, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_22(self):
         # _tmp_22: ',' arguments
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -1097,6 +1292,7 @@ class GeneratedParser(Parser):
         ):
             return [string, arguments]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
@@ -1104,18 +1300,21 @@ class GeneratedParser(Parser):
         # _loop_23: (',' kwarg)
         mark = self.mark()
         children = []
+        cut = False
         while (
             (_tmp_36 := self._tmp_36())
         ):
             children.append([_tmp_36])
             mark = self.mark()
         self.reset(mark)
+        if cut: return None
         return children
 
     @memoize
     def _tmp_24(self):
         # _tmp_24: ';' small_stmt
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(';'))
             and
@@ -1123,12 +1322,14 @@ class GeneratedParser(Parser):
         ):
             return [string, small_stmt]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_25(self):
         # _tmp_25: '@' factor NEWLINE
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('@'))
             and
@@ -1138,12 +1339,14 @@ class GeneratedParser(Parser):
         ):
             return [string, factor, newline]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_26(self):
         # _tmp_26: ',' full_expression
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -1151,12 +1354,14 @@ class GeneratedParser(Parser):
         ):
             return [string, full_expression]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_27(self):
         # _tmp_27: 'or' conjunction
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('or'))
             and
@@ -1164,12 +1369,14 @@ class GeneratedParser(Parser):
         ):
             return [string, conjunction]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_28(self):
         # _tmp_28: 'and' comparison
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('and'))
             and
@@ -1177,12 +1384,14 @@ class GeneratedParser(Parser):
         ):
             return [string, comparison]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_29(self):
         # _tmp_29: compare_op bitwise_or
         mark = self.mark()
+        cut = False
         if (
             (compare_op := self.compare_op())
             and
@@ -1190,12 +1399,14 @@ class GeneratedParser(Parser):
         ):
             return [compare_op, bitwise_or]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_30(self):
         # _tmp_30: '|' bitwise_and
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('|'))
             and
@@ -1203,12 +1414,14 @@ class GeneratedParser(Parser):
         ):
             return [string, bitwise_and]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_31(self):
         # _tmp_31: '&' expression
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('&'))
             and
@@ -1216,12 +1429,14 @@ class GeneratedParser(Parser):
         ):
             return [string, expression]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_32(self):
         # _tmp_32: ',' expression
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -1229,12 +1444,14 @@ class GeneratedParser(Parser):
         ):
             return [string, expression]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_33(self):
         # _tmp_33: '+' term | '-' term
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('+'))
             and
@@ -1242,6 +1459,8 @@ class GeneratedParser(Parser):
         ):
             return [string, term]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('-'))
             and
@@ -1249,12 +1468,14 @@ class GeneratedParser(Parser):
         ):
             return [string, term]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_34(self):
         # _tmp_34: '*' factor | '/' factor
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('*'))
             and
@@ -1262,6 +1483,8 @@ class GeneratedParser(Parser):
         ):
             return [string, factor]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('/'))
             and
@@ -1269,12 +1492,14 @@ class GeneratedParser(Parser):
         ):
             return [string, factor]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_35(self):
         # _tmp_35: '.' NAME | '[' expression ']' | '(' arguments ','?? ')'
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect('.'))
             and
@@ -1282,6 +1507,8 @@ class GeneratedParser(Parser):
         ):
             return [string, name]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('['))
             and
@@ -1291,6 +1518,8 @@ class GeneratedParser(Parser):
         ):
             return [string, expression, string_1]
         self.reset(mark)
+        if cut: return None
+        cut = False
         if (
             (string := self.expect('('))
             and
@@ -1300,12 +1529,14 @@ class GeneratedParser(Parser):
         ):
             return [string, opt, string_1]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_36(self):
         # _tmp_36: ',' kwarg
         mark = self.mark()
+        cut = False
         if (
             (string := self.expect(','))
             and
@@ -1313,12 +1544,14 @@ class GeneratedParser(Parser):
         ):
             return [string, kwarg]
         self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
     def _tmp_37(self):
         # _tmp_37: arguments ','?
         mark = self.mark()
+        cut = False
         if (
             (arguments := self.arguments())
             and
@@ -1326,6 +1559,7 @@ class GeneratedParser(Parser):
         ):
             return [arguments, opt]
         self.reset(mark)
+        if cut: return None
         return None
 
 
