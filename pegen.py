@@ -8,6 +8,7 @@ Search the web for PEG Parsers for reference.
 from __future__ import annotations  # Requires Python 3.7 or later
 
 import argparse
+import ast
 import contextlib
 import os
 import sys
@@ -409,17 +410,53 @@ class Rule:
             else:
                 gen.print("return None")
 
+    def cgen_func(self, gen: ParserGenerator, rulename: str) -> None:
+        is_loop = rulename.startswith('_loop_')
+        memoize = not self.leader
+        if self.left_recursive:
+            print(f"Warning: {rulename} is left-recursive; generating bogus code",
+                  file=sys.stderr)
+        if is_loop:
+            print(f"Warning: {rulename} is a loop; generating bogus code",
+                  file=sys.stderr)
+
+        rhs = self.rhs
+        if (not is_loop
+            and len(rhs.alts) == 1
+            and len(rhs.alts[0].items) == 1
+            and isinstance(rhs.alts[0].items[0].item, Group)):
+            rhs = rhs.alts[0].items[0].item.rhs
+
+        gen.print(f"// {self}")
+        gen.print("static ASTptr")
+        gen.print(f"{rulename}_rule(Parser *p)")
+        gen.print("{")
+        with gen.indent():
+            gen.print("ASTptr res = NULL;")
+            gen.print("int mark = p->mark;")
+            if memoize:
+                gen.print(f"if (is_memoized(p, {rulename}_type, &res))")
+            with gen.indent():
+                gen.print("return res;")
+            rhs.cgen_body(gen, is_loop)
+            gen.print("// Fail")
+            if memoize:
+                gen.print(f"insert_memo(p, mark, {rulename}_type, NULL);",
+                          "// Memoize negative result")
+            gen.print("return NULL;")
+        gen.print("}")
+
 
 class Leaf:
-    def __init__(self, name: str):
-        self.value = name
+    def __init__(self, value: str):
+        self.value = value
 
     def __str__(self):
         return self.value
 
 
 class NameLeaf(Leaf):
-    __rules: Optional[Dict[str, Rule]] = None
+    """The value is the name."""
 
     def __str__(self):
         if self.value == 'ENDMARKER':
@@ -440,17 +477,29 @@ class NameLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return {self.value}
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name = self.value
         if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
             name = name.lower()
-            return name, f"self.{name}()"
+            if cpython:
+                return f"{name}_var", f"{name}_token(p)"
+            else:
+                return name, f"self.{name}()"
         if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
-            return name.lower(), f"self.expect({name!r})"
-        return name, f"self.{name}()"
+            if cpython:
+                name = name.lower()
+                return f"{name}_var", f"{name}_token(p)"
+            else:
+                return name.lower(), f"self.expect({name!r})"
+        if cpython:
+            return f"{name}_var", f"{name}_rule(p)"
+        else:
+            return name, f"self.{name}()"
 
 
 class StringLeaf(Leaf):
+    """The value is a string literal, including quotes."""
+
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
@@ -461,8 +510,11 @@ class StringLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        return 'string', f"self.expect({self.value})"
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        if cpython:
+            return 'string_var', f'expect_token(p, "{ast.literal_eval(self.value)}")'
+        else:
+            return 'string', f"self.expect({self.value})"
 
 
 class Rhs:
@@ -487,17 +539,30 @@ class Rhs:
             names |= alt.initial_names()
         return names
 
-    def gen_body(self, gen: ParserGenerator, is_loop: bool = False):
+    def gen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
         if is_loop:
             assert len(self.alts) == 1
         for alt in self.alts:
             alt.gen_block(gen, is_loop)
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+    def cgen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
+        if is_loop:
+            assert len(self.alts) == 1
+        vars = set()
+        for alt in self.alts:
+            vars |= alt.collect_vars(gen)
+        gen.print(f"void {', '.join('*' + v for v in sorted(vars))};")
+        for alt in self.alts:
+            alt.cgen_block(gen, is_loop)
+
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
-            return self.alts[0].items[0].make_call(gen)
+            return self.alts[0].items[0].make_call(gen, cpython)
         name = gen.name_node(self)
-        return name, f"self.{name}()"
+        if cpython:
+            return f"{name}_var", f"{name}_rule(p)"
+        else:
+            return name, f"self.{name}()"
 
 
 class Alt:
@@ -567,6 +632,38 @@ class Alt:
         # Skip remaining alternatives if a cut was reached.
         gen.print("if cut: return None")  # TODO: Only if needed.
 
+    def collect_vars(self, gen: ParserGenerator) -> AbstractSet[str]:
+        names = []
+        for item in self.items:
+            item.add_vars(gen, names)
+        return set(names)
+
+    def cgen_block(self, gen: ParserGenerator, is_loop: bool = False):
+        gen.print(f"// {self}")
+        names = []
+        if is_loop:
+            gen.print("while (")
+        else:
+            gen.print("if (")
+        with gen.indent():
+            first = True
+            for item in self.items:
+                if first:
+                    first = False
+                else:
+                    gen.print("&&")
+                item.cgen_item(gen, names)
+        gen.print(") {")
+        with gen.indent():
+            action = self.action
+            if not action:
+                gen.print(f"return CONSTRUCTOR(p, {', '.join(names)});")
+            else:
+                assert action[0] == '{' and action[-1] == '}', repr(action)
+                action = action[1:-1].strip()
+                gen.print(f"return {action};")
+        gen.print("}")
+
 
 class NamedItem:
     def __init__(self, name: Optional[str], item: Item):
@@ -592,18 +689,32 @@ class NamedItem:
         return self.item.initial_names()
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
-        name, call = self.item.make_call(gen)
+        name, call = self.item.make_call(gen, cpython=False)
         if self.name:
             name = self.name
-        if name is None:
+        if not name:
             gen.print(call)
         else:
             if name != 'cut':
                 name = dedupe(name, names)
             gen.print(f"({name} := {call})")
 
-    def make_call(self, gen: ParserGenerator):
-        name, call = self.item.make_call(gen)
+    def add_vars(self, gen: ParserGenerator, names: List[str]) -> None:
+        name, call = self.make_call(gen, cpython=True)
+        if name != 'cut':
+            name = dedupe(name, names)
+
+    def cgen_item(self, gen: ParserGenerator, names: List[str]):
+        name, call = self.make_call(gen, cpython=True)
+        if not name:
+            gen.print(call)
+        else:
+            if name != 'cut':
+                name = dedupe(name, names)
+            gen.print(f"({name} = {call})")
+
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        name, call = self.item.make_call(gen, cpython)
         if self.name:
             name = self.name
         return name, call
@@ -623,8 +734,8 @@ class Lookahead:
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
-    def make_call_helper(self, gen: ParserGenerator) -> str:
-        name, call = self.node.make_call(gen)
+    def make_call_helper(self, gen: ParserGenerator, cpython: bool) -> str:
+        name, call = self.node.make_call(gen, cpython)
         head, tail = call.split('(', 1)
         assert tail[-1] == ')'
         tail = tail[:-1]
@@ -638,9 +749,12 @@ class PositiveLookahead(Lookahead):
     def __repr__(self):
         return f"PositiveLookahead({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        head, tail = self.make_call_helper(gen)
-        return None, f"self.positive_lookahead({head}, {tail})"
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        head, tail = self.make_call_helper(gen, cpython)
+        if cpython:
+            return None, f"positive_lookahead({head}, {tail})"
+        else:
+            return None, f"self.positive_lookahead({head}, {tail})"
 
 class NegativeLookahead(Lookahead):
     def __init__(self, node: Plain):
@@ -649,9 +763,12 @@ class NegativeLookahead(Lookahead):
     def __repr__(self):
         return f"NegativeLookahead({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        head, tail = self.make_call_helper(gen)
-        return None, f"self.negative_lookahead({head}, {tail})"
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        head, tail = self.make_call_helper(gen, cpython)
+        if cpython:
+            return None, f"negative_lookahead({head}, {tail})"
+        else:
+            return None, f"self.negative_lookahead({head}, {tail})"
 
 
 class Opt:
@@ -664,9 +781,12 @@ class Opt:
     def __repr__(self):
         return f"Opt({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        name, call = self.node.make_call(gen)
-        return "opt", f"{call},"  # Note trailing comma!
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        name, call = self.node.make_call(gen, cpython)
+        if cpython:
+            return "opt_var", call  # Caller has to add ((...) || 1)!
+        else:
+            return "opt", f"{call},"  # Note trailing comma!
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return True
@@ -695,9 +815,12 @@ class Repeat0(Repeat):
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         return True
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name = gen.name_loop(self.node)
-        return name, f"self.{name}(),"  # Also a trailing comma!
+        if cpython:
+            return name, f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
+        else:
+            return name, f"self.{name}(),"  # Also a trailing comma!
 
 
 class Repeat1(Repeat):
@@ -711,9 +834,12 @@ class Repeat1(Repeat):
         # TODO: What if self.node is itself nullable?
         return False
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name = gen.name_loop(self.node)
-        return name, f"self.{name}()"  # But no trailing comma here!
+        if cpython:
+            return name, f"{name}_rule(p)"  # But not here!
+        else:
+            return name, f"self.{name}()"  # But no trailing comma here!
 
 
 class Group:
@@ -732,8 +858,8 @@ class Group:
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
 
-    def make_call(self, gen: ParserGenerator) -> Tuple[str, str]:
-        return self.rhs.make_call(gen)
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        return self.rhs.make_call(gen, cpython)
 
 
 Plain = Union[Leaf, Group]
@@ -887,7 +1013,8 @@ class GrammarParser(Parser):
         return None
 
 
-PARSER_PREFIX = """#!/usr/bin/env python3.8
+MODULE_PREFIX = """\
+#!/usr/bin/env python3.8
 # @generated by pegen.py from {filename}
 from __future__ import annotations
 
@@ -899,11 +1026,21 @@ from pegen import memoize, memoize_left_rec, Parser
 
 """
 
-PARSER_SUFFIX = """
+MODULE_SUFFIX = """
 
 if __name__ == '__main__':
     from pegen import simple_parser_main
     simple_parser_main(GeneratedParser)
+"""
+
+EXTENSION_PREFIX = """\
+// @generated by pegen.py from {filename}
+
+#include "pegen.h"
+"""
+
+EXTENSION_SUFFIX = """
+// The end
 """
 
 
@@ -935,8 +1072,8 @@ class ParserGenerator:
         for line in lines.splitlines():
             self.print(line)
 
-    def generate_parser(self, filename: str) -> None:
-        self.print(PARSER_PREFIX.format(filename=filename))
+    def generate_python_module(self, filename: str) -> None:
+        self.print(MODULE_PREFIX.format(filename=filename))
         self.print("class GeneratedParser(Parser):")
         self.todo = self.rules.copy()  # Rules to generate
         self.done: Dict[str, Rule] = {}  # Rules generated
@@ -948,7 +1085,26 @@ class ParserGenerator:
                 self.print()
                 with self.indent():
                     rule.gen_func(self, rulename)
-        self.print(PARSER_SUFFIX.rstrip('\n'))
+        self.print(MODULE_SUFFIX.rstrip('\n'))
+
+    def generate_cpython_extension(self, filename: str) -> None:
+        self.print(EXTENSION_PREFIX.format(filename=filename))
+        for i, rulename in enumerate(self.rules, 1000):
+            self.print(f"#define {rulename}_type {i}")
+        self.print()
+        for rulename in self.rules:
+            self.print(f"static ASTptr {rulename}_rule(Parser *p);")
+        self.print()
+        self.todo = self.rules.copy()  # Rules to generate
+        self.done: Dict[str, Rule] = {}  # Rules generated
+        self.counter = 0
+        while self.todo:
+            for rulename, rule in list(self.todo.items()):
+                self.done[rulename] = rule
+                del self.todo[rulename]
+                self.print()
+                rule.cgen_func(self, rulename)
+        self.print(EXTENSION_SUFFIX.rstrip('\n'))
 
     def name_node(self, alts: Rhs) -> str:
         self.counter += 1
@@ -965,9 +1121,6 @@ class ParserGenerator:
 
 def compute_nullables(rules: Dict[str, Rule]) -> None:
     """Compute which rules in a grammar are nullable.
-
-    This has the side effect of setting self.__rules for all NameLeaf
-    instances.
 
     Thanks to TatSu (tatsu/leftrec.py) for inspiration.
     """
@@ -1157,7 +1310,8 @@ argparser = argparse.ArgumentParser(prog='pegen', description="Experimental PEG-
 argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print the parsed grammar")
 argparser.add_argument('-v', '--verbose', action='count', default=0,
                        help="Print timing stats; repeat for more debug output")
-argparser.add_argument('-o', '--output', default='parse.py', metavar='OUT',
+argparser.add_argument('-c', '--cpython', action='store_true', help="Generate C code for inclusion into CPython")
+argparser.add_argument('-o', '--output', metavar='OUT',
                        help="Where to write the generated parser (default parse.py)")
 argparser.add_argument('filename', help="Grammar description")
 
@@ -1189,9 +1343,18 @@ def main() -> None:
         for rule in rules.values():
             print(" ", rule)
 
-    with open(args.output, 'w') as file:
+    output = args.output
+    if not output:
+        if args.cpython:
+            output = "parse.c"
+        else:
+            output = "parse.py"
+    with open(output, 'w') as file:
         genr = ParserGenerator(rules, file)
-        genr.generate_parser(args.filename)
+        if args.cpython:
+            genr.generate_cpython_extension(args.filename)
+        else:
+            genr.generate_python_module(args.filename)
 
     if args.verbose:
         print("First Graph:")

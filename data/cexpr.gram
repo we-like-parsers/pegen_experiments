@@ -1,0 +1,15 @@
+start: expr NEWLINE? ENDMARKER { expr_var }
+expr: ( expr '+' term { BinOp(expr_var, Add, term_var, LINE(expr_var), COL(expr_var), ENDLINE(term_var), ENDCOL(term_var), p->arena) }
+      | expr '-' term { BinOp(expr_var, Sub, term_var, LINE(expr_var), COL(expr_var), ENDLINE(term_var), ENDCOL(term_var), p->arena) }
+      | term { term_var }
+      )
+term: ( l=term '*' r=factor { BinOp(l, Mult, r, LINE(l), COL(l), ENDLINE(r), ENDCOL(r), p->arena) }
+      | term '/' factor { BinOp(term_var, Div, factor_var, LINE(term_var), COL(term_var), ENDLINE(factor_var), ENDCOL(factor_var), p->arena) }
+      | factor { factor_var }
+      )
+factor: ('(' expr ')' { expr_var }
+        | atom { atom_var }
+        )
+atom: ( NAME { name_var }
+      | NUMBER { number_var }
+      )

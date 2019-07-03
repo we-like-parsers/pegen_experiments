@@ -19,7 +19,7 @@ def generate_parser(rules):
     # Generate a parser.
     out = io.StringIO()
     genr = pegen.ParserGenerator(rules, out)
-    genr.generate_parser("<string>")
+    genr.generate_python_module("<string>")
 
     # Load the generated parser class.
     ns = {}
@@ -280,7 +280,7 @@ def test_mutually_left_recursive():
     assert not rules['start'].left_recursive
     assert rules['foo'].left_recursive
     assert rules['bar'].left_recursive
-    genr.generate_parser("<string>")
+    genr.generate_python_module("<string>")
     ns = {}
     exec(out.getvalue(), ns)
     parser_class = ns['GeneratedParser']

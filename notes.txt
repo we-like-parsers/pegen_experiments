@@ -57,12 +57,12 @@ Similar to the Python functions, but memoziation is done here.
 
 #define expr_type  321
 
-static AST*
+static ASTptr
 expr_rule(Parser *p)
 {
-    AST *res = NULL;
+    ASTptr res = NULL;
     int mark = p->mark;
-    if (is_memoized(p, expr_type, res))
+    if (is_memoized(p, expr_type, &res))
         return res;
     // Alternatives start here
     if ((a = rule_a(p)) && (b = rule_b(p)) && (c = rule_c(p))) {
@@ -83,7 +83,7 @@ expr_rule(Parser *p)
 // Here, mark is the start of the node, while p->mark is the end.
 // If node==NULL, they should be the same.
 static void
-insert_memo(Parser *p, int mark, int type, AST *node)
+insert_memo(Parser *p, int mark, int type, ASTptr node)
 {
     // Insert in front
     Memo *m = PyArena_Malloc(p->arena, sizeof(Memo));
@@ -97,7 +97,7 @@ insert_memo(Parser *p, int mark, int type, AST *node)
 }
 
 static int  // bool
-is_memoized(Parser *p, int type, AST *pres)
+is_memoized(Parser *p, int type, ASTptr *pres)
 {
     Token *t = &p->tokens[p->mark];
     Memo *m;
@@ -116,15 +116,15 @@ is_memoized(Parser *p, int type, AST *pres)
 Structure for each rule
 -----------------------
 
-AST *a, *b, *c;
-if ((a = a_rule(p) && (b = b_rule(p)) && (c = c_rule(p))) {
-    AST *res = SomeAstRule(a, b, c, p->arena);  // Often also add line, col, endline, endcol
-    if (res == NULL)
-        panic();
-    insert_memo(p, mark, expr_type, res);
-    return res;
-}
-p->mark = mark;  // Prep for the next alternative, or for fail return
+    ASTptr a, *b, *c;
+    if ((a = a_rule(p) && (b = b_rule(p)) && (c = c_rule(p))) {
+        ASTptr res = SomeAstRule(a, b, c, p->arena);  // Often also add line, col, endline, endcol
+        if (res == NULL)
+            panic();
+        insert_memo(p, mark, expr_type, res);
+        return res;
+    }
+    p->mark = mark;  // Prep for the next alternative, or for fail return
 
 Expecting tokens
 ----------------
@@ -150,10 +150,10 @@ kinds of things.
 Let's say we have (memoized) expect(NAME) in the Python version; in
 the C version we'd have
 
-static AST*
+static ASTptr
 expect_name(Parser *p)
 {
-    AST *res;
+    ASTptr res;
     if (is_memoized(p, NAME, &res))
         return res;
     int mark = p->mark;
@@ -172,10 +172,10 @@ And ditto for STRING
 
 OTOH for all tokens without extra info we could have one function:
 
-static AST*
+static ASTptr
 expect_token(Parser *p, int type)
 {
-    AST *res;
+    ASTptr res;
     if (is_memoized(p, NAME, &res))
         return res;
     int mark = p->mark;
