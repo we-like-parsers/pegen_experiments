@@ -1,26 +1,27 @@
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <token.h>
 #include <Python-ast.h>
 #include <pyarena.h>
 
 #define ASTptr void*
 
-typedef struct memo {
+typedef struct _memo {
     int type;
     ASTptr node;
     int mark;
-    struct memo *next;
+    struct _memo *next;
 } Memo;
 
-typedef struct token {
+typedef struct {
     int type;
-    char *start, *end;
+    PyObject *bytes;
     int line, col, endline, endcol;
     Memo *memo;
 } Token;
 
-typedef struct parse {
+typedef struct {
     struct tok_state *tok;
-    char *input;
     Token *tokens;
     int mark;
     int fill, size;
@@ -31,16 +32,18 @@ void insert_memo(Parser *p, int mark, int type, ASTptr node);
 int is_memoized(Parser *p, int type, ASTptr *pres);
 void panic(char *message);
 
-void *expect_token(Parser *p, char *c);
+ASTptr expect_token(Parser *p, int token);
 
-void *endmarker_token(Parser *p);
-void *name_token(Parser *p);
-void *newline_token(Parser *p);
-void *number_token(Parser *p);
+ASTptr endmarker_token(Parser *p);
+ASTptr name_token(Parser *p);
+ASTptr newline_token(Parser *p);
+ASTptr number_token(Parser *p);
 
-void *CONSTRUCTOR(Parser *p, ...);
+ASTptr CONSTRUCTOR(Parser *p, ...);
 
 #define LINE(arg) ((expr_ty)(arg))->lineno
 #define COL(arg) ((expr_ty)(arg))->col_offset
 #define ENDLINE(arg) ((expr_ty)(arg))->end_lineno
 #define ENDCOL(arg) ((expr_ty)(arg))->end_col_offset
+
+int run_parser(const char *filename, ASTptr(*start_rule_func)(Parser *));

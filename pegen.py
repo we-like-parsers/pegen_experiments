@@ -512,7 +512,9 @@ class StringLeaf(Leaf):
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if cpython:
-            return 'string_var', f'expect_token(p, "{ast.literal_eval(self.value)}")'
+            val = ast.literal_eval(self.value)
+            type = exact_token_types[val]
+            return 'string_var', f'expect_token(p, {type})'
         else:
             return 'string', f"self.expect({self.value})"
 
@@ -1040,6 +1042,42 @@ EXTENSION_PREFIX = """\
 """
 
 EXTENSION_SUFFIX = """
+// TODO: Allow specifying a module name
+
+static PyObject *
+parse_file(PyObject *self, PyObject *args)
+{
+    const char *filename;
+
+    if (!PyArg_ParseTuple(args, "s", &filename))
+        return NULL;
+    if (!run_parser(filename, start_rule))
+        return NULL;
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef ParseMethods[] = {
+    {"parse",  parse_file, METH_VARARGS, "Parse a file."},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+static struct PyModuleDef parsemodule = {
+    PyModuleDef_HEAD_INIT,
+    .m_name = "parse",
+    .m_doc = "A parser.",
+    .m_methods = ParseMethods,
+};
+
+PyMODINIT_FUNC
+PyInit_parse(void)
+{
+    PyObject *m = PyModule_Create(&parsemodule);
+    if (m == NULL)
+        return NULL;
+
+    return m;
+}
+
 // The end
 """
 

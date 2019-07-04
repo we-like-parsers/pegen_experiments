@@ -1,19 +1,22 @@
 TOP = /usr/local
+PYTHON = $(TOP)/bin/python3.8
 INCLUDES = -I$(TOP)/include/python3.8
-LDFLAGS = -L/usr/local/lib/python3.8/config-3.8-darwin -ldl
+LDFLAGS = -L$(TOP)/lib/python3.8/config-3.8-darwin -ldl
 LDSHARED = $(CC) -bundle -undefined dynamic_lookup $(LDFLAGS)
+
+GRAMMAR = data/cexpr.gram
 
 parse.so: parse.o pegen.o
 	$(LDSHARED) parse.o pegen.o -o parse.so
 
-parse.o: pegen.h parse.c
+parse.o: parse.c pegen.h v38tokenizer.h
 	$(CC) -c $(INCLUDES) parse.c
 
-pegen.o: pegen.h pegen.c
+pegen.o: pegen.c pegen.h
 	$(CC) -c $(INCLUDES) pegen.c
 
-parse.c: data/cexpr.gram pegen.py
-	$(TOP)/bin/python3.8 pegen.py -c data/cexpr.gram -o parse.c
+parse.c: $(GRAMMAR) pegen.py
+	$(PYTHON) pegen.py -c $(GRAMMAR) -o parse.c
 
 clean:
 	rm *.o *.so parse.c
