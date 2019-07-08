@@ -4,7 +4,7 @@
 #include <Python-ast.h>
 #include <pyarena.h>
 
-#define ASTptr void*
+typedef void *ASTptr;
 
 typedef struct _memo {
     int type;

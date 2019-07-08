@@ -553,7 +553,7 @@ class Rhs:
         vars = set()
         for alt in self.alts:
             vars |= alt.collect_vars(gen)
-        gen.print(f"void {', '.join('*' + v for v in sorted(vars))};")
+        gen.print(f"ASTptr {', '.join(v for v in sorted(vars))};")
         for alt in self.alts:
             alt.cgen_block(gen, is_loop)
 
@@ -665,6 +665,7 @@ class Alt:
                 action = action[1:-1].strip()
                 gen.print(f"return {action};")
         gen.print("}")
+        gen.print("p->mark = mark;")
 
 
 class NamedItem:
