@@ -2,6 +2,14 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+static const char *
+token_name(int type)
+{
+    if (0 <= type && type <= N_TOKENS)
+        return _PyParser_TokenNames[type];
+    return "<Huh?>";
+}
+
 // Here, mark is the start of the node, while p->mark is the end.
 // If node==NULL, they should be the same.
 void
@@ -56,7 +64,7 @@ fill_token(Parser *p)
 
     // TODO: lineno etc.
 
-    fprintf(stderr, "Filled: %d \"%s\"\n", type, PyBytes_AsString(t->bytes));
+    fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
 }
 
@@ -86,9 +94,12 @@ expect_token(Parser *p, int type)
     if (p->mark == p->fill)
         fill_token(p);
     Token *t = p->tokens + p->mark;
-    if (t->type != type)
+    if (t->type != type) {
+        fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
         return NULL;
+    }
     p->mark += 1;
+    fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
     return t->bytes;
 }
 

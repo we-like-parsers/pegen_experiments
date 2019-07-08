@@ -659,10 +659,12 @@ class Alt:
         with gen.indent():
             action = self.action
             if not action:
+                gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
                 gen.print(f"return CONSTRUCTOR(p, {', '.join(names)});")
             else:
                 assert action[0] == '{' and action[-1] == '}', repr(action)
                 action = action[1:-1].strip()
+                gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
                 gen.print(f"return {action};")
         gen.print("}")
         gen.print("p->mark = mark;")
