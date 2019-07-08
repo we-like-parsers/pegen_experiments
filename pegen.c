@@ -18,23 +18,6 @@ insert_memo(Parser *p, int mark, int type, ASTptr node)
     p->tokens[mark].memo = m;
 }
 
-int  // bool
-is_memoized(Parser *p, int type, ASTptr *pres)
-{
-    Token *t = &p->tokens[p->mark];
-    Memo *m;
-    for (m = t->memo; m != NULL; m = m->next) {
-        if (m->type == type) {
-            if (m->node == NULL)
-                return 0;
-            p->mark = m->mark;
-            *pres = m->node;
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void
 panic(char *message)
 {
@@ -75,6 +58,26 @@ fill_token(Parser *p)
 
     fprintf(stderr, "Filled: %d \"%s\"\n", type, PyBytes_AsString(t->bytes));
     p->fill += 1;
+}
+
+int  // bool
+is_memoized(Parser *p, int type, ASTptr *pres)
+{
+    if (p->mark == p->fill)
+        fill_token(p);
+
+    Token *t = &p->tokens[p->mark];
+
+    for (Memo *m = t->memo; m != NULL; m = m->next) {
+        if (m->type == type) {
+            if (m->node == NULL)
+                return 0;
+            p->mark = m->mark;
+            *pres = m->node;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 ASTptr
