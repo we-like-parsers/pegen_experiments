@@ -193,3 +193,106 @@ What should the result type be here?  Something that's a subclass of
 AST.  For things like LPAR, there's no precedent.  Also, maybe this
 shouldn't bother with memoization, since the info is all there.  Just
 inline the fast path of next_token(p).
+
+Return types for rules
+----------------------
+
+It turns out the AST nodes are not uniquely identifiably given just a
+void*.  You must know whether it points to e.g. a mod_ty, a stmt_ty,
+or an expr_ty -- each of these is their own typedef in Python-ast.h,
+with its own enum for union discrimination, and the object is
+structured like this:
+
+typedef struct _stmt *stmt_ty;
+
+enum _stmt_kind {FunctionDef_kind=1, AsyncFunctionDef_kind=2, ClassDef_kind=3,
+                 ...........};
+struct _stmt {
+    enum _stmt_kind kind;
+    union {
+        struct {
+            identifier name;
+            .............
+        } FunctionDef;
+        ...........
+    } v;
+    int lineno;
+    int col_offset;
+    int end_lineno;
+    int end_col_offset;
+};
+
+We will have to have a way for the rule to indicate the return type of
+the function generated for the rule.  How can we do this?  One option
+would be to add the type in brackets after the rule name, like so:
+
+start[mod_ty]: stmt* $ { ........ }
+stmt[stmt_ty]: small_stmt | large_stmt
+small_stmt[stmt_ty]: .........
+
+However, this does not give the parser enough information if it wants
+to split out an optional or repeated sub-expression, nor does it give
+the return type of nested alternatives like `('+' | '-')` here:
+
+sum[expr_ty]: term ('+' | '-') sum
+
+Maybe we can put the type in the action, like this:
+
+start: stmt* $ { mod_ty | .......... }
+
+We also need a data type to represent lists of things.  Maybe asdl_seq
+is enough?  But wha about asdl_int_seq?  (Both are in asdl.h.)
+
+And what do we use as the type to represent tokens, e.g. '+'?
+I guess it would come down to
+
+add_op[operator_ty]: '+' { Add } | '-' { Sub }
+
+and then we'd have this:
+
+sum[expr_ty]: l=term op=add_op r=term { BinOp(l, op, r, l->lineno, l->col_offset, r->end_lineno, r->end_col_offset, p->arena) }
+
+(Of course we'd need to deal with left-recursion still.)
+
+Return types for tokens
+-----------------------
+
+We need something to represent tokens, so we can at least get line
+numbers out of them.  Example:
+
+term[expr_ty]: ....... | op='-' t=term { UnaryOp(USub, t, op->lineno, op->col_offset, t->end_lineno, t->end_col_offset, p->arena) }
+
+So whatever the tokenizer uses to represent the token, it had better
+have lineno etc. attributes.  I guess we could use our own Token
+struct, just rename line, col, endline, endcol to the longer names.
+
+Shorter actions
+---------------
+
+I also desperately want the actions to be shorter.  E.g. for the latter rule I want to write
+
+term[expr_ty]: ....... | op='-' t=term { UnaryOp(USub, t, STUFF(op, t)) }
+
+where
+
+#define STUFF(l, r) l->lineno, l->col_offset, r->end_lineno, r->end_col_offset, p->arena
+
+This however runs into a C preprocessor issue; maybe we'll have to write
+
+...... { _Py_UnaryOp(USub, t, STUFF(op, t)) }
+
+Alternatively we could define our own macros MyBinOp, MyUnaryOp etc., so you could write
+
+...... { _Py_UnaryOp(USub, t, STUFF(op, t)) }
+
+
+Avoiding name conflicts
+-----------------------
+
+It would be tragic if we couldn't name a rule 'if' or int'.  So we do
+everything with suffixes, e.g. expr_rule, expr_type, expr_var.
+Currently there's a loophole where named subexpressions don't have a
+_var suffix, but I think that won't work -- then you couldn't name a
+*subexpression* for' or 'struct', and naming it 'p' or 'mark' would
+also cause problems.  So probably it'll have to be l_var and r_var in
+the action, if the grammar uses 'l' and 'r'.
