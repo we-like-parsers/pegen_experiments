@@ -355,8 +355,9 @@ class Parser(Generic[T]):
 
 
 class Rule:
-    def __init__(self, name: str, rhs: Rhs):
+    def __init__(self, name: str, type: str, rhs: Rhs):
         self.name = name
+        self.type = type
         self.rhs = rhs
         self.visited = False
         self.nullable = None
@@ -364,10 +365,13 @@ class Rule:
         self.leader = False
 
     def __str__(self):
-        return f"{self.name}: {self.rhs}"
+        if self.type is None:
+            return f"{self.name}: {self.rhs}"
+        else:
+            return f"{self.name}[{self.type}]: {self.rhs}"
 
     def __repr__(self):
-        return f"Rule({self.name!r}, {self.rhs!r})"
+        return f"Rule({self.name!r}, {self.type!r}, {self.rhs!r})"
 
     def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
         if self.visited:
@@ -891,14 +895,23 @@ class GrammarParser(Parser):
     @memoize
     def rule(self) -> Optional[Rule]:
         """
-        rule: NAME ':' alternatives NEWLINE
+        rule: NAME [ '[' NAME ']' ] ':' alternatives NEWLINE
         """
         mark = self.mark()
+        if ((name := self.name()) and
+                self.expect('[') and
+                (type := self.name()) and
+                self.expect(']') and
+                self.expect(':') and
+                (alts := self.alternatives()) and
+                self.expect('NEWLINE')):
+            return Rule(name.string, type.string, alts)
+        self.reset(mark)
         if ((name := self.name()) and
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
-            return Rule(name.string, alts)
+            return Rule(name.string, None, alts)
         self.reset(mark)
         return None
 
@@ -1150,13 +1163,13 @@ class ParserGenerator:
     def name_node(self, alts: Rhs) -> str:
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
-        self.todo[name] = Rule(name, alts)
+        self.todo[name] = Rule(name, None, alts)
         return name
 
     def name_loop(self, node: Plain):
         self.counter += 1
         name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
-        self.todo[name] = Rule(name, Rhs([Alt([NamedItem(None, node)])]))
+        self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
 
