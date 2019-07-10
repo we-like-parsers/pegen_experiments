@@ -4,11 +4,9 @@
 #include <Python-ast.h>
 #include <pyarena.h>
 
-typedef void *ASTptr;
-
 typedef struct _memo {
     int type;
-    ASTptr node;
+    void *node;
     int mark;
     struct _memo *next;
 } Memo;
@@ -28,22 +26,22 @@ typedef struct {
     PyArena *arena;
 } Parser;
 
-void insert_memo(Parser *p, int mark, int type, ASTptr node);
-int is_memoized(Parser *p, int type, ASTptr *pres);
+void insert_memo(Parser *p, int mark, int type, void *node);
+int is_memoized(Parser *p, int type, void *pres);
 void panic(char *message);
 
-ASTptr expect_token(Parser *p, int token);
+void *expect_token(Parser *p, int token);
 
-ASTptr endmarker_token(Parser *p);
-ASTptr name_token(Parser *p);
-ASTptr newline_token(Parser *p);
-ASTptr number_token(Parser *p);
+void *endmarker_token(Parser *p);
+void *name_token(Parser *p);
+void *newline_token(Parser *p);
+void *number_token(Parser *p);
 
-ASTptr CONSTRUCTOR(Parser *p, ...);
+void *CONSTRUCTOR(Parser *p, ...);
 
 #define LINE(arg) ((expr_ty)(arg))->lineno
 #define COL(arg) ((expr_ty)(arg))->col_offset
 #define ENDLINE(arg) ((expr_ty)(arg))->end_lineno
 #define ENDCOL(arg) ((expr_ty)(arg))->end_col_offset
 
-int run_parser(const char *filename, ASTptr(*start_rule_func)(Parser *));
+int run_parser(const char *filename, void *(start_rule_func)(Parser *));

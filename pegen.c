@@ -13,7 +13,7 @@ token_name(int type)
 // Here, mark is the start of the node, while p->mark is the end.
 // If node==NULL, they should be the same.
 void
-insert_memo(Parser *p, int mark, int type, ASTptr node)
+insert_memo(Parser *p, int mark, int type, void *node)
 {
     // Insert in front
     Memo *m = PyArena_Malloc(p->arena, sizeof(Memo));
@@ -33,7 +33,7 @@ panic(char *message)
     exit(2);
 }
 
-ASTptr
+void *
 CONSTRUCTOR(Parser *p, ...)
 {
     return (void *)1;
@@ -69,7 +69,7 @@ fill_token(Parser *p)
 }
 
 int  // bool
-is_memoized(Parser *p, int type, ASTptr *pres)
+is_memoized(Parser *p, int type, void *pres)
 {
     if (p->mark == p->fill)
         fill_token(p);
@@ -81,14 +81,14 @@ is_memoized(Parser *p, int type, ASTptr *pres)
             if (m->node == NULL)
                 return 0;
             p->mark = m->mark;
-            *pres = m->node;
+            *(void **)(pres) = m->node;
             return 1;
         }
     }
     return 0;
 }
 
-ASTptr
+void *
 expect_token(Parser *p, int type)
 {
     if (p->mark == p->fill)
@@ -103,32 +103,32 @@ expect_token(Parser *p, int type)
     return t->bytes;
 }
 
-ASTptr
+void *
 endmarker_token(Parser *p)
 {
     return expect_token(p, ENDMARKER);
 }
 
-ASTptr
+void *
 name_token(Parser *p)
 {
     return expect_token(p, NAME);
 }
 
-ASTptr
+void *
 newline_token(Parser *p)
 {
     return expect_token(p, NEWLINE);
 }
 
-ASTptr
+void *
 number_token(Parser *p)
 {
     return expect_token(p, NUMBER);
 }
 
 int
-run_parser(const char *filename, ASTptr(*start_rule_func)(Parser *))
+run_parser(const char *filename, void *(start_rule_func)(Parser *))
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL)

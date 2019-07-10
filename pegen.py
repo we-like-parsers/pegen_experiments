@@ -432,11 +432,12 @@ class Rule:
             rhs = rhs.alts[0].items[0].item.rhs
 
         gen.print(f"// {self}")
-        gen.print("static ASTptr")
+        type = self.type or 'void'
+        gen.print(f"static {type}")
         gen.print(f"{rulename}_rule(Parser *p)")
         gen.print("{")
         with gen.indent():
-            gen.print("ASTptr res = NULL;")
+            gen.print(f"{type} res = NULL;")
             gen.print("int mark = p->mark;")
             if memoize:
                 gen.print(f"if (is_memoized(p, {rulename}_type, &res))")
@@ -557,7 +558,8 @@ class Rhs:
         vars = set()
         for alt in self.alts:
             vars |= alt.collect_vars(gen)
-        gen.print(f"ASTptr {', '.join(v for v in sorted(vars))};")
+        for v in sorted(vars):
+            gen.print(f"void *{v};")
         for alt in self.alts:
             alt.cgen_block(gen, is_loop)
 
@@ -1067,7 +1069,7 @@ parse_file(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "s", &filename))
         return NULL;
-    if (!run_parser(filename, start_rule))
+    if (!run_parser(filename, (void *)start_rule))
         return NULL;
     Py_RETURN_NONE;
 }
@@ -1146,8 +1148,8 @@ class ParserGenerator:
         for i, rulename in enumerate(self.rules, 1000):
             self.print(f"#define {rulename}_type {i}")
         self.print()
-        for rulename in self.rules:
-            self.print(f"static ASTptr {rulename}_rule(Parser *p);")
+        for rulename, rule in self.rules.items():
+            self.print(f"static {rule.type or 'void'} {rulename}_rule(Parser *p);")
         self.print()
         self.todo = self.rules.copy()  # Rules to generate
         self.done: Dict[str, Rule] = {}  # Rules generated
