@@ -432,7 +432,7 @@ class Rule:
             rhs = rhs.alts[0].items[0].item.rhs
 
         gen.print(f"// {self}")
-        type = self.type or 'void'
+        type = self.type or 'void*'
         gen.print(f"static {type}")
         gen.print(f"{rulename}_rule(Parser *p)")
         gen.print("{")
@@ -1149,7 +1149,7 @@ class ParserGenerator:
             self.print(f"#define {rulename}_type {i}")
         self.print()
         for rulename, rule in self.rules.items():
-            self.print(f"static {rule.type or 'void'} {rulename}_rule(Parser *p);")
+            self.print(f"static {rule.type or 'void*'} {rulename}_rule(Parser *p);")
         self.print()
         self.todo = self.rules.copy()  # Rules to generate
         self.done: Dict[str, Rule] = {}  # Rules generated
