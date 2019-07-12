@@ -64,7 +64,7 @@ fill_token(Parser *p)
 
     // TODO: lineno etc.
 
-    fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
+    // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
 }
 
@@ -78,13 +78,13 @@ is_memoized(Parser *p, int type, void *pres)
 
     for (Memo *m = t->memo; m != NULL; m = m->next) {
         if (m->type == type) {
-            if (m->node == NULL)
-                return 0;
             p->mark = m->mark;
             *(void **)(pres) = m->node;
+            // fprintf(stderr, "%d < %d: memoized!\n", p->mark, p->fill);
             return 1;
         }
     }
+    // fprintf(stderr, "%d < %d: not memoized\n", p->mark, p->fill);
     return 0;
 }
 
@@ -95,11 +95,11 @@ expect_token(Parser *p, int type)
         fill_token(p);
     Token *t = p->tokens + p->mark;
     if (t->type != type) {
-        fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
+        // fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
         return NULL;
     }
     p->mark += 1;
-    fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
+    // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
     return t->bytes;
 }
 
