@@ -1,10 +1,14 @@
-start: expr NEWLINE? ENDMARKER { expr_var }
-expr: ( l=expr '+' r=term { BinOp(l, Add, r, LINE(l), COL(l), ENDLINE(r), ENDCOL(r), p->arena) }
-      | l=expr '-' r=term { BinOp(l, Sub, r, LINE(l), COL(l), ENDLINE(r), ENDCOL(r), p->arena) }
+start: a=exprs ENDMARKER { a }
+exprs: ( l=expr_stmt r=exprs { r }
+       | a=expr_stmt { a }
+       )
+expr_stmt: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
+expr: ( l=term '+' r=expr { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
+      | l=term '-' r=expr { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
       | t=term { t }
       )
-term: ( l=term '*' r=factor { BinOp(l, Mult, r, LINE(l), COL(l), ENDLINE(r), ENDCOL(r), p->arena) }
-      | l=term '/' r=factor { BinOp(l, Div, r, LINE(l), COL(l), ENDLINE(r), ENDCOL(r), p->arena) }
+term: ( l=factor '*' r=term { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
+      | l=factor '/' r=term { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
       | f=factor { f }
       )
 factor: ('(' e=expr ')' { e }
