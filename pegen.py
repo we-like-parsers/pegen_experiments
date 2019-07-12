@@ -443,7 +443,7 @@ class Rule:
                 gen.print(f"if (is_memoized(p, {rulename}_type, &res))")
             with gen.indent():
                 gen.print("return res;")
-            rhs.cgen_body(gen, is_loop)
+            rhs.cgen_body(gen, is_loop, rulename if memoize else None)
             gen.print("// Fail")
             if memoize:
                 gen.print(f"insert_memo(p, mark, {rulename}_type, NULL);",
@@ -552,7 +552,7 @@ class Rhs:
         for alt in self.alts:
             alt.gen_block(gen, is_loop)
 
-    def cgen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
+    def cgen_body(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]) -> None:
         if is_loop:
             assert len(self.alts) == 1
         vars = set()
@@ -561,7 +561,7 @@ class Rhs:
         for v in sorted(vars):
             gen.print(f"void *{v};")
         for alt in self.alts:
-            alt.cgen_block(gen, is_loop)
+            alt.cgen_block(gen, is_loop, rulename)
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
@@ -646,7 +646,7 @@ class Alt:
             item.add_vars(gen, names)
         return set(names)
 
-    def cgen_block(self, gen: ParserGenerator, is_loop: bool = False):
+    def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
         gen.print(f"// {self}")
         names = []
         if is_loop:
@@ -665,13 +665,17 @@ class Alt:
         with gen.indent():
             action = self.action
             if not action:
-                gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
-                gen.print(f"return CONSTRUCTOR(p, {', '.join(names)});")
+                ## gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
+                gen.print(f"void *res = CONSTRUCTOR(p, {', '.join(names)});")
             else:
                 assert action[0] == '{' and action[-1] == '}', repr(action)
                 action = action[1:-1].strip()
-                gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
-                gen.print(f"return {action};")
+                gen.print(f"void *res = {action};")
+                ## gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
+            if rulename:
+                gen.print(f"insert_memo(p, mark, {rulename}_type, res);",
+                          "// Memoize negative result")
+            gen.print(f"return res;")
         gen.print("}")
         gen.print("p->mark = mark;")
 
