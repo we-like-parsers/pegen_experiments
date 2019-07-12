@@ -43,5 +43,6 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define COL(arg) ((expr_ty)(arg))->col_offset
 #define ENDLINE(arg) ((expr_ty)(arg))->end_lineno
 #define ENDCOL(arg) ((expr_ty)(arg))->end_col_offset
+#define EXTRA(head, tail) LINE(head), COL(head), ENDLINE(tail), ENDCOL(tail), p->arena
 
 int run_parser(const char *filename, void *(start_rule_func)(Parser *));
