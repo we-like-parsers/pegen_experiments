@@ -527,6 +527,7 @@ class StringLeaf(Leaf):
 class Rhs:
     def __init__(self, alts: List[Alt]):
         self.alts = alts
+        self.memo = None
 
     def __str__(self):
         return " | ".join(str(alt) for alt in self.alts)
@@ -564,13 +565,17 @@ class Rhs:
             alt.cgen_block(gen, is_loop, rulename)
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        if self.memo is not None:
+            return self.memo
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
-            return self.alts[0].items[0].make_call(gen, cpython)
-        name = gen.name_node(self)
-        if cpython:
-            return f"{name}_var", f"{name}_rule(p)"
+            self.memo = self.alts[0].items[0].make_call(gen, cpython)
         else:
-            return name, f"self.{name}()"
+            name = gen.name_node(self)
+            if cpython:
+                self.memo = f"{name}_var", f"{name}_rule(p)"
+            else:
+                self.memo =name, f"self.{name}()"
+        return self.memo
 
 
 class Alt:
@@ -819,6 +824,7 @@ class Repeat:
 
     def __init__(self, node: Plain):
         self.node = node
+        self.memo = None
 
     def initial_names(self) -> AbstractSet[str]:
         return self.node.initial_names()
@@ -835,11 +841,14 @@ class Repeat0(Repeat):
         return True
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        if self.memo is not None:
+            return self.memo
         name = gen.name_loop(self.node)
         if cpython:
-            return name, f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
+            self.memo = f"{name}", f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
         else:
-            return name, f"self.{name}(),"  # Also a trailing comma!
+            self.memo = name, f"self.{name}(),"  # Also a trailing comma!
+        return self.memo
 
 
 class Repeat1(Repeat):
@@ -854,11 +863,14 @@ class Repeat1(Repeat):
         return False
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        if self.memo is not None:
+            return self.memo
         name = gen.name_loop(self.node)
         if cpython:
-            return name, f"{name}_rule(p)"  # But not here!
+            self.memo = name, f"{name}_rule(p)"  # But not here!
         else:
-            return name, f"self.{name}()"  # But no trailing comma here!
+            self.memo = name, f"self.{name}()"  # But no trailing comma here!
+        return self.memo
 
 
 class Group:
