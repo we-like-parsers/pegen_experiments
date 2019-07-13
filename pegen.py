@@ -724,9 +724,13 @@ class NamedItem:
         if not name:
             gen.print(call)
         else:
+            optional = (name == 'opt_var')  # Hack, signalling optionality from make_call().
             if name != 'cut':
                 name = dedupe(name, names)
-            gen.print(f"({name} = {call})")
+            if optional:
+                gen.print(f"(({name} = {call}) || 1)")
+            else:
+                gen.print(f"({name} = {call})")
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name, call = self.item.make_call(gen, cpython)
