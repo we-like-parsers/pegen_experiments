@@ -845,7 +845,7 @@ class Repeat0(Repeat):
             return self.memo
         name = gen.name_loop(self.node)
         if cpython:
-            self.memo = f"{name}", f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
+            self.memo = f"{name}_var", f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
         else:
             self.memo = name, f"self.{name}(),"  # Also a trailing comma!
         return self.memo
@@ -867,7 +867,7 @@ class Repeat1(Repeat):
             return self.memo
         name = gen.name_loop(self.node)
         if cpython:
-            self.memo = name, f"{name}_rule(p)"  # But not here!
+            self.memo = f"{name}_var", f"{name}_rule(p)"  # But not here!
         else:
             self.memo = name, f"self.{name}()"  # But no trailing comma here!
         return self.memo
