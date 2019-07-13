@@ -1143,7 +1143,6 @@ class ParserGenerator:
         compute_nullables(rules)
         self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
         self.todo = self.rules.copy()  # Rules to generate
-        self.done: Dict[str, Rule] = {}  # Rules generated
         self.counter = 0  # For name_rule()/name_loop()
 
     @contextlib.contextmanager
@@ -1170,7 +1169,6 @@ class ParserGenerator:
         self.print("class GeneratedParser(Parser):")
         while self.todo:
             for rulename, rule in list(self.todo.items()):
-                self.done[rulename] = rule
                 del self.todo[rulename]
                 self.print()
                 with self.indent():
@@ -1188,19 +1186,21 @@ class ParserGenerator:
         self.print()
         while self.todo:
             for rulename, rule in list(self.todo.items()):
-                self.done[rulename] = rule
                 del self.todo[rulename]
                 self.print()
                 rule.cgen_func(self, rulename)
         self.print(EXTENSION_SUFFIX.rstrip('\n'))
 
     def collect_todo(self) -> None:
-        n = 0
-        while len(self.todo) > n:
-            nn = n
-            n = len(self.todo)
-            for rule in list(self.todo.values())[nn:]:
-                rule.collect_todo(self)
+        done = set()  # type: Set[str]
+        while True:
+            alltodo = set(self.todo)
+            todo = alltodo - done
+            if not todo:
+                break
+            for rulename in todo:
+                self.todo[rulename].collect_todo(self)
+            done = alltodo
 
     def name_node(self, rhs: Rhs) -> str:
         self.counter += 1
