@@ -385,6 +385,9 @@ class Rule:
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
 
+    def collect_todo(self, gen: ParserGenerator) -> None:
+        self.rhs.collect_todo(gen)
+
     def gen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
         # If it's a single parenthesized group, flatten it.
@@ -547,6 +550,10 @@ class Rhs:
             names |= alt.initial_names()
         return names
 
+    def collect_todo(self, gen: ParserGenerator) -> None:
+        for alt in self.alts:
+            alt.collect_todo(gen)
+
     def gen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
         if is_loop:
             assert len(self.alts) == 1
@@ -612,6 +619,10 @@ class Alt:
             if not item.nullable:
                 break
         return names
+
+    def collect_todo(self, gen: ParserGenerator) -> None:
+        for item in self.items:
+            item.collect_todo(gen)
 
     def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
         names = []
@@ -707,6 +718,9 @@ class NamedItem:
 
     def initial_names(self) -> AbstractSet[str]:
         return self.item.initial_names()
+
+    def collect_todo(self, gen: ParserGenerator) -> None:
+        self.item.make_call(gen, True)
 
     def gen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen, cpython=False)
@@ -1128,6 +1142,9 @@ class ParserGenerator:
         self.level = 0
         compute_nullables(rules)
         self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
+        self.todo = self.rules.copy()  # Rules to generate
+        self.done: Dict[str, Rule] = {}  # Rules generated
+        self.counter = 0  # For name_rule()/name_loop()
 
     @contextlib.contextmanager
     def indent(self) -> None:
@@ -1151,9 +1168,6 @@ class ParserGenerator:
     def generate_python_module(self, filename: str) -> None:
         self.print(MODULE_PREFIX.format(filename=filename))
         self.print("class GeneratedParser(Parser):")
-        self.todo = self.rules.copy()  # Rules to generate
-        self.done: Dict[str, Rule] = {}  # Rules generated
-        self.counter = 0
         while self.todo:
             for rulename, rule in list(self.todo.items()):
                 self.done[rulename] = rule
@@ -1164,16 +1178,14 @@ class ParserGenerator:
         self.print(MODULE_SUFFIX.rstrip('\n'))
 
     def generate_cpython_extension(self, filename: str) -> None:
+        self.collect_todo()
         self.print(EXTENSION_PREFIX.format(filename=filename))
-        for i, rulename in enumerate(self.rules, 1000):
+        for i, rulename in enumerate(self.todo, 1000):
             self.print(f"#define {rulename}_type {i}")
         self.print()
-        for rulename, rule in self.rules.items():
+        for rulename, rule in self.todo.items():
             self.print(f"static {rule.type or 'void*'} {rulename}_rule(Parser *p);")
         self.print()
-        self.todo = self.rules.copy()  # Rules to generate
-        self.done: Dict[str, Rule] = {}  # Rules generated
-        self.counter = 0
         while self.todo:
             for rulename, rule in list(self.todo.items()):
                 self.done[rulename] = rule
@@ -1182,10 +1194,18 @@ class ParserGenerator:
                 rule.cgen_func(self, rulename)
         self.print(EXTENSION_SUFFIX.rstrip('\n'))
 
-    def name_node(self, alts: Rhs) -> str:
+    def collect_todo(self) -> None:
+        n = 0
+        while len(self.todo) > n:
+            nn = n
+            n = len(self.todo)
+            for rule in list(self.todo.values())[nn:]:
+                rule.collect_todo(self)
+
+    def name_node(self, rhs: Rhs) -> str:
         self.counter += 1
         name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
-        self.todo[name] = Rule(name, None, alts)
+        self.todo[name] = Rule(name, None, rhs)
         return name
 
     def name_loop(self, node: Plain):

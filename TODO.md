@@ -17,8 +17,10 @@ Python code generator:
 
 C Code generator:
 
+- [ ] actually return a result from parse() (either a code object or an ast.AST)
 - [ ] tests
-- [ ] optional
+- [x] optional
+- [x] groups
 - [ ] loops
 - [ ] lookaheads
 - [ ] cut operator
