@@ -1,0 +1,16 @@
+start[expr_ty]: expr NEWLINE? ENDMARKER
+expr[expr_ty]: ( term '+' expr
+             | [sign sign] term '-' expr
+             | term
+             )
+sign: '+' | '-'
+term[expr_ty]: ( factor '*' term
+             | factor '/' term
+             | factor
+             )
+factor[expr_ty]: ('(' expr ')'
+               | atom
+                )
+atom[expr_ty]: ( NAME
+               | NUMBER
+               )
