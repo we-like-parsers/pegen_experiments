@@ -424,7 +424,8 @@ class Rule:
                 gen.print("return None")
 
     def cgen_func(self, gen: ParserGenerator, rulename: str) -> None:
-        is_loop = rulename.startswith('_loop_')
+        is_loop = rulename.startswith('_loop')
+        is_repeat1 = rulename.startswith('_loop1')
         memoize = not self.leader
         if self.left_recursive:
             print(f"Warning: {rulename} is left-recursive; generating bogus code",
@@ -449,6 +450,12 @@ class Rule:
                 gen.print("ssize_t n = 0;")
             rhs.cgen_body(gen, is_loop, rulename if memoize else None)
             if is_loop:
+                if is_repeat1:
+                    gen.print("if (n == 0) {")
+                    with gen.indent():
+                        gen.print("PyMem_Free(children);")
+                        gen.print("return NULL;")
+                    gen.print("}")
                 gen.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
                 gen.print(f'if (!seq) panic("asdl_seq_new {rulename}");')
                 gen.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
@@ -762,13 +769,9 @@ class NamedItem:
         if not name:
             gen.print(call)
         else:
-            optional = (name == 'opt_var')  # Hack, signalling optionality from make_call().
             if name != 'cut':
                 name = dedupe(name, names)
-            if optional:
-                gen.print(f"(({name} = {call}) || 1)")
-            else:
-                gen.print(f"({name} = {call})")
+            gen.print(f"({name} = {call})")
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name, call = self.item.make_call(gen, cpython)
@@ -841,7 +844,7 @@ class Opt:
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name, call = self.node.make_call(gen, cpython)
         if cpython:
-            return "opt_var", call  # Caller has to add ((...) || 1)!
+            return "opt_var", f"{call}, 1"  # Using comma operator!
         else:
             return "opt", f"{call},"  # Note trailing comma!
 
@@ -876,9 +879,9 @@ class Repeat0(Repeat):
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if self.memo is not None:
             return self.memo
-        name = gen.name_loop(self.node)
+        name = gen.name_loop(self.node, False)
         if cpython:
-            self.memo = f"{name}_var", f"{name}_rule(p)"  # Caller has to wrap with '|| 1'.
+            self.memo = f"{name}_var", f"{name}_rule(p)"
         else:
             self.memo = name, f"self.{name}(),"  # Also a trailing comma!
         return self.memo
@@ -898,7 +901,7 @@ class Repeat1(Repeat):
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if self.memo is not None:
             return self.memo
-        name = gen.name_loop(self.node)
+        name = gen.name_loop(self.node, True)
         if cpython:
             self.memo = f"{name}_var", f"{name}_rule(p)"  # But not here!
         else:
@@ -1227,9 +1230,13 @@ class ParserGenerator:
         self.todo[name] = Rule(name, None, rhs)
         return name
 
-    def name_loop(self, node: Plain):
+    def name_loop(self, node: Plain, is_repeat1: bool) -> str:
         self.counter += 1
-        name = f'_loop_{self.counter}'  # TODO: It's ugly to signal via the name.
+        if is_repeat1:
+            prefix = '_loop1_'
+        else:
+            prefix = '_loop0_'
+        name = f'{prefix}{self.counter}'  # TODO: It's ugly to signal via the name.
         self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 

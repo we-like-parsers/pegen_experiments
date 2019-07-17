@@ -346,3 +346,11 @@ we're running on a system where the system realloc() (or
 PyMem_Realloc()) is smart.  If the O(N**2) behavior becomes a problem
 we can write our own wrapper or macro that rounds the size up
 logarithmically (e.g. using the algorithm from list_resize()).
+
+For the * operator we may return a sequence of 0 elements, for the +
+operator we should return NULL if there are no elements:
+
+    if (n == 0) {
+        PyMem_Free(children);
+        return NULL;
+    }
