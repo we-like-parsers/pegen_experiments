@@ -364,6 +364,9 @@ class Rule:
         self.left_recursive = False
         self.leader = False
 
+    def is_loop(self):
+        return self.name.startswith('_loop')
+
     def __str__(self):
         if self.type is None:
             return f"{self.name}: {self.rhs}"
@@ -387,9 +390,8 @@ class Rule:
 
     def flatten(self) -> Rhs:
         # If it's a single parenthesized group, flatten it.
-        is_loop = self.name.startswith('_loop_')
         rhs = self.rhs
-        if (not is_loop
+        if (not self.is_loop()
             and len(rhs.alts) == 1
             and len(rhs.alts[0].items) == 1
             and isinstance(rhs.alts[0].items[0].item, Group)):
@@ -400,8 +402,8 @@ class Rule:
         rhs = self.flatten()
         rhs.collect_todo(gen)
 
-    def pgen_func(self, gen: ParserGenerator, rulename: str):
-        is_loop = rulename.startswith('_loop_')
+    def pgen_func(self, gen: ParserGenerator):
+        is_loop = self.is_loop()
         rhs = self.flatten()
         if self.left_recursive:
             if self.leader:
@@ -409,9 +411,9 @@ class Rule:
             # Non-leader rules in a cycle are not memoized
         else:
             gen.print("@memoize")
-        gen.print(f"def {rulename}(self):")
+        gen.print(f"def {self.name}(self):")
         with gen.indent():
-            gen.print(f"# {rulename}: {rhs}")
+            gen.print(f"# {self.name}: {rhs}")
             if self.nullable:
                 gen.print(f"# nullable={self.nullable}")
             gen.print("mark = self.mark()")
@@ -423,32 +425,32 @@ class Rule:
             else:
                 gen.print("return None")
 
-    def cgen_func(self, gen: ParserGenerator, rulename: str) -> None:
-        is_loop = rulename.startswith('_loop')
-        is_repeat1 = rulename.startswith('_loop1')
+    def cgen_func(self, gen: ParserGenerator) -> None:
+        is_loop = self.is_loop()
+        is_repeat1 = self.name.startswith('_loop1')
         memoize = not self.leader
         if self.left_recursive:
-            print(f"Warning: {rulename} is left-recursive; generating bogus code",
+            print(f"Warning: {self.name} is left-recursive; generating bogus code",
                   file=sys.stderr)
 
         rhs = self.flatten()
         gen.print(f"// {self}")
         type = self.type or 'void*'
         gen.print(f"static {type}")
-        gen.print(f"{rulename}_rule(Parser *p)")
+        gen.print(f"{self.name}_rule(Parser *p)")
         gen.print("{")
         with gen.indent():
             gen.print(f"{type} res = NULL;")
             gen.print("int mark = p->mark;")
             if memoize:
-                gen.print(f"if (is_memoized(p, {rulename}_type, &res))")
+                gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
             with gen.indent():
                 gen.print("return res;")
             if is_loop:
                 gen.print("void **children = PyMem_Malloc(0);")
-                gen.print(f'if (!children) panic("malloc {rulename}");')
+                gen.print(f'if (!children) panic("malloc {self.name}");')
                 gen.print("ssize_t n = 0;")
-            rhs.cgen_body(gen, is_loop, rulename if memoize else None)
+            rhs.cgen_body(gen, is_loop, self.name if memoize else None)
             if is_loop:
                 if is_repeat1:
                     gen.print("if (n == 0) {")
@@ -457,16 +459,16 @@ class Rule:
                         gen.print("return NULL;")
                     gen.print("}")
                 gen.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
-                gen.print(f'if (!seq) panic("asdl_seq_new {rulename}");')
+                gen.print(f'if (!seq) panic("asdl_seq_new {self.name}");')
                 gen.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
                 gen.print("PyMem_Free(children);")
-                if rulename:
-                    gen.print(f"insert_memo(p, mark, {rulename}_type, seq);")
+                if self.name:
+                    gen.print(f"insert_memo(p, mark, {self.name}_type, seq);")
                 gen.print("return seq;")
             else:
                 gen.print("// Fail")
                 if memoize:
-                    gen.print(f"insert_memo(p, mark, {rulename}_type, NULL);",
+                    gen.print(f"insert_memo(p, mark, {self.name}_type, NULL);",
                               "// Memoize negative result")
                 gen.print("return NULL;")
         gen.print("}")
@@ -1207,7 +1209,7 @@ class ParserGenerator:
                 del self.todo[rulename]
                 self.print()
                 with self.indent():
-                    rule.pgen_func(self, rulename)
+                    rule.pgen_func(self)
         self.print(MODULE_SUFFIX.rstrip('\n'))
 
     def generate_cpython_extension(self, filename: str) -> None:
@@ -1223,7 +1225,7 @@ class ParserGenerator:
             for rulename, rule in list(self.todo.items()):
                 del self.todo[rulename]
                 self.print()
-                rule.cgen_func(self, rulename)
+                rule.cgen_func(self)
         mode = int(self.rules['start'].type == 'mod_ty')
         self.print(EXTENSION_SUFFIX.rstrip('\n') % dict(mode=mode))
 
