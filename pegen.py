@@ -467,6 +467,7 @@ class Rule:
                 gen.print("return seq;")
             else:
                 gen.print("// Fail")
+                ## gen.print(f'fprintf(stderr, "Fail at %d: {self.name}\\n", p->mark);')
                 if memoize:
                     gen.print(f"insert_memo(p, mark, {self.name}_type, NULL);",
                               "// Memoize negative result")

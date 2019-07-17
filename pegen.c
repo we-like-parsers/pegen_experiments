@@ -62,7 +62,19 @@ fill_token(Parser *p)
     if (t->bytes == NULL)
         panic("PyBytes_FromStringAndSize failed");
 
-    // TODO: lineno etc.
+    int lineno = type == STRING ? p->tok->first_lineno : p->tok->lineno;
+    const char *line_start = type == STRING ? p->tok->multi_line_start : p->tok->line_start;
+    int end_lineno = p->tok->lineno;
+    int col_offset = -1, end_col_offset = -1;
+    if (start != NULL && start >= line_start)
+        col_offset = start - line_start;
+    if (end != NULL && end >= p->tok->line_start)
+        end_col_offset = end - p->tok->line_start;
+
+    t->line = lineno;
+    t->col = col_offset;
+    t->endline = end_lineno;
+    t->endcol = end_col_offset;
 
     // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
@@ -88,7 +100,7 @@ is_memoized(Parser *p, int type, void *pres)
     return 0;
 }
 
-void *
+Token *
 expect_token(Parser *p, int type)
 {
     if (p->mark == p->fill)
@@ -100,7 +112,7 @@ expect_token(Parser *p, int type)
     }
     p->mark += 1;
     // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
-    return t->bytes;
+    return t;
 }
 
 void *
@@ -109,10 +121,21 @@ endmarker_token(Parser *p)
     return expect_token(p, ENDMARKER);
 }
 
-void *
+expr_ty
 name_token(Parser *p)
 {
-    return expect_token(p, NAME);
+    Token *t = expect_token(p, NAME);
+    if (t == NULL)
+        return NULL;
+    char *s;
+    Py_ssize_t n;
+    if (PyBytes_AsStringAndSize(t->bytes, &s, &n) < 0)
+        panic("bytes");
+    PyObject *id = PyUnicode_DecodeUTF8(s, n, NULL);
+    if (id == NULL)
+        panic("unicode");
+    // TODO: What new_identifier() does.
+    return Name(id, Load, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
 void *
@@ -121,10 +144,13 @@ newline_token(Parser *p)
     return expect_token(p, NEWLINE);
 }
 
-void *
+expr_ty
 number_token(Parser *p)
 {
-    return expect_token(p, NUMBER);
+    Token *t = expect_token(p, NUMBER);
+    // TODO: Check for float, complex.
+    PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
+    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
 PyObject *
@@ -169,9 +195,8 @@ run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
 asdl_seq *
 singleton_seq(Parser *p, void *a)
 {
-    asdl_seq *seq = NULL;
-    seq = (asdl_seq *)PyArena_Malloc(p->arena, 1);
-    if (!seq) panic("singleton_seq");
+    asdl_seq *seq = _Py_asdl_seq_new(1, p->arena);
+    if (!seq) panic("_Py_asdl_seq_new");
     asdl_seq_SET(seq, 0, a);
     return seq;
 }

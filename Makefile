@@ -24,4 +24,4 @@ clean:
 	rm *.o *.so parse.c
 
 test: parse.so
-	$(PYTHON) -c "import parse; c = compile(parse.parse('$(TESTFILE)'), '', 'exec'); exec(c)"
+	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
