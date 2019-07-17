@@ -435,7 +435,7 @@ class Rule:
 
         rhs = self.flatten()
         gen.print(f"// {self}")
-        type = self.type or 'void*'
+        type = self.type or 'void *'
         gen.print(f"static {type}")
         gen.print(f"{self.name}_rule(Parser *p)")
         gen.print("{")
@@ -718,7 +718,7 @@ class Alt:
                 gen.print(f"void *res = {action};")
                 ## gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
             if is_loop:
-                gen.print("children = PyMem_Realloc(children, (n+1)*sizeof(void*));")
+                gen.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
                 gen.print(f'if (!children) panic("realloc {rulename}");')
                 gen.print(f"children[n++] = res;")
                 gen.print("mark = p->mark;")
@@ -1219,7 +1219,8 @@ class ParserGenerator:
             self.print(f"#define {rulename}_type {i}")
         self.print()
         for rulename, rule in self.todo.items():
-            self.print(f"static {rule.type or 'void*'} {rulename}_rule(Parser *p);")
+            type = rule.type + ' ' if rule.type else 'void *'
+            self.print(f"static {type}{rulename}_rule(Parser *p);")
         self.print()
         while self.todo:
             for rulename, rule in list(self.todo.items()):
