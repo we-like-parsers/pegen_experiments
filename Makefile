@@ -6,6 +6,7 @@ LDSHARED = $(CC) -bundle -undefined dynamic_lookup $(LDFLAGS)
 CFLAGS = -Werror
 
 GRAMMAR = data/cexpr.gram
+TESTFILE = data/cexpr.txt
 
 parse.so: parse.o pegen.o
 	$(LDSHARED) parse.o pegen.o -o parse.so
@@ -23,4 +24,4 @@ clean:
 	rm *.o *.so parse.c
 
 test: parse.so
-	$(PYTHON) -c "import parse; c = compile(parse.parse('data/cexpr.txt'), '', 'exec'); exec(c)"
+	$(PYTHON) -c "import parse; c = compile(parse.parse('$(TESTFILE)'), '', 'exec'); exec(c)"
