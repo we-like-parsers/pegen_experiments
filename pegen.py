@@ -580,11 +580,15 @@ class Rhs:
     def cgen_body(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]) -> None:
         if is_loop:
             assert len(self.alts) == 1
-        vars = set()
+        vars = {}
         for alt in self.alts:
-            vars |= alt.collect_vars(gen)
-        for v in sorted(vars):
-            gen.print(f"void *{v};")
+            vars.update(alt.collect_vars(gen))
+        for v, type in sorted(vars.items()):
+            if not type:
+                type = 'void *'
+            else:
+                type += ' '
+            gen.print(f"{type}{v};")
         for alt in self.alts:
             alt.cgen_block(gen, is_loop, rulename)
 
@@ -673,11 +677,13 @@ class Alt:
         # Skip remaining alternatives if a cut was reached.
         gen.print("if cut: return None")  # TODO: Only if needed.
 
-    def collect_vars(self, gen: ParserGenerator) -> AbstractSet[str]:
+    def collect_vars(self, gen: ParserGenerator) -> Dict[str, str]:
         names = []
+        types = {}
         for item in self.items:
-            item.add_vars(gen, names)
-        return set(names)
+            name, type = item.add_var(gen, names)
+            types[name] = type
+        return types
 
     def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
         # TODO: Refactor this -- there are too many is_loop checks.
@@ -759,10 +765,19 @@ class NamedItem:
                 name = dedupe(name, names)
             gen.print(f"({name} := {call})")
 
-    def add_vars(self, gen: ParserGenerator, names: List[str]) -> None:
-        name, call = self.make_call(gen, cpython=True)
+    def add_var(self, gen: ParserGenerator, names: List[str]) -> Tuple[str, str]:
+        name, call = self.item.make_call(gen, cpython=True)
+        type = None
         if name != 'cut':
+            if name.endswith('_var'):
+                rulename = name[:-4]
+                rule = gen.rules.get(rulename)
+                if rule is not None:
+                    type = rule.type
+            if self.name:
+                name = self.name
             name = dedupe(name, names)
+        return name, type
 
     def cgen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.make_call(gen, cpython=True)
@@ -1125,9 +1140,7 @@ parse_file(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "s", &filename))
         return NULL;
-    if (!run_parser(filename, (void *)start_rule))
-        return NULL;
-    Py_RETURN_NONE;
+    return run_parser(filename, (void *)start_rule, %(mode)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -1211,7 +1224,8 @@ class ParserGenerator:
                 del self.todo[rulename]
                 self.print()
                 rule.cgen_func(self, rulename)
-        self.print(EXTENSION_SUFFIX.rstrip('\n'))
+        mode = int(self.rules['start'].type == 'mod_ty')
+        self.print(EXTENSION_SUFFIX.rstrip('\n') % dict(mode=mode))
 
     def collect_todo(self) -> None:
         done = set()  # type: Set[str]

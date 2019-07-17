@@ -21,3 +21,6 @@ parse.c: $(GRAMMAR) pegen.py
 
 clean:
 	rm *.o *.so parse.c
+
+test: parse.so
+	$(PYTHON) -c "import parse; c = compile(parse.parse('data/cexpr.txt'), '', 'exec'); exec(c)"

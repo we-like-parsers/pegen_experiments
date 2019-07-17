@@ -45,4 +45,5 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define ENDCOL(arg) ((expr_ty)(arg))->end_col_offset
 #define EXTRA(head, tail) LINE(head), COL(head), ENDLINE(tail), ENDCOL(tail), p->arena
 
-int run_parser(const char *filename, void *(start_rule_func)(Parser *));
+PyObject *run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode);
+asdl_seq *singleton_seq(Parser *, void *);

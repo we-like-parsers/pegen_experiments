@@ -127,8 +127,8 @@ number_token(Parser *p)
     return expect_token(p, NUMBER);
 }
 
-int
-run_parser(const char *filename, void *(start_rule_func)(Parser *))
+PyObject *
+run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL)
@@ -140,7 +140,7 @@ run_parser(const char *filename, void *(start_rule_func)(Parser *))
 
     p->tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
     if (p->tok == NULL)
-        return 0;
+        return NULL;
 
     p->tokens = malloc(sizeof(Token));
     memset(p->tokens, '\0', sizeof(Token));
@@ -150,17 +150,28 @@ run_parser(const char *filename, void *(start_rule_func)(Parser *))
 
     p->arena = PyArena_New();
     if (!p->arena)
-        return 0;
+        return NULL;
 
     fill_token(p);
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         PyErr_Format(PyExc_SyntaxError, "error at mark %d, fill %d, size %d", p->mark, p->fill, p->size);
-        return 0;
+        return NULL;
     }
 
     // TODO: Free stuff
+    if (mode == 1)
+        return PyAST_mod2obj(res);
+    Py_RETURN_NONE;
+}
 
-    return 1;
+asdl_seq *
+singleton_seq(Parser *p, void *a)
+{
+    asdl_seq *seq = NULL;
+    seq = (asdl_seq *)PyArena_Malloc(p->arena, 1);
+    if (!seq) panic("singleton_seq");
+    asdl_seq_SET(seq, 0, a);
+    return seq;
 }
