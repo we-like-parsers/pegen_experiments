@@ -9,6 +9,10 @@ Grammar features:
       see https://github.com/PhilippeSigaud/Pegged/blob/master/pegged/introspection.d
 - [ ] Make grammar parser bootstrappable
 
+Refactoring:
+
+- [ ] Change code generators to use visitor pattern
+
 Python code generator:
 
 - [ ] Rename all Parser methods to have a leading underscore

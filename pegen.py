@@ -385,18 +385,24 @@ class Rule:
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
 
-    def collect_todo(self, gen: ParserGenerator) -> None:
-        self.rhs.collect_todo(gen)
-
-    def gen_func(self, gen: ParserGenerator, rulename: str):
-        is_loop = rulename.startswith('_loop_')
+    def flatten(self) -> Rhs:
         # If it's a single parenthesized group, flatten it.
+        is_loop = self.name.startswith('_loop_')
         rhs = self.rhs
         if (not is_loop
             and len(rhs.alts) == 1
             and len(rhs.alts[0].items) == 1
             and isinstance(rhs.alts[0].items[0].item, Group)):
             rhs = rhs.alts[0].items[0].item.rhs
+        return rhs
+
+    def collect_todo(self, gen: ParserGenerator) -> None:
+        rhs = self.flatten()
+        rhs.collect_todo(gen)
+
+    def gen_func(self, gen: ParserGenerator, rulename: str):
+        is_loop = rulename.startswith('_loop_')
+        rhs = self.flatten()
         if self.left_recursive:
             if self.leader:
                 gen.print("@memoize_left_rec")
