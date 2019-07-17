@@ -1,6 +1,6 @@
 start[expr_ty]: expr NEWLINE? ENDMARKER
 expr[expr_ty]: ( term '+' expr
-             | sign* term '-' expr
+             | (sign sign)+ term '-' expr
              | term
              )
 sign: '+' | '-'

@@ -400,7 +400,7 @@ class Rule:
         rhs = self.flatten()
         rhs.collect_todo(gen)
 
-    def gen_func(self, gen: ParserGenerator, rulename: str):
+    def pgen_func(self, gen: ParserGenerator, rulename: str):
         is_loop = rulename.startswith('_loop_')
         rhs = self.flatten()
         if self.left_recursive:
@@ -417,7 +417,7 @@ class Rule:
             gen.print("mark = self.mark()")
             if is_loop:
                 gen.print("children = []")
-            rhs.gen_body(gen, is_loop)
+            rhs.pgen_body(gen, is_loop)
             if is_loop:
                 gen.print("return children")
             else:
@@ -564,11 +564,11 @@ class Rhs:
         for alt in self.alts:
             alt.collect_todo(gen)
 
-    def gen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
+    def pgen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
         if is_loop:
             assert len(self.alts) == 1
         for alt in self.alts:
-            alt.gen_block(gen, is_loop)
+            alt.pgen_block(gen, is_loop)
 
     def cgen_body(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]) -> None:
         if is_loop:
@@ -634,7 +634,7 @@ class Alt:
         for item in self.items:
             item.collect_todo(gen)
 
-    def gen_block(self, gen: ParserGenerator, is_loop: bool = False):
+    def pgen_block(self, gen: ParserGenerator, is_loop: bool = False):
         names = []
         gen.print("cut = False")  # TODO: Only if needed.
         if is_loop:
@@ -648,7 +648,7 @@ class Alt:
                     first = False
                 else:
                     gen.print("and")
-                item.gen_item(gen, names)
+                item.pgen_item(gen, names)
         gen.print("):")
         with gen.indent():
             action = self.action
@@ -741,7 +741,7 @@ class NamedItem:
     def collect_todo(self, gen: ParserGenerator) -> None:
         self.item.make_call(gen, True)
 
-    def gen_item(self, gen: ParserGenerator, names: List[str]):
+    def pgen_item(self, gen: ParserGenerator, names: List[str]):
         name, call = self.item.make_call(gen, cpython=False)
         if self.name:
             name = self.name
@@ -1191,7 +1191,7 @@ class ParserGenerator:
                 del self.todo[rulename]
                 self.print()
                 with self.indent():
-                    rule.gen_func(self, rulename)
+                    rule.pgen_func(self, rulename)
         self.print(MODULE_SUFFIX.rstrip('\n'))
 
     def generate_cpython_extension(self, filename: str) -> None:

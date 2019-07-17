@@ -25,7 +25,7 @@ C Code generator:
 - [ ] tests
 - [x] optional
 - [x] groups
-- [ ] loops
+- [ ] repetitions
 - [ ] lookaheads
 - [ ] cut operator
 - [ ] left recursion
