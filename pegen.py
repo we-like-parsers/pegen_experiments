@@ -433,13 +433,7 @@ class Rule:
             print(f"Warning: {rulename} is a loop; generating bogus code",
                   file=sys.stderr)
 
-        rhs = self.rhs
-        if (not is_loop
-            and len(rhs.alts) == 1
-            and len(rhs.alts[0].items) == 1
-            and isinstance(rhs.alts[0].items[0].item, Group)):
-            rhs = rhs.alts[0].items[0].item.rhs
-
+        rhs = self.flatten()
         gen.print(f"// {self}")
         type = self.type or 'void*'
         gen.print(f"static {type}")
@@ -453,11 +447,18 @@ class Rule:
             with gen.indent():
                 gen.print("return res;")
             rhs.cgen_body(gen, is_loop, rulename if memoize else None)
-            gen.print("// Fail")
-            if memoize:
-                gen.print(f"insert_memo(p, mark, {rulename}_type, NULL);",
-                          "// Memoize negative result")
-            gen.print("return NULL;")
+            if is_loop:
+                gen.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
+                gen.print(f'if (!seq) panic("asdl_seq_new {rulename}");')
+                gen.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
+                gen.print("PyMem_Free(children);")
+                gen.print("return seq;")
+            else:
+                gen.print("// Fail")
+                if memoize:
+                    gen.print(f"insert_memo(p, mark, {rulename}_type, NULL);",
+                              "// Memoize negative result")
+                gen.print("return NULL;")
         gen.print("}")
 
 
@@ -669,9 +670,13 @@ class Alt:
         return set(names)
 
     def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
+        # TODO: Refactor this -- there are too many is_loop checks.
         gen.print(f"// {self}")
         names = []
         if is_loop:
+            gen.print("void **children = PyMem_Malloc(0);")
+            gen.print(f'if (!children) panic("malloc {rulename}");')
+            gen.print("ssize_t n = 0;")
             gen.print("while (")
         else:
             gen.print("if (")
@@ -688,16 +693,23 @@ class Alt:
             action = self.action
             if not action:
                 ## gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
-                gen.print(f"void *res = CONSTRUCTOR(p, {', '.join(names)});")
+                if is_loop:
+                    gen.print("children = PyMem_Realloc(children, (n+1)*sizeof(void*));")
+                    gen.print(f'if (!children) panic("realloc {rulename}");')
+                    gen.print(f"children[n++] = {names[0]};")
+                    gen.print("mark = p->mark;")
+                else:
+                    gen.print(f"void *res = CONSTRUCTOR(p, {', '.join(names)});")
             else:
+                assert not is_loop
                 assert action[0] == '{' and action[-1] == '}', repr(action)
                 action = action[1:-1].strip()
                 gen.print(f"void *res = {action};")
                 ## gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
-            if rulename:
-                gen.print(f"insert_memo(p, mark, {rulename}_type, res);",
-                          "// Memoize negative result")
-            gen.print(f"return res;")
+            if not is_loop:
+                if rulename:
+                    gen.print(f"insert_memo(p, mark, {rulename}_type, res);")
+                gen.print(f"return res;")
         gen.print("}")
         gen.print("p->mark = mark;")
 
