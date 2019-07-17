@@ -296,3 +296,53 @@ _var suffix, but I think that won't work -- then you couldn't name a
 *subexpression* for' or 'struct', and naming it 'p' or 'mark' would
 also cause problems.  So probably it'll have to be l_var and r_var in
 the action, if the grammar uses 'l' and 'r'.
+
+
+Implementing repeated values
+----------------------------
+
+Consider
+
+start: foo* { <what to put here?> }
+foo: NUMBER
+
+The generated C code has to have a way to collect 0 or more foo items
+for consumption by the { curly stuff }.  In the generated Python code
+we just use
+
+def _loop_1(self):
+    mark = self.mark()
+    children = []
+    while (foo := self.foo()):
+        children.append(foo)
+        mark = self.mark()
+    self.reset(mark)
+    return children
+
+but in C we don't have such luxuries.  I guess the most basic way out
+is to use malloc/realloc, like this:
+
+// Insert casts until compiler is happy
+static asdl_seq *
+_loop_1_rule(Parser *p)
+{
+    void **children = PyMem_Malloc(0);
+    ssize_t n = 0;
+    while (foo = foo_rool(p)) {
+        children = PyMem_Realloc(children, (n+1)*sizeof(void*));
+        if (!children) panic("...");
+        children[n++] = foo;
+    }
+    asdl_seq *res = _Py_asdl_seq_new(n, p->arena);
+    if (res == NULL) panic("...");
+    for (int i = 0; i < n; i++) asdl_seq_SET(res, i, children[i]);
+    PyMem_Free(children);
+    return res;
+}
+
+The cost here is a potentially quadratic realloc() loop (especially
+bothersome if a large list or module is being compiled), but hopefully
+we're running on a system where the system realloc() (or
+PyMem_Realloc()) is smart.  If the O(N**2) behavior becomes a problem
+we can write our own wrapper or macro that rounds the size up
+logarithmically (e.g. using the algorithm from list_resize()).
