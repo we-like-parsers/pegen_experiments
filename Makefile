@@ -7,6 +7,7 @@ CFLAGS = -Werror
 
 GRAMMAR = data/cexpr.gram
 TESTFILE = data/cexpr.txt
+TIMEFILE = data/xxl.txt
 
 parse.so: parse.o pegen.o
 	$(LDSHARED) parse.o pegen.o -o parse.so
@@ -25,3 +26,9 @@ clean:
 
 test: parse.so
 	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
+
+time: parse.so
+	/usr/bin/time -l $(PYTHON) -c "import parse; parse.parse('$(TIMEFILE)')"
+
+time_stdlib:
+	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
