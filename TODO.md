@@ -12,23 +12,29 @@ Grammar features:
 Refactoring:
 
 - [ ] Change code generators to use visitor pattern
+- [ ] Split up into multiple modules
+- [ ] Less dependence on Python tokenizer
 
 Python code generator:
 
 - [ ] Rename all Parser methods to have a leading underscore
 - [ ] Change memoize so as to minimize mark()/reset() calls (assume all functions are atomic)
 - [ ] Move special cases in expect() (e.g. NEWLINE) to generation-time
+- [ ] Reserved words
 
 C Code generator:
 
 - [ ] actually return a result from parse() (either a code object or an ast.AST)
 - [ ] tests
+- [ ] verbose debug output (selected when generating)
 - [x] optional
 - [x] groups
 - [x] repetitions
 - [ ] lookaheads
 - [ ] cut operator
 - [ ] left recursion
+- [ ] reserved words
+- [ ] option to return a code object instead of an AST
 - [ ] Avoid name conflicts between variable names and internal vars (e.g. mark, p)
 
 Infrastructure:
