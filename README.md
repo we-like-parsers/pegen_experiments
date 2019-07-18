@@ -34,9 +34,10 @@ a file of 100,000 lines containing simple expressions (`data/xxl.txt`)
 in ~0.8 seconds, using ~420 MiB of memory.  For comparison, compiling
 the same file to bytecode currently takes ~2.5 seconds, using ~870
 MiB.  (A newer version can produce working AST nodes, and it produces
-the AST for that same file in ~5 seconds, using ~1300 miB; the stdlib
-ast module does the same in ~6 seconds, using ~880 MiB.  However these
-times are on a faster machine.)
+the AST for that same file in ~5.9 seconds, using ~1100 miB; the
+stdlib ast module does the same in ~6 seconds, using ~880 MiB.
+However these times are on a faster machine.  Likely the majority of
+this time is spent converting the internal AST to the public AST.)
 
 __________
 PS. It's pronounced "pagan".

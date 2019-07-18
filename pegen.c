@@ -26,6 +26,22 @@ insert_memo(Parser *p, int mark, int type, void *node)
     p->tokens[mark].memo = m;
 }
 
+// Like insert_memo(), but updates an existing node if found.
+void
+update_memo(Parser *p, int mark, int type, void *node)
+{
+    for (Memo *m = p->tokens[mark].memo; m != NULL; m = m->next) {
+        if (m->type == type) {
+            // Update existing node.
+            m->node = node;
+            m->mark = p->mark;
+            return;
+        }
+    }
+    // Insert new node.
+    insert_memo(p, mark, type, node);
+}
+
 void
 panic(char *message)
 {

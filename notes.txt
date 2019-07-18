@@ -377,6 +377,7 @@ The outer function does:
 - if it's memoized, return that
 - prime the memo with failure
 - repeatedly:
+  - reset mark
   - call the raw function
   - if it fails or doesn't move mark ahead, break
   - else, overwrite the memo with the result and continue

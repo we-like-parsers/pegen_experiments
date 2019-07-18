@@ -24,7 +24,7 @@ Python code generator:
 
 C Code generator:
 
-- [ ] actually return a result from parse() (either a code object or an ast.AST)
+- [x] actually return a result from parse() (an ast.AST)
 - [ ] tests
 - [ ] verbose debug output (selected when generating)
 - [x] optional
@@ -32,7 +32,7 @@ C Code generator:
 - [x] repetitions
 - [ ] lookaheads
 - [ ] cut operator
-- [ ] left recursion
+- [x] left recursion
 - [ ] reserved words
 - [ ] option to return a code object instead of an AST
 - [ ] Avoid name conflicts between variable names and internal vars (e.g. mark, p)

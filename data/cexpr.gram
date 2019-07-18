@@ -1,12 +1,12 @@
 start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
 stmt[stmt_ty]: a=expr_stmt { a }
 expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
-expr[expr_ty]: ( l=term '+' r=expr { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
-               | l=term '-' r=expr { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
+expr[expr_ty]: ( l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
+               | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
                | t=term { t }
                )
-term[expr_ty]: ( l=factor '*' r=term { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
-               | l=factor '/' r=term { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
+term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
+               | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
                | f=factor { f }
                )
 factor[expr_ty]: ('(' e=expr ')' { e }

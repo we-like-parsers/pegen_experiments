@@ -27,6 +27,7 @@ typedef struct {
 } Parser;
 
 void insert_memo(Parser *p, int mark, int type, void *node);
+void update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
 void panic(char *message);
 

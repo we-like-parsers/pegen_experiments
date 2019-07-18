@@ -422,23 +422,50 @@ class Rule:
         is_loop = self.is_loop()
         is_repeat1 = self.name.startswith('_loop1')
         memoize = not self.leader
-        if self.left_recursive:
-            print(f"Warning: {self.name} is left-recursive; generating bogus code",
-                  file=sys.stderr)
-
         rhs = self.flatten()
-        gen.print(f"// {self}")
         type = self.type or 'void *'
+
+        gen.print(f"// {self}")
+        if self.left_recursive:
+            gen.print(f"static {type} {self.name}_raw(Parser *);")
+
         gen.print(f"static {type}")
         gen.print(f"{self.name}_rule(Parser *p)")
+
+        if self.left_recursive:
+            gen.print("{")
+            with gen.indent():
+                gen.print(f"{type} res = NULL;")
+                gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
+                with gen.indent():
+                    gen.print("return res;")
+                gen.print("int mark = p->mark;")
+                gen.print("int resmark = p->mark;")
+                gen.print("while (1) {")
+                with gen.indent():
+                    gen.print(f"update_memo(p, mark, {self.name}_type, res);")
+                    gen.print("p->mark = mark;")
+                    gen.print(f"void *raw = {self.name}_raw(p);")
+                    gen.print("if (raw == NULL || p->mark <= resmark)")
+                    with gen.indent():
+                        gen.print("break;")
+                    gen.print("resmark = p->mark;")
+                    gen.print("res = raw;")
+                gen.print("}")
+                gen.print("p->mark = resmark;")
+                gen.print("return res;")
+            gen.print("}")
+            gen.print(f"static {type}")
+            gen.print(f"{self.name}_raw(Parser *p)")
+
         gen.print("{")
         with gen.indent():
             gen.print(f"{type} res = NULL;")
-            gen.print("int mark = p->mark;")
             if memoize:
                 gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
-            with gen.indent():
-                gen.print("return res;")
+                with gen.indent():
+                    gen.print("return res;")
+            gen.print("int mark = p->mark;")
             if is_loop:
                 gen.print("void **children = PyMem_Malloc(0);")
                 gen.print(f'if (!children) panic("malloc {self.name}");')
@@ -459,12 +486,13 @@ class Rule:
                     gen.print(f"insert_memo(p, mark, {self.name}_type, seq);")
                 gen.print("return seq;")
             else:
-                gen.print("// Fail")
                 ## gen.print(f'fprintf(stderr, "Fail at %d: {self.name}\\n", p->mark);')
+                gen.print("res = NULL;")
+        gen.print("  done:")
+        with gen.indent():
                 if memoize:
-                    gen.print(f"insert_memo(p, mark, {self.name}_type, NULL);",
-                              "// Memoize negative result")
-                gen.print("return NULL;")
+                    gen.print(f"insert_memo(p, mark, {self.name}_type, res);")
+                gen.print("return res;")
         gen.print("}")
 
 
@@ -703,13 +731,13 @@ class Alt:
             if not action:
                 ## gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
                 if len(names) > 1:
-                    gen.print(f"void *res = CONSTRUCTOR(p, {', '.join(names)});")
+                    gen.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
                 else:
-                    gen.print(f"void *res = {names[0]};")
+                    gen.print(f"res = {names[0]};")
             else:
                 assert action[0] == '{' and action[-1] == '}', repr(action)
                 action = action[1:-1].strip()
-                gen.print(f"void *res = {action};")
+                gen.print(f"res = {action};")
                 ## gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
             if is_loop:
                 gen.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
@@ -719,7 +747,7 @@ class Alt:
             else:
                 if rulename:
                     gen.print(f"insert_memo(p, mark, {rulename}_type, res);")
-                gen.print(f"return res;")
+                gen.print(f"goto done;")
         gen.print("}")
         gen.print("p->mark = mark;")
 
