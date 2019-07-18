@@ -179,13 +179,6 @@ def memoize_left_rec(method: Callable[[Parser], T]):
             # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
             # (But we use the memoization cache instead of a static
             # variable.)
-            #
-            # TODO: Fix this for indirectly left-recursive rules!
-            # E.g.
-            #   start: foo '+' bar | bar
-            #   foo: start
-            #   bar: NUMBER
-            # (We don't clear the cache for foo.)
 
             # Prime the cache with a failure.
             self._symbol_cache[key] = None, mark

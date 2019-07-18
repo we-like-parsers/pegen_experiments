@@ -354,3 +354,30 @@ operator we should return NULL if there are no elements:
         PyMem_Free(children);
         return NULL;
     }
+
+
+Implementing left-recursion
+---------------------------
+
+We rely on the analysis that marks left-recursuve rules and determines
+leaders for each SCC.
+
+We generate two functions:
+
+- expr_rule(p) has the signature of a typical rule function
+- expr_rule_raw(p) is used internally
+
+These correspond to the decorated and undecorated functions in Python.
+
+We need to add a new function to *replace* a memoized item if it's
+already there (and insert it if it isn't).
+
+The outer function does:
+
+- if it's memoized, return that
+- prime the memo with failure
+- repeatedly:
+  - call the raw function
+  - if it fails or doesn't move mark ahead, break
+  - else, overwrite the memo with the result and continue
+- return the last successfully memoed value/position
