@@ -61,6 +61,7 @@ fill_token(Parser *p)
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL)
         panic("PyBytes_FromStringAndSize failed");
+    PyArena_AddPyObject(p->arena, t->bytes);
 
     int lineno = type == STRING ? p->tok->first_lineno : p->tok->lineno;
     const char *line_start = type == STRING ? p->tok->multi_line_start : p->tok->line_start;
@@ -134,6 +135,7 @@ name_token(Parser *p)
     PyObject *id = PyUnicode_DecodeUTF8(s, n, NULL);
     if (id == NULL)
         panic("unicode");
+    PyArena_AddPyObject(p->arena, id);
     // TODO: What new_identifier() does.
     return Name(id, Load, t->line, t->col, t->endline, t->endcol, p->arena);
 }
@@ -150,6 +152,9 @@ number_token(Parser *p)
     Token *t = expect_token(p, NUMBER);
     // TODO: Check for float, complex.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
+    if (c == NULL)
+        panic("long");
+    PyArena_AddPyObject(p->arena, c);
     return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
