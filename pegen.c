@@ -150,6 +150,8 @@ expr_ty
 number_token(Parser *p)
 {
     Token *t = expect_token(p, NUMBER);
+    if (t == NULL)
+        return NULL;
     // TODO: Check for float, complex.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
     if (c == NULL)

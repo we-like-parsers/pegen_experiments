@@ -1,4 +1,4 @@
-start[mod_ty]: a=stmt $ { Module(singleton_seq(p, a), NULL, p->arena) }
+start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
 stmt[stmt_ty]: a=expr_stmt { a }
 expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
 expr[expr_ty]: ( l=term '+' r=expr { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
