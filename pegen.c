@@ -198,7 +198,9 @@ string_token(Parser *p)
     Py_ssize_t len = 0;
     if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
         panic("bytes");
-    PyObject *c = PyUnicode_FromStringAndSize(s, len);
+    // Strip quotes.
+    // TODO: Properly handle all forms of string quotes and backslashes.
+    PyObject *c = PyUnicode_FromStringAndSize(s+1, len-2);
     if (!c)
         panic("string");
     PyArena_AddPyObject(p->arena, c);

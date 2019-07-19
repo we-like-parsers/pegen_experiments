@@ -24,9 +24,12 @@ parse.c: $(GRAMMAR) pegen.py
 clean:
 	-rm -f *.o *.so parse.c
 
-test: parse.so
+dump: parse.so
 	cat -n $(TESTFILE)
 	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
+
+test: parse.so
+	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
 
 time: parse.so
 	/usr/bin/time -l $(PYTHON) -c "import parse; parse.parse('$(TIMEFILE)')"

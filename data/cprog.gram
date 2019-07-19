@@ -20,10 +20,14 @@ term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
                | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
                | factor
                )
-factor[expr_ty]: ('(' e=expr ')' { e }
-                 | atom
+factor[expr_ty]: ( l=primary '**' r=factor { _Py_BinOp(l, Pow, r, EXTRA(l, r)) }
+                 | primary
                  )
-atom[expr_ty]: ( NAME
+primary[expr_ty]: ( f=primary '(' e=expr ')' { _Py_Call(f, singleton_seq(p, e), NULL, EXTRA(f, e)) }
+                  | atom
+                  )
+atom[expr_ty]: ( '(' e=expr ')' { e }
+               | NAME
                | NUMBER
                | STRING
                )
