@@ -14,4 +14,5 @@ factor[expr_ty]: ('(' e=expr ')' { e }
                  )
 atom[expr_ty]: ( n=NAME { n }
                | n=NUMBER { n }
+               | s=STRING { s }
                )

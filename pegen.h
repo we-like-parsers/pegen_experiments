@@ -36,6 +36,8 @@ Token *expect_token(Parser *p, int type);
 void *endmarker_token(Parser *p);
 expr_ty name_token(Parser *p);
 void *newline_token(Parser *p);
+void *indent_token(Parser *p);
+void *dedent_token(Parser *p);
 expr_ty number_token(Parser *p);
 expr_ty string_token(Parser *p);
 void *keyword_token(Parser *p, const char *val);

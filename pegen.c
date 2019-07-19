@@ -162,6 +162,18 @@ newline_token(Parser *p)
     return expect_token(p, NEWLINE);
 }
 
+void *
+indent_token(Parser *p)
+{
+    return expect_token(p, INDENT);
+}
+
+void *
+dedent_token(Parser *p)
+{
+    return expect_token(p, DEDENT);
+}
+
 expr_ty
 number_token(Parser *p)
 {
@@ -172,6 +184,23 @@ number_token(Parser *p)
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
     if (c == NULL)
         panic("long");
+    PyArena_AddPyObject(p->arena, c);
+    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
+}
+
+expr_ty
+string_token(Parser *p)
+{
+    Token *t = expect_token(p, STRING);
+    if (t == NULL)
+        return NULL;
+    char *s = NULL;
+    Py_ssize_t len = 0;
+    if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
+        panic("bytes");
+    PyObject *c = PyUnicode_FromStringAndSize(s, len);
+    if (!c)
+        panic("string");
     PyArena_AddPyObject(p->arena, c);
     return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
