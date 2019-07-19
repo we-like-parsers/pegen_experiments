@@ -14,6 +14,8 @@ Refactoring:
 - [ ] Change code generators to use visitor pattern
 - [ ] Split up into multiple modules
 - [ ] Less dependence on Python tokenizer
+- [ ] Code cleanup
+- [ ] Respond to Nam's code review
 
 Python code generator:
 
@@ -36,10 +38,11 @@ C Code generator:
 - [ ] reserved words
 - [ ] option to return a code object instead of an AST
 - [ ] Avoid name conflicts between variable names and internal vars (e.g. mark, p)
+- [ ] Python grammar development
+- [ ] Test against a large amount of real Python code
 
 Infrastructure:
 
 - [ ] CI setup (with coverage)
-- [ ] code cleanup
 - [ ] documentation
 - [ ] blog series
