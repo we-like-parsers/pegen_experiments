@@ -424,7 +424,12 @@ class Rule:
         is_repeat1 = self.name.startswith('_loop1')
         memoize = not self.leader
         rhs = self.flatten()
-        type = self.type or 'void *'
+        if is_loop:
+            type = 'asdl_seq *'
+        elif self.type:
+            type = self.type
+        else:
+            type = 'void *'
 
         gen.print(f"// {self}")
         if self.left_recursive:
@@ -461,7 +466,10 @@ class Rule:
 
         gen.print("{")
         with gen.indent():
-            gen.print(f"{type} res = NULL;")
+            if is_loop:
+                gen.print(f"void *res = NULL;")
+            else:
+                gen.print(f"{type} res = NULL;")
             if memoize:
                 gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
                 with gen.indent():
@@ -489,11 +497,12 @@ class Rule:
             else:
                 ## gen.print(f'fprintf(stderr, "Fail at %d: {self.name}\\n", p->mark);')
                 gen.print("res = NULL;")
-        gen.print("  done:")
-        with gen.indent():
-                if memoize:
-                    gen.print(f"insert_memo(p, mark, {self.name}_type, res);")
-                gen.print("return res;")
+        if not is_loop:
+            gen.print("  done:")
+            with gen.indent():
+                    if memoize:
+                        gen.print(f"insert_memo(p, mark, {self.name}_type, res);")
+                    gen.print("return res;")
         gen.print("}")
 
 
@@ -803,7 +812,12 @@ class NamedItem:
                 rulename = name[:-4]
                 rule = gen.rules.get(rulename)
                 if rule is not None:
-                    type = rule.type
+                    if rule.is_loop():
+                        type = 'asdl_seq *'
+                    else:
+                        type = rule.type
+                elif name.startswith('_loop'):
+                    type = 'asdl_seq *'
             if self.name:
                 name = self.name
             name = dedupe(name, names)
@@ -998,9 +1012,15 @@ class GrammarParser(Parser):
     @memoize
     def rule(self) -> Optional[Rule]:
         """
-        rule: NAME [ '[' NAME ']' ] ':' alternatives NEWLINE
+        rule: NAME [ '[' NAME ['*'] ']' ] ':' alternatives NEWLINE
         """
         mark = self.mark()
+        if ((name := self.name()) and
+                self.expect(':') and
+                (alts := self.alternatives()) and
+                self.expect('NEWLINE')):
+            return Rule(name.string, None, alts)
+        self.reset(mark)
         if ((name := self.name()) and
                 self.expect('[') and
                 (type := self.name()) and
@@ -1011,10 +1031,14 @@ class GrammarParser(Parser):
             return Rule(name.string, type.string, alts)
         self.reset(mark)
         if ((name := self.name()) and
+                self.expect('[') and
+                (type := self.name()) and
+                self.expect('*') and
+                self.expect(']') and
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
-            return Rule(name.string, None, alts)
+            return Rule(name.string, type.string + '*', alts)
         self.reset(mark)
         return None
 
@@ -1247,7 +1271,12 @@ class ParserGenerator:
             self.print(f"#define {rulename}_type {i}")
         self.print()
         for rulename, rule in self.todo.items():
-            type = rule.type + ' ' if rule.type else 'void *'
+            if rule.is_loop():
+                type = 'asdl_seq *'
+            elif rule.type:
+                type = rule.type + ' '
+            else:
+                type = 'void *'
             self.print(f"static {type}{rulename}_rule(Parser *p);")
         self.print()
         while self.todo:
