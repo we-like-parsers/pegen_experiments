@@ -31,13 +31,14 @@ void update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
 void panic(char *message);
 
-Token *expect_token(Parser *p, int token);
+Token *expect_token(Parser *p, int type);
 
 void *endmarker_token(Parser *p);
 expr_ty name_token(Parser *p);
 void *newline_token(Parser *p);
 expr_ty number_token(Parser *p);
 expr_ty string_token(Parser *p);
+void *keyword_token(Parser *p, const char *val);
 
 void *CONSTRUCTOR(Parser *p, ...);
 

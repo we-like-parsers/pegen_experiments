@@ -32,9 +32,9 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (_loop_1 := self._loop_1())
+            (_loop1_1 := self._loop1_1())
         ):
-            return [_loop_1]
+            return [_loop1_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -67,11 +67,11 @@ class GeneratedParser(Parser):
         if (
             (small_stmt := self.small_stmt())
             and
-            (_loop_2 := self._loop_2(),)
+            (_loop0_2 := self._loop0_2(),)
             and
             (newline := self.expect('NEWLINE'))
         ):
-            return [small_stmt, _loop_2, newline]
+            return [small_stmt, _loop0_2, newline]
         self.reset(mark)
         if cut: return None
         return None
@@ -96,9 +96,9 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (string := self.expect('pass'))
+            (literal := self.expect('pass'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -166,11 +166,11 @@ class GeneratedParser(Parser):
         if (
             (target := self.target())
             and
-            (string := self.expect('='))
+            (literal := self.expect('='))
             and
             (expression := self.expression())
         ):
-            return [target, string, expression]
+            return [target, literal, expression]
         self.reset(mark)
         if cut: return None
         return None
@@ -181,24 +181,24 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('import'))
+            (literal := self.expect('import'))
             and
             (names := self.names())
         ):
-            return [string, names]
+            return [literal, names]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('from'))
+            (literal := self.expect('from'))
             and
             (name := self.name())
             and
-            (string_1 := self.expect('import'))
+            (literal_1 := self.expect('import'))
             and
             (_tmp_3 := self._tmp_3())
         ):
-            return [string, name, string_1, _tmp_3]
+            return [literal, name, literal_1, _tmp_3]
         self.reset(mark)
         if cut: return None
         return None
@@ -211,11 +211,11 @@ class GeneratedParser(Parser):
         if (
             (name := self.name())
             and
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (names := self.names())
         ):
-            return [name, string, names]
+            return [name, literal, names]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -233,19 +233,19 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('if'))
+            (literal := self.expect('if'))
             and
             (full_expression := self.full_expression())
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
             and
-            (_loop_4 := self._loop_4(),)
+            (_loop0_4 := self._loop0_4(),)
             and
             (opt := self.else_block(),)
         ):
-            return [string, full_expression, string_1, block, _loop_4, opt]
+            return [literal, full_expression, literal_1, block, _loop0_4, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -256,15 +256,15 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('elif'))
+            (literal := self.expect('elif'))
             and
             (full_expression := self.full_expression())
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [string, full_expression, string_1, block]
+            return [literal, full_expression, literal_1, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -275,13 +275,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('else'))
+            (literal := self.expect('else'))
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [string, string_1, block]
+            return [literal, literal_1, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -292,17 +292,17 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('while'))
+            (literal := self.expect('while'))
             and
             (full_expression := self.full_expression())
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
             and
             (opt := self.else_block(),)
         ):
-            return [string, full_expression, string_1, block, opt]
+            return [literal, full_expression, literal_1, block, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -313,17 +313,17 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('with'))
+            (literal := self.expect('with'))
             and
             (expression := self.expression())
             and
             (opt := self._tmp_5(),)
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [string, expression, opt, string_1, block]
+            return [literal, expression, opt, literal_1, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -334,11 +334,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('return'))
+            (literal := self.expect('return'))
             and
             (opt := self.expressions(),)
         ):
-            return [string, opt]
+            return [literal, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -351,21 +351,21 @@ class GeneratedParser(Parser):
         if (
             (opt := self.decorators(),)
             and
-            (string := self.expect('def'))
+            (literal := self.expect('def'))
             and
             (name := self.name())
             and
-            (string_1 := self.expect('('))
+            (literal_1 := self.expect('('))
             and
             (opt_1 := self.parameters(),)
             and
-            (string_2 := self.expect(')'))
+            (literal_2 := self.expect(')'))
             and
-            (string_3 := self.expect(':'))
+            (literal_3 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [opt, string, name, string_1, opt_1, string_2, string_3, block]
+            return [opt, literal, name, literal_1, opt_1, literal_2, literal_3, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -415,20 +415,20 @@ class GeneratedParser(Parser):
         if (
             (name := self.name())
             and
-            (string := self.expect('='))
+            (literal := self.expect('='))
             and
             (expression := self.expression())
         ):
-            return [name, string, expression]
+            return [name, literal, expression]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('**'))
+            (literal := self.expect('**'))
             and
             (name := self.name())
         ):
-            return [string, name]
+            return [literal, name]
         self.reset(mark)
         if cut: return None
         return None
@@ -446,11 +446,11 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (string := self.expect('*'))
+            (literal := self.expect('*'))
             and
             (name := self.name())
         ):
-            return [string, name]
+            return [literal, name]
         self.reset(mark)
         if cut: return None
         return None
@@ -461,9 +461,9 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (_loop_8 := self._loop_8())
+            (_loop1_8 := self._loop1_8())
         ):
-            return [_loop_8]
+            return [_loop1_8]
         self.reset(mark)
         if cut: return None
         return None
@@ -476,17 +476,17 @@ class GeneratedParser(Parser):
         if (
             (opt := self.decorators(),)
             and
-            (string := self.expect('class'))
+            (literal := self.expect('class'))
             and
             (name := self.name())
             and
             (opt_1 := self._tmp_9(),)
             and
-            (string_1 := self.expect(':'))
+            (literal_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [opt, string, name, opt_1, string_1, block]
+            return [opt, literal, name, opt_1, literal_1, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -525,11 +525,11 @@ class GeneratedParser(Parser):
         if (
             (full_expression := self.full_expression())
             and
-            (_loop_10 := self._loop_10(),)
+            (_loop0_10 := self._loop0_10(),)
             and
             (opt := self.expect(','),)
         ):
-            return [full_expression, _loop_10, opt]
+            return [full_expression, _loop0_10, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -542,11 +542,11 @@ class GeneratedParser(Parser):
         if (
             (name := self.name())
             and
-            (string := self.expect(':='))
+            (literal := self.expect(':='))
             and
             (disjunction := self.disjunction())
         ):
-            return [name, string, disjunction]
+            return [name, literal, disjunction]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -566,9 +566,9 @@ class GeneratedParser(Parser):
         if (
             (conjunction := self.conjunction())
             and
-            (_loop_11 := self._loop_11(),)
+            (_loop0_11 := self._loop0_11(),)
         ):
-            return [conjunction, _loop_11]
+            return [conjunction, _loop0_11]
         self.reset(mark)
         if cut: return None
         return None
@@ -581,9 +581,9 @@ class GeneratedParser(Parser):
         if (
             (comparison := self.comparison())
             and
-            (_loop_12 := self._loop_12(),)
+            (_loop0_12 := self._loop0_12(),)
         ):
-            return [comparison, _loop_12]
+            return [comparison, _loop0_12]
         self.reset(mark)
         if cut: return None
         return None
@@ -594,13 +594,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (_loop_13 := self._loop_13(),)
+            (_loop0_13 := self._loop0_13(),)
             and
             (bitwise_or := self.bitwise_or())
             and
-            (_loop_14 := self._loop_14(),)
+            (_loop0_14 := self._loop0_14(),)
         ):
-            return [_loop_13, bitwise_or, _loop_14]
+            return [_loop0_13, bitwise_or, _loop0_14]
         self.reset(mark)
         if cut: return None
         return None
@@ -611,58 +611,58 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('<'))
+            (literal := self.expect('<'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('<='))
+            (literal := self.expect('<='))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('=='))
+            (literal := self.expect('=='))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('>='))
+            (literal := self.expect('>='))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('>'))
+            (literal := self.expect('>'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('!='))
+            (literal := self.expect('!='))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('in'))
+            (literal := self.expect('in'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('not in'))
+            (literal := self.expect('not in'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         return None
@@ -675,9 +675,9 @@ class GeneratedParser(Parser):
         if (
             (bitwise_and := self.bitwise_and())
             and
-            (_loop_15 := self._loop_15(),)
+            (_loop0_15 := self._loop0_15(),)
         ):
-            return [bitwise_and, _loop_15]
+            return [bitwise_and, _loop0_15]
         self.reset(mark)
         if cut: return None
         return None
@@ -690,9 +690,9 @@ class GeneratedParser(Parser):
         if (
             (expression := self.expression())
             and
-            (_loop_16 := self._loop_16(),)
+            (_loop0_16 := self._loop0_16(),)
         ):
-            return [expression, _loop_16]
+            return [expression, _loop0_16]
         self.reset(mark)
         if cut: return None
         return None
@@ -705,11 +705,11 @@ class GeneratedParser(Parser):
         if (
             (expression := self.expression())
             and
-            (_loop_17 := self._loop_17(),)
+            (_loop0_17 := self._loop0_17(),)
             and
             (opt := self.expect(','),)
         ):
-            return [expression, _loop_17, opt]
+            return [expression, _loop0_17, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -722,9 +722,9 @@ class GeneratedParser(Parser):
         if (
             (term := self.term())
             and
-            (_loop_18 := self._loop_18(),)
+            (_loop0_18 := self._loop0_18(),)
         ):
-            return [term, _loop_18]
+            return [term, _loop0_18]
         self.reset(mark)
         if cut: return None
         return None
@@ -737,9 +737,9 @@ class GeneratedParser(Parser):
         if (
             (factor := self.factor())
             and
-            (_loop_19 := self._loop_19(),)
+            (_loop0_19 := self._loop0_19(),)
         ):
-            return [factor, _loop_19]
+            return [factor, _loop0_19]
         self.reset(mark)
         if cut: return None
         return None
@@ -752,9 +752,9 @@ class GeneratedParser(Parser):
         if (
             (primary := self.primary())
             and
-            (_loop_20 := self._loop_20(),)
+            (_loop0_20 := self._loop0_20(),)
         ):
-            return [primary, _loop_20]
+            return [primary, _loop0_20]
         self.reset(mark)
         if cut: return None
         return None
@@ -813,13 +813,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('['))
+            (literal := self.expect('['))
             and
             (opt := self.full_expressions(),)
             and
-            (string_1 := self.expect(']'))
+            (literal_1 := self.expect(']'))
         ):
-            return [string, opt, string_1]
+            return [literal, opt, literal_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -830,13 +830,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('('))
+            (literal := self.expect('('))
             and
             (opt := self._tmp_21(),)
             and
-            (string_1 := self.expect(')'))
+            (literal_1 := self.expect(')'))
         ):
-            return [string, opt, string_1]
+            return [literal, opt, literal_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -847,13 +847,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('('))
+            (literal := self.expect('('))
             and
             (full_expression := self.full_expression())
             and
-            (string_1 := self.expect(')'))
+            (literal_1 := self.expect(')'))
         ):
-            return [string, full_expression, string_1]
+            return [literal, full_expression, literal_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -888,9 +888,9 @@ class GeneratedParser(Parser):
         if (
             (kwarg := self.kwarg())
             and
-            (_loop_23 := self._loop_23(),)
+            (_loop0_23 := self._loop0_23(),)
         ):
-            return [kwarg, _loop_23]
+            return [kwarg, _loop0_23]
         self.reset(mark)
         if cut: return None
         return None
@@ -908,11 +908,11 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (string := self.expect('*'))
+            (literal := self.expect('*'))
             and
             (disjunction := self.disjunction())
         ):
-            return [string, disjunction]
+            return [literal, disjunction]
         self.reset(mark)
         if cut: return None
         return None
@@ -925,20 +925,20 @@ class GeneratedParser(Parser):
         if (
             (name := self.name())
             and
-            (string := self.expect('='))
+            (literal := self.expect('='))
             and
             (disjunction := self.disjunction())
         ):
-            return [name, string, disjunction]
+            return [name, literal, disjunction]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('**'))
+            (literal := self.expect('**'))
             and
             (disjunction := self.disjunction())
         ):
-            return [string, disjunction]
+            return [literal, disjunction]
         self.reset(mark)
         if cut: return None
         return None
@@ -957,8 +957,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _loop_1(self):
-        # _loop_1: statement
+    def _loop1_1(self):
+        # _loop1_1: statement
         mark = self.mark()
         children = []
         cut = False
@@ -972,8 +972,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_2(self):
-        # _loop_2: (';' small_stmt)
+    def _loop0_2(self):
+        # _loop0_2: (';' small_stmt)
         mark = self.mark()
         children = []
         cut = False
@@ -992,9 +992,9 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('*'))
+            (literal := self.expect('*'))
         ):
-            return [string]
+            return [literal]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -1007,8 +1007,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _loop_4(self):
-        # _loop_4: elif_block
+    def _loop0_4(self):
+        # _loop0_4: elif_block
         mark = self.mark()
         children = []
         cut = False
@@ -1027,11 +1027,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('as'))
+            (literal := self.expect('as'))
             and
             (target := self.target())
         ):
-            return [string, target]
+            return [literal, target]
         self.reset(mark)
         if cut: return None
         return None
@@ -1042,11 +1042,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (opt := self.parameters(),)
         ):
-            return [string, opt]
+            return [literal, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -1057,18 +1057,18 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (opt := self.kwparams(),)
         ):
-            return [string, opt]
+            return [literal, opt]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def _loop_8(self):
-        # _loop_8: ('@' factor NEWLINE)
+    def _loop1_8(self):
+        # _loop1_8: ('@' factor NEWLINE)
         mark = self.mark()
         children = []
         cut = False
@@ -1087,20 +1087,20 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('('))
+            (literal := self.expect('('))
             and
             (full_expressions := self.full_expressions())
             and
-            (string_1 := self.expect(')'))
+            (literal_1 := self.expect(')'))
         ):
-            return [string, full_expressions, string_1]
+            return [literal, full_expressions, literal_1]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def _loop_10(self):
-        # _loop_10: (',' full_expression)
+    def _loop0_10(self):
+        # _loop0_10: (',' full_expression)
         mark = self.mark()
         children = []
         cut = False
@@ -1114,8 +1114,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_11(self):
-        # _loop_11: ('or' conjunction)
+    def _loop0_11(self):
+        # _loop0_11: ('or' conjunction)
         mark = self.mark()
         children = []
         cut = False
@@ -1129,8 +1129,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_12(self):
-        # _loop_12: ('and' comparison)
+    def _loop0_12(self):
+        # _loop0_12: ('and' comparison)
         mark = self.mark()
         children = []
         cut = False
@@ -1144,23 +1144,23 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_13(self):
-        # _loop_13: 'not'
+    def _loop0_13(self):
+        # _loop0_13: 'not'
         mark = self.mark()
         children = []
         cut = False
         while (
-            (string := self.expect('not'))
+            (literal := self.expect('not'))
         ):
-            children.append([string])
+            children.append([literal])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop_14(self):
-        # _loop_14: (compare_op bitwise_or)
+    def _loop0_14(self):
+        # _loop0_14: (compare_op bitwise_or)
         mark = self.mark()
         children = []
         cut = False
@@ -1174,8 +1174,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_15(self):
-        # _loop_15: ('|' bitwise_and)
+    def _loop0_15(self):
+        # _loop0_15: ('|' bitwise_and)
         mark = self.mark()
         children = []
         cut = False
@@ -1189,8 +1189,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_16(self):
-        # _loop_16: ('&' expression)
+    def _loop0_16(self):
+        # _loop0_16: ('&' expression)
         mark = self.mark()
         children = []
         cut = False
@@ -1204,8 +1204,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_17(self):
-        # _loop_17: (',' expression)
+    def _loop0_17(self):
+        # _loop0_17: (',' expression)
         mark = self.mark()
         children = []
         cut = False
@@ -1219,8 +1219,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_18(self):
-        # _loop_18: (('+' term | '-' term))
+    def _loop0_18(self):
+        # _loop0_18: (('+' term | '-' term))
         mark = self.mark()
         children = []
         cut = False
@@ -1234,8 +1234,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_19(self):
-        # _loop_19: (('*' factor | '/' factor))
+    def _loop0_19(self):
+        # _loop0_19: (('*' factor | '/' factor))
         mark = self.mark()
         children = []
         cut = False
@@ -1249,8 +1249,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop_20(self):
-        # _loop_20: ('.' NAME | '[' expression ']' | '(' arguments ','?? ')')
+    def _loop0_20(self):
+        # _loop0_20: ('.' NAME | '[' expression ']' | '(' arguments ','?? ')')
         mark = self.mark()
         children = []
         cut = False
@@ -1271,11 +1271,11 @@ class GeneratedParser(Parser):
         if (
             (full_expression := self.full_expression())
             and
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (opt := self.full_expressions(),)
         ):
-            return [full_expression, string, opt]
+            return [full_expression, literal, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -1286,18 +1286,18 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (arguments := self.arguments())
         ):
-            return [string, arguments]
+            return [literal, arguments]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def _loop_23(self):
-        # _loop_23: (',' kwarg)
+    def _loop0_23(self):
+        # _loop0_23: (',' kwarg)
         mark = self.mark()
         children = []
         cut = False
@@ -1316,11 +1316,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(';'))
+            (literal := self.expect(';'))
             and
             (small_stmt := self.small_stmt())
         ):
-            return [string, small_stmt]
+            return [literal, small_stmt]
         self.reset(mark)
         if cut: return None
         return None
@@ -1331,13 +1331,13 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('@'))
+            (literal := self.expect('@'))
             and
             (factor := self.factor())
             and
             (newline := self.expect('NEWLINE'))
         ):
-            return [string, factor, newline]
+            return [literal, factor, newline]
         self.reset(mark)
         if cut: return None
         return None
@@ -1348,11 +1348,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (full_expression := self.full_expression())
         ):
-            return [string, full_expression]
+            return [literal, full_expression]
         self.reset(mark)
         if cut: return None
         return None
@@ -1363,11 +1363,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('or'))
+            (literal := self.expect('or'))
             and
             (conjunction := self.conjunction())
         ):
-            return [string, conjunction]
+            return [literal, conjunction]
         self.reset(mark)
         if cut: return None
         return None
@@ -1378,11 +1378,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('and'))
+            (literal := self.expect('and'))
             and
             (comparison := self.comparison())
         ):
-            return [string, comparison]
+            return [literal, comparison]
         self.reset(mark)
         if cut: return None
         return None
@@ -1408,11 +1408,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('|'))
+            (literal := self.expect('|'))
             and
             (bitwise_and := self.bitwise_and())
         ):
-            return [string, bitwise_and]
+            return [literal, bitwise_and]
         self.reset(mark)
         if cut: return None
         return None
@@ -1423,11 +1423,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('&'))
+            (literal := self.expect('&'))
             and
             (expression := self.expression())
         ):
-            return [string, expression]
+            return [literal, expression]
         self.reset(mark)
         if cut: return None
         return None
@@ -1438,11 +1438,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (expression := self.expression())
         ):
-            return [string, expression]
+            return [literal, expression]
         self.reset(mark)
         if cut: return None
         return None
@@ -1453,20 +1453,20 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('+'))
+            (literal := self.expect('+'))
             and
             (term := self.term())
         ):
-            return [string, term]
+            return [literal, term]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('-'))
+            (literal := self.expect('-'))
             and
             (term := self.term())
         ):
-            return [string, term]
+            return [literal, term]
         self.reset(mark)
         if cut: return None
         return None
@@ -1477,20 +1477,20 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('*'))
+            (literal := self.expect('*'))
             and
             (factor := self.factor())
         ):
-            return [string, factor]
+            return [literal, factor]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('/'))
+            (literal := self.expect('/'))
             and
             (factor := self.factor())
         ):
-            return [string, factor]
+            return [literal, factor]
         self.reset(mark)
         if cut: return None
         return None
@@ -1501,33 +1501,33 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect('.'))
+            (literal := self.expect('.'))
             and
             (name := self.name())
         ):
-            return [string, name]
+            return [literal, name]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('['))
+            (literal := self.expect('['))
             and
             (expression := self.expression())
             and
-            (string_1 := self.expect(']'))
+            (literal_1 := self.expect(']'))
         ):
-            return [string, expression, string_1]
+            return [literal, expression, literal_1]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.expect('('))
+            (literal := self.expect('('))
             and
             (opt := self._tmp_37(),)
             and
-            (string_1 := self.expect(')'))
+            (literal_1 := self.expect(')'))
         ):
-            return [string, opt, string_1]
+            return [literal, opt, literal_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -1538,11 +1538,11 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (string := self.expect(','))
+            (literal := self.expect(','))
             and
             (kwarg := self.kwarg())
         ):
-            return [string, kwarg]
+            return [literal, kwarg]
         self.reset(mark)
         if cut: return None
         return None

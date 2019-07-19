@@ -5,8 +5,8 @@ LDFLAGS = -L$(TOP)/lib/python3.8/config-3.8-darwin -ldl
 LDSHARED = $(CC) -bundle -undefined dynamic_lookup $(LDFLAGS)
 CFLAGS = -Werror
 
-GRAMMAR = data/cexpr.gram
-TESTFILE = data/cexpr.txt
+GRAMMAR = data/cprog.gram
+TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 
 parse.so: parse.o pegen.o

@@ -22,7 +22,7 @@ Python code generator:
 - [ ] Rename all Parser methods to have a leading underscore
 - [ ] Change memoize so as to minimize mark()/reset() calls (assume all functions are atomic)
 - [ ] Move special cases in expect() (e.g. NEWLINE) to generation-time
-- [ ] Reserved words
+- [ ] Reserved words the Python way
 
 C Code generator:
 

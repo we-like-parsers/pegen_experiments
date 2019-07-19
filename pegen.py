@@ -11,6 +11,7 @@ import argparse
 import ast
 import contextlib
 import os
+import re
 import sys
 import time
 import token
@@ -562,10 +563,15 @@ class StringLeaf(Leaf):
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         if cpython:
             val = ast.literal_eval(self.value)
-            type = exact_token_types[val]
-            return 'string_var', f'expect_token(p, {type})'
+            if re.match(r'[a-zA-Z_]\w*\Z', val):
+                type = token.NAME
+                return 'keyword', f'keyword_token(p, "{val}")'
+            else:
+                assert val in exact_token_types, f"{self.value} is not a known literal"
+                type = exact_token_types[val]
+                return 'literal', f'expect_token(p, {type})'
         else:
-            return 'string', f"self.expect({self.value})"
+            return 'literal', f"self.expect({self.value})"
 
 
 class Rhs:

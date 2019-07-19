@@ -176,6 +176,19 @@ number_token(Parser *p)
     return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
+void *
+keyword_token(Parser *p, const char *val)
+{
+    int mark = p->mark;
+    Token *t = expect_token(p, NAME);
+    if (t == NULL)
+        return NULL;
+    if (strcmp(val, PyBytes_AsString(t->bytes)) == 0)
+        return t;
+    p->mark = mark;
+    return NULL;
+}
+
 PyObject *
 run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
 {
