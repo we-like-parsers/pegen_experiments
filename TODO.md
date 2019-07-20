@@ -43,6 +43,7 @@ C Code generator:
 - [ ] Better SyntaxError report
 - [ ] String kinds, quotes and backslash escapes
 - [ ] Store context for NAME tokens
+- [ ] Use some syntax like '@prefix <string>' to put prefix in the .gram file instead of hardcoding
 
 Infrastructure:
 
