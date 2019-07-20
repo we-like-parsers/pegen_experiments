@@ -40,6 +40,9 @@ C Code generator:
 - [ ] Avoid name conflicts between variable names and internal vars (e.g. mark, p)
 - [ ] Python grammar development
 - [ ] Test against a large amount of real Python code
+- [ ] Better SyntaxError report
+- [ ] String kinds, quotes and backslash escapes
+- [ ] Store context for NAME tokens
 
 Infrastructure:
 

@@ -19,7 +19,7 @@ pegen.o: pegen.c pegen.h
 	$(CC) $(CFLAGS) -c $(INCLUDES) pegen.c
 
 parse.c: $(GRAMMAR) pegen.py
-	$(PYTHON) pegen.py -c $(GRAMMAR) -o parse.c
+	$(PYTHON) pegen.py -q -c $(GRAMMAR) -o parse.c
 
 clean:
 	-rm -f *.o *.so parse.c

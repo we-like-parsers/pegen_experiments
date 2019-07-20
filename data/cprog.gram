@@ -4,9 +4,14 @@ compound_stmt[stmt_ty]: pass_stmt | if_stmt
 
 pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, a)) }
 
-if_stmt[stmt_ty]: 'if' c=expr ':' t=suite { _Py_If(c, t, NULL, EXTRA(c, t)) }
+if_stmt[stmt_ty]: 'if' c=expr ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA(c, c)) }
+else_clause[asdl_seq*]: ( 'elif' c=expr ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA(c, c))) }
+                        | 'else' ':' s=suite { s }
+                        )
 
-suite[asdl_seq*]: a=simple_stmt { singleton_seq(p, a) }
+suite[asdl_seq*]: ( a=simple_stmt { singleton_seq(p, a) }
+                  | NEWLINE INDENT b=stmt+ DEDENT { b }
+                  )
 
 simple_stmt[stmt_ty]: a=expr_stmt NEWLINE { a }
 
