@@ -15,17 +15,18 @@ def test_basic():
     t = p.expect(NAME)
     assert t and t.string == "f"
     pos = p.mark()
-    assert p.expect_string(OP, "(")
+    assert p.expect("(")
     t = p.expect(NUMBER)
     assert t and t.string == "42"
-    assert p.expect_string(OP, ")")
+    assert p.expect(")")
     pos2 = p.mark()
     p.reset(pos)
-    assert p.expect_string(OP, "(")
+    assert p.expect("(")
     assert p.expect(NUMBER)
-    assert p.expect_string(OP, ")")
+    assert p.expect(")")
     p.reset(pos)
-    assert p.expect_string(OP, "(")
+
+    assert p.expect("(")
     p.reset(pos2)
     assert p.expect(NEWLINE)
     assert p.expect(ENDMARKER)

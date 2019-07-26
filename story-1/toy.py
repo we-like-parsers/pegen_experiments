@@ -17,11 +17,11 @@ class ToyParser(Parser):
     def expr(self):
         if t := self.term():
             pos = self.mark()
-            if op := self.expect_string(OP, "+"):
+            if op := self.expect("+"):
                 if e := self.expr():
                     return Node("add", [t, e])
             self.reset(pos)
-            if op := self.expect_string(OP, "-"):
+            if op := self.expect("-"):
                 if e := self.expr():
                     return Node("sub", [t, e])
             self.reset(pos)
@@ -31,11 +31,11 @@ class ToyParser(Parser):
     def term(self):
         if t := self.atom():
             pos = self.mark()
-            if op := self.expect_string(OP, "*"):
+            if op := self.expect("*"):
                 if e := self.term():
                     return Node("mul", [t, e])
             self.reset(pos)
-            if op := self.expect_string(OP, "/"):
+            if op := self.expect("/"):
                 if e := self.term():
                     return Node("div", [t, e])
             self.reset(pos)
@@ -58,7 +58,7 @@ class ToyParser(Parser):
     def assignment(self):
         pos = self.mark()
         if ((t := self.target()) and
-            self.expect_string(OP, "=") and
+            self.expect("=") and
             (e := self.expr())):
             return Node("assign", [t, e])
         self.reset(pos)
@@ -69,9 +69,9 @@ class ToyParser(Parser):
 
     def if_statement(self):
         pos = self.mark()
-        if (self.expect_string(NAME, "if") and
+        if (self.expect("if") and
             (e := self.expr()) and
-            self.expect_string(OP, ":") and
+            self.expect(":") and
             (s := self.statement())):
             return Node("if", [e, s])
         self.reset(pos)
