@@ -10,21 +10,8 @@ class Parser:
         self.tokenizer.reset(pos)
 
     def expect(self, arg):
-        if isinstance(arg, int):
-            return self.expect_type(arg)
-        elif isinstance(arg, str):
-            return self.expect_string(arg)
-        else:
-            assert False
-
-    def expect_type(self, type):
-        if self.tokenizer.peek_token().type == type:
-            return self.tokenizer.get_token()
-        return None
-
-    def expect_string(self, string):
         token = self.tokenizer.peek_token()
-        if token.string == string:
+        if ((isinstance(arg, int) and token.type == arg) or
+            (isinstance(arg, str) and token.string == arg)):
             return self.tokenizer.get_token()
         return None
-
