@@ -32,7 +32,7 @@ def test_basic():
     assert p.expect(ENDMARKER)
 
 def test_toy():
-    program = "x - 1"
+    program = "x - (y + z)"
     file = StringIO(program)
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
@@ -40,4 +40,4 @@ def test_toy():
     tree = p.statement()
     assert tree and tree.type == "sub"
     assert tree.children[0].type == NAME
-    assert tree.children[1].type == NUMBER
+    assert tree.children[1].type == "add"

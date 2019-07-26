@@ -48,9 +48,9 @@ class ToyParser(Parser):
         if token := self.expect(NUMBER):
             return token
         pos = self.mark()
-        if self.expect(LPAR):
+        if self.expect("("):
             if e := self.expr():
-                if self.expect(RPAR):
+                if self.expect(")"):
                     return e
         self.reset(pos)
         return None
