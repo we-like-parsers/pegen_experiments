@@ -11,7 +11,6 @@ class Parser:
 
     def expect(self, arg):
         token = self.tokenizer.peek_token()
-        if ((isinstance(arg, int) and token.type == arg) or
-            (isinstance(arg, str) and token.string == arg)):
+        if token.type == arg or token.string == arg:
             return self.tokenizer.get_token()
         return None
