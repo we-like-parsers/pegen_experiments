@@ -1,4 +1,6 @@
-/*.o
-/*.so
-/parse
-/parse.c
+pegen/*.o
+pegen/*.so
+pegen/parse
+pegen/parse.c
+
+**/__pycache__
