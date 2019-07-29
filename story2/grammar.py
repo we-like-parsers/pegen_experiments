@@ -1,23 +1,35 @@
 """Parser for the grammar file."""
 
-from token import NAME, NEWLINE, STRING
+from token import NAME, NEWLINE, STRING, ENDMARKER
 
 from story2.parser import Parser
 
 class Rule:
+
     def __init__(self, name, alts):
         self.name = name
         self.alts = alts
+
+    def __repr__(self):
+        return f"Rule({self.name!r}, {self.alts})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Rule):
+            return NotImplemented
+        return self.name == other.name and self.alts == other.alts
 
 
 class GrammarParser(Parser):
 
     def start(self):
+        pos = self.mark()
         if rule := self.rule():
             rules = [rule]
             while rule := self.rule():
                 rules.append(rule)
-            return rules
+            if self.expect(ENDMARKER):
+                return rules
+        self.reset(pos)
         return None
 
     def rule(self):
