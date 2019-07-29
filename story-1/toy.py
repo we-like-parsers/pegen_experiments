@@ -1,4 +1,4 @@
-from token import NAME, NUMBER, LPAR, RPAR, OP
+from token import NAME, NUMBER
 
 from parser import Parser
 from node import Node
