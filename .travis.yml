@@ -1,0 +1,20 @@
+dist: xenial
+language: python
+cache: pip
+env:
+- TEST_CMD="python -m pytest test -v --cov=pegen --cov-report term"
+install:
+- pip install pytest
+- pip install pytest-cov
+- pip install coveralls
+script:
+- $TEST_CMD
+after_success:
+- coveralls
+notifications:
+  on_success: change
+  on_failure: always
+matrix:
+  include:
+    - name: "3.8-dev"
+      python: 3.8-dev
