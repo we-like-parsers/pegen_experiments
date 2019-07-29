@@ -1,5 +1,5 @@
 from io import StringIO
-from token import NAME, NUMBER, OP, NEWLINE, ENDMARKER
+from token import NAME, NUMBER, NEWLINE, ENDMARKER
 from tokenize import generate_tokens
 
 from story1.tokenizer import Tokenizer
