@@ -2,7 +2,7 @@ from io import StringIO
 from token import NAME, NUMBER, OP, NEWLINE, ENDMARKER
 from tokenize import generate_tokens
 
-from tokenizer import Tokenizer
+from story2.tokenizer import Tokenizer
 
 def test_basic():
     program = "f(42)"

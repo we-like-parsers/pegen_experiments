@@ -3,11 +3,11 @@
 import sys
 from tokenize import generate_tokens
 
-from grammar import GrammarParser
-from tokenizer import Tokenizer
+from story2.grammar import GrammarParser
+from story2.tokenizer import Tokenizer
 
 def main():
-    file = "toy.gram"
+    file = "story2/toy.gram"
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
         tok = Tokenizer(tokengen)

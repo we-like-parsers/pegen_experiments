@@ -1,7 +1,7 @@
 from token import NAME, NUMBER
 
-from parser import Parser
-from node import Node
+from story2.parser import Parser
+from story2.node import Node
 
 class ToyParser(Parser):
 

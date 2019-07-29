@@ -2,7 +2,7 @@
 
 from token import NAME, NEWLINE, STRING
 
-from parser import Parser
+from story2.parser import Parser
 
 class Rule:
     def __init__(self, name, alts):

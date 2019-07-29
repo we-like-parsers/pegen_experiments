@@ -2,9 +2,9 @@ from io import StringIO
 from token import NAME, NUMBER, OP, NEWLINE, ENDMARKER
 from tokenize import generate_tokens
 
-from tokenizer import Tokenizer
-from parser import Parser
-from toy import ToyParser
+from story2.tokenizer import Tokenizer
+from story2.parser import Parser
+from story2.toy import ToyParser
 
 def test_basic():
     program = "f(42)"

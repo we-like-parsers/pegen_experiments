@@ -2,7 +2,7 @@ dist: xenial
 language: python
 cache: pip
 env:
-- TEST_CMD="python -m pytest test -v --cov=pegen --cov-report term"
+- TEST_CMD="python -m pytest -v --cov=pegen --cov-report term"
 install:
 - pip install pytest
 - pip install pytest-cov
