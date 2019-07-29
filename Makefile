@@ -9,20 +9,20 @@ GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 
-parse.so: parse.o pegen.o
-	$(LDSHARED) parse.o pegen.o -o parse.so
+pegen/parse.so: pegen/parse.o pegen/pegen.o
+	$(LDSHARED) pegen/parse.o pegen/pegen.o -o pegen/parse.so
 
-parse.o: parse.c pegen.h v38tokenizer.h
-	$(CC) $(CFLAGS) -c $(INCLUDES) parse.c
+pegen/parse.o: pegen/parse.c pegen/pegen.h pegen/v38tokenizer.h
+	$(CC) $(CFLAGS) -c $(INCLUDES) pegen/parse.c -o pegen/parse.o
 
-pegen.o: pegen.c pegen.h
-	$(CC) $(CFLAGS) -c $(INCLUDES) pegen.c
+pegen/pegen.o: pegen/pegen.c pegen/pegen.h
+	$(CC) $(CFLAGS) -c $(INCLUDES) pegen/pegen.c -o pegen/pegen.o
 
-parse.c: $(GRAMMAR) pegen.py
-	$(PYTHON) pegen.py -q -c $(GRAMMAR) -o parse.c
+pegen/parse.c: $(GRAMMAR) pegen/*.py
+	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c
 
 clean:
-	-rm -f *.o *.so parse.c
+	-rm -f pegen/*.o pegen/*.so pegen/parse.c
 
 dump: parse.so
 	cat -n $(TESTFILE)
