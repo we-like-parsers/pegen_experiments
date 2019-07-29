@@ -17,7 +17,7 @@ import time
 import token
 import tokenize
 import traceback
-from typing import *
+from typing import AbstractSet, Callable, Dict, Generic, Iterable, Optional, List, TypeVar, Union
 
 import sccutils
 
