@@ -2,9 +2,11 @@ from token import NAME, NUMBER
 
 from story2.parser import Parser
 from story2.node import Node
+from story2.memo import memoize
 
 class ToyParser(Parser):
 
+    @memoize
     def statement(self):
         if a := self.assignment():
             return a
@@ -14,6 +16,7 @@ class ToyParser(Parser):
             return i
         return None
 
+    @memoize
     def expr(self):
         if t := self.term():
             pos = self.mark()
@@ -28,6 +31,7 @@ class ToyParser(Parser):
             return t
         return None
 
+    @memoize
     def term(self):
         if t := self.atom():
             pos = self.mark()
@@ -42,6 +46,7 @@ class ToyParser(Parser):
             return t
         return None
 
+    @memoize
     def atom(self):
         if token := self.expect(NAME):
             return token
@@ -55,6 +60,7 @@ class ToyParser(Parser):
         self.reset(pos)
         return None
 
+    @memoize
     def assignment(self):
         pos = self.mark()
         if ((t := self.target()) and
@@ -64,9 +70,11 @@ class ToyParser(Parser):
         self.reset(pos)
         return None
 
+    @memoize
     def target(self):
         return self.expect(NAME)
 
+    @memoize
     def if_statement(self):
         pos = self.mark()
         if (self.expect("if") and
