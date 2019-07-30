@@ -24,15 +24,15 @@ pegen/parse.c: $(GRAMMAR) pegen/*.py
 clean:
 	-rm -f pegen/*.o pegen/*.so pegen/parse.c
 
-dump: parse.so
+dump: pegen/parse.so
 	cat -n $(TESTFILE)
-	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
+	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
 
-test: parse.so
-	$(PYTHON) -c "import parse, ast; t = parse.parse('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
+test: pegen/parse.so
+	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
 
-time: parse.so
-	/usr/bin/time -l $(PYTHON) -c "import parse; parse.parse('$(TIMEFILE)')"
+time: pegen/parse.so
+	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse('$(TIMEFILE)')"
 
 time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
