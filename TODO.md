@@ -4,7 +4,6 @@ TODO items
 Grammar features:
 
 - [ ] Stop using CURLY_STUFF hack and instead design a mini-grammar for what goes between { and }
-- [ ] Handle reserved words like in Python (maybe later we'll do it differently)
 - [ ] Report static bugs in the grammar,
       see https://github.com/PhilippeSigaud/Pegged/blob/master/pegged/introspection.d
 - [ ] Make grammar parser bootstrappable
@@ -12,7 +11,7 @@ Grammar features:
 Refactoring:
 
 - [ ] Change code generators to use visitor pattern
-- [ ] Split up into multiple modules
+- [x] Split up into multiple modules
 - [ ] Less dependence on Python tokenizer
 - [ ] Code cleanup
 - [ ] Respond to Nam's code review
@@ -47,6 +46,6 @@ C Code generator:
 
 Infrastructure:
 
-- [ ] CI setup (with coverage)
+- [x] CI setup (with coverage)
 - [ ] documentation
-- [ ] blog series
+- [x] blog series (started)

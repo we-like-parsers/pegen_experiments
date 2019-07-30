@@ -22,6 +22,15 @@ use case for the walrus operator (`:=`).
 
 See [TODO.md](TODO.md) for a list of open tasks.
 
+Blog series
+-----------
+
+I've started blogging on Medium about this.  I'll probably end up
+rewriting everything based on the approach from the blogs.  Episodes:
+
+- [PEG Parsers](https://medium.com/@gvanrossum_83706/peg-parsers-7ed72462f97c)
+- [Building a PEG Parser](https://medium.com/@gvanrossum_83706/building-a-peg-parser-d4869b5958fb)
+
 C code generator
 ----------------
 
