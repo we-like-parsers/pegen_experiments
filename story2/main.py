@@ -9,6 +9,7 @@ from story2.generator import generate
 
 def main():
     file = "story2/toy.gram"
+    print("Reading", file)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
         tok = Tokenizer(tokengen)
@@ -19,6 +20,9 @@ def main():
     for rule in rules:
         print(rule.name, end=": ", file=sys.stderr)
         print(*(" ".join(alt) for alt in rule.alts), sep=" | ", file=sys.stderr)
+    outfile = "story2/toy.py"
+    print("Updating", outfile, file=sys.stderr)
+    sys.stdout = open(outfile, "w")
     generate(rules)
 
 if __name__ == '__main__':

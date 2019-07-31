@@ -2,11 +2,13 @@
 
 from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
 
-from story2.parser import Parser
+from story2.memo import memoize
 from story2.node import Node
+from story2.parser import Parser
 
 class ToyParser(Parser):
 
+  @memoize
   def start(self):
     pos = self.mark()
     if (True
@@ -17,6 +19,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def statements(self):
     pos = self.mark()
     if (True
@@ -34,6 +37,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def statement(self):
     pos = self.mark()
     if (True
@@ -53,6 +57,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def expr(self):
     pos = self.mark()
     if (True
@@ -76,6 +81,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def term(self):
     pos = self.mark()
     if (True
@@ -99,6 +105,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def atom(self):
     pos = self.mark()
     if (True
@@ -120,6 +127,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def assignment(self):
     pos = self.mark()
     if (True
@@ -131,6 +139,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def target(self):
     pos = self.mark()
     if (True
@@ -140,6 +149,7 @@ class ToyParser(Parser):
     self.reset(pos)
     return None
 
+  @memoize
   def if_statement(self):
     pos = self.mark()
     if (True

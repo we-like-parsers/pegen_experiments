@@ -16,12 +16,14 @@ def generate(rules):
     print()
     print(f"from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER")
     print()
-    print(f"from story2.parser import Parser")
+    print(f"from story2.memo import memoize")
     print(f"from story2.node import Node")
+    print(f"from story2.parser import Parser")
     print()
     print(f"class ToyParser(Parser):")
     for rule in rules:
         print()
+        print(f"  @memoize")
         print(f"  def {rule.name}(self):")
         print(f"    pos = self.mark()")
         for alt in rule.alts:
