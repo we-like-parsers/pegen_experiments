@@ -5,7 +5,7 @@ from tokenize import generate_tokens
 
 from story2.grammar import GrammarParser
 from story2.tokenizer import Tokenizer
-from story2.generator import generate
+from story2.generator2 import generate
 
 def main():
     file = "story2/toy.gram"
@@ -22,8 +22,8 @@ def main():
         print(*(" ".join(alt) for alt in rule.alts), sep=" | ", file=sys.stderr)
     outfile = "story2/toy.py"
     print("Updating", outfile, file=sys.stderr)
-    sys.stdout = open(outfile, "w")
-    generate(rules)
+    with open(outfile, "w") as stream:
+        generate(rules, stream)
 
 if __name__ == '__main__':
     main()
