@@ -2,24 +2,18 @@
 
 from story2.grammar import Rule
 
-def is_string(s):
-    return s[0] in ('"', "'") and s[-1] == s[0]
+HEADER = """\
+# This is @generated code; do not edit!
 
-def is_lower(s):
-    return s.islower()
+from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
 
-def is_upper(s):
-    return s.isupper()
+from story2.memo import memoize
+from story2.node import Node
+from story2.parser import Parser
+"""
 
 def generate(rules):
-    print(f"# This is @generated code; do not edit!")
-    print()
-    print(f"from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER")
-    print()
-    print(f"from story2.memo import memoize")
-    print(f"from story2.node import Node")
-    print(f"from story2.parser import Parser")
-    print()
+    print(HEADER)
     print(f"class ToyParser(Parser):")
     for rule in rules:
         print()
@@ -30,19 +24,17 @@ def generate(rules):
             items = []
             print(f"        if (True")
             for item in alt:
-                if is_string(item):
+                if item[0] in ('"', "'"):
                     print(f"            and self.expect({item})")
                 else:
                     var = item.lower()
                     if var in items:
                         var += str(len(items))
                     items.append(var)
-                    if is_lower(item):
-                        print(f"            and ({var} := self.{item}())")
-                    elif is_upper(item):
+                    if item.isupper():
                         print(f"            and ({var} := self.expect({item}))")
                     else:
-                        assert False, f"What kind of item is {item}?"
+                        print(f"            and ({var} := self.{item}())")
             print(f"        ):")
             print(f"            return Node({rule.name!r}, [{', '.join(items)}])")
             print(f"        self.reset(pos)")
