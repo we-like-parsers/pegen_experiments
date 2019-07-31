@@ -1,30 +1,47 @@
 from __future__ import annotations  # Requires Python 3.7 or later
 
-import ast
-import re
-import sys
-import time
-import token
-import tokenize
-import traceback
 from abc import abstractmethod
 from typing import AbstractSet, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
-from pegen.tokenizer import exact_token_types
 
 if TYPE_CHECKING:
     from pegen.parser_generator import ParserGenerator
 
 
-def dedupe(name: str, names: List[str]) -> str:
-    origname = name
-    counter = 0
-    while name in names:
-        counter += 1
-        name = f"{origname}_{counter}"
-    names.append(name)
-    return name
+class GrammarVisitor:
+
+    def visit(self, node, *args, **kwargs):
+        """Visit a node."""
+        method = 'visit_' + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        return visitor(node, *args, **kwargs)
+
+    def visit_TokenInfo():
+        pass
+
+    def generic_visit(self, node, *args, **kwargs):
+        """Called if no explicit visitor function exists for a node."""
+        for value in node:
+            if isinstance(value, list):
+                for item in value:
+                    self.visit(item, *args, **kwargs)
+            else:
+                self.visit(value, *args, **kwargs)
+
+
+class Rules:
+    def __init__(self, rules):
+        self.rules = rules
+
+    def __str__(self):
+        return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
+
+    def __repr__(self):
+        return f"Rules({self.rules!r})"
+
+    def __iter__(self):
+        yield from self.rules.values()
 
 
 class Rule:
@@ -48,6 +65,9 @@ class Rule:
 
     def __repr__(self):
         return f"Rule({self.name!r}, {self.type!r}, {self.rhs!r})"
+
+    def __iter__(self):
+        yield self.rhs
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         if self.visited:
@@ -74,115 +94,6 @@ class Rule:
         rhs = self.flatten()
         rhs.collect_todo(gen)
 
-    def pgen_func(self, gen: ParserGenerator):
-        is_loop = self.is_loop()
-        rhs = self.flatten()
-        if self.left_recursive:
-            if self.leader:
-                gen.print("@memoize_left_rec")
-            # Non-leader rules in a cycle are not memoized
-        else:
-            gen.print("@memoize")
-        gen.print(f"def {self.name}(self):")
-        with gen.indent():
-            gen.print(f"# {self.name}: {rhs}")
-            if self.nullable:
-                gen.print(f"# nullable={self.nullable}")
-            gen.print("mark = self.mark()")
-            if is_loop:
-                gen.print("children = []")
-            rhs.pgen_body(gen, is_loop)
-            if is_loop:
-                gen.print("return children")
-            else:
-                gen.print("return None")
-
-    def cgen_func(self, gen: ParserGenerator) -> None:
-        is_loop = self.is_loop()
-        is_repeat1 = self.name.startswith('_loop1')
-        memoize = not self.leader
-        rhs = self.flatten()
-        if is_loop:
-            type = 'asdl_seq *'
-        elif self.type:
-            type = self.type
-        else:
-            type = 'void *'
-
-        gen.print(f"// {self}")
-        if self.left_recursive:
-            gen.print(f"static {type} {self.name}_raw(Parser *);")
-
-        gen.print(f"static {type}")
-        gen.print(f"{self.name}_rule(Parser *p)")
-
-        if self.left_recursive:
-            gen.print("{")
-            with gen.indent():
-                gen.print(f"{type} res = NULL;")
-                gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
-                with gen.indent():
-                    gen.print("return res;")
-                gen.print("int mark = p->mark;")
-                gen.print("int resmark = p->mark;")
-                gen.print("while (1) {")
-                with gen.indent():
-                    gen.print(f"update_memo(p, mark, {self.name}_type, res);")
-                    gen.print("p->mark = mark;")
-                    gen.print(f"void *raw = {self.name}_raw(p);")
-                    gen.print("if (raw == NULL || p->mark <= resmark)")
-                    with gen.indent():
-                        gen.print("break;")
-                    gen.print("resmark = p->mark;")
-                    gen.print("res = raw;")
-                gen.print("}")
-                gen.print("p->mark = resmark;")
-                gen.print("return res;")
-            gen.print("}")
-            gen.print(f"static {type}")
-            gen.print(f"{self.name}_raw(Parser *p)")
-
-        gen.print("{")
-        with gen.indent():
-            if is_loop:
-                gen.print(f"void *res = NULL;")
-            else:
-                gen.print(f"{type} res = NULL;")
-            if memoize:
-                gen.print(f"if (is_memoized(p, {self.name}_type, &res))")
-                with gen.indent():
-                    gen.print("return res;")
-            gen.print("int mark = p->mark;")
-            if is_loop:
-                gen.print("void **children = PyMem_Malloc(0);")
-                gen.print(f'if (!children) panic("malloc {self.name}");')
-                gen.print("ssize_t n = 0;")
-            rhs.cgen_body(gen, is_loop, self.name if memoize else None)
-            if is_loop:
-                if is_repeat1:
-                    gen.print("if (n == 0) {")
-                    with gen.indent():
-                        gen.print("PyMem_Free(children);")
-                        gen.print("return NULL;")
-                    gen.print("}")
-                gen.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
-                gen.print(f'if (!seq) panic("asdl_seq_new {self.name}");')
-                gen.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
-                gen.print("PyMem_Free(children);")
-                if self.name:
-                    gen.print(f"insert_memo(p, mark, {self.name}_type, seq);")
-                gen.print("return seq;")
-            else:
-                ## gen.print(f'fprintf(stderr, "Fail at %d: {self.name}\\n", p->mark);')
-                gen.print("res = NULL;")
-        if not is_loop:
-            gen.print("  done:")
-            with gen.indent():
-                    if memoize:
-                        gen.print(f"insert_memo(p, mark, {self.name}_type, res);")
-                    gen.print("return res;")
-        gen.print("}")
-
 
 class Leaf:
     def __init__(self, value: str):
@@ -191,16 +102,16 @@ class Leaf:
     def __str__(self):
         return self.value
 
+    def __iter__(self):
+        return
+        yield
+
     @abstractmethod
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
     @abstractmethod
     def initial_names(self) -> AbstractSet[str]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
 
@@ -226,25 +137,6 @@ class NameLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return {self.value}
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        name = self.value
-        if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
-            name = name.lower()
-            if cpython:
-                return f"{name}_var", f"{name}_token(p)"
-            else:
-                return name, f"self.{name}()"
-        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
-            if cpython:
-                name = name.lower()
-                return f"{name}_var", f"{name}_token(p)"
-            else:
-                return name.lower(), f"self.expect({name!r})"
-        if cpython:
-            return f"{name}_var", f"{name}_rule(p)"
-        else:
-            return name, f"self.{name}()"
-
 
 class StringLeaf(Leaf):
     """The value is a string literal, including quotes."""
@@ -259,19 +151,6 @@ class StringLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        if cpython:
-            val = ast.literal_eval(self.value)
-            if re.match(r'[a-zA-Z_]\w*\Z', val):
-                type = token.NAME
-                return 'keyword', f'keyword_token(p, "{val}")'
-            else:
-                assert val in exact_token_types, f"{self.value} is not a known literal"
-                type = exact_token_types[val]
-                return 'literal', f'expect_token(p, {type})'
-        else:
-            return 'literal', f"self.expect({self.value})"
-
 
 class Rhs:
     def __init__(self, alts: List[Alt]):
@@ -283,6 +162,9 @@ class Rhs:
 
     def __repr__(self):
         return f"Rhs({self.alts!r})"
+
+    def __iter__(self):
+        yield self.alts
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         for alt in self.alts:
@@ -299,40 +181,6 @@ class Rhs:
     def collect_todo(self, gen: ParserGenerator) -> None:
         for alt in self.alts:
             alt.collect_todo(gen)
-
-    def pgen_body(self, gen: ParserGenerator, is_loop: bool = False) -> None:
-        if is_loop:
-            assert len(self.alts) == 1
-        for alt in self.alts:
-            alt.pgen_block(gen, is_loop)
-
-    def cgen_body(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]) -> None:
-        if is_loop:
-            assert len(self.alts) == 1
-        vars = {}
-        for alt in self.alts:
-            vars.update(alt.collect_vars(gen))
-        for v, type in sorted(vars.items()):
-            if not type:
-                type = 'void *'
-            else:
-                type += ' '
-            gen.print(f"{type}{v};")
-        for alt in self.alts:
-            alt.cgen_block(gen, is_loop, rulename)
-
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        if self.memo is not None:
-            return self.memo
-        if len(self.alts) == 1 and len(self.alts[0].items) == 1:
-            self.memo = self.alts[0].items[0].make_call(gen, cpython)
-        else:
-            name = gen.name_node(self)
-            if cpython:
-                self.memo = f"{name}_var", f"{name}_rule(p)"
-            else:
-                self.memo = name, f"self.{name}()"
-        return self.memo
 
 
 class Alt:
@@ -356,6 +204,9 @@ class Alt:
             args.append(f"action={self.action!r}")
         return f"Alt({', '.join(args)})"
 
+    def __iter__(self):
+        yield self.items
+
     def visit(self, rules: Dict[str, Rule]) -> bool:
         for item in self.items:
             if not item.visit(rules):
@@ -374,88 +225,15 @@ class Alt:
         for item in self.items:
             item.collect_todo(gen)
 
-    def pgen_block(self, gen: ParserGenerator, is_loop: bool = False):
-        names: List[str] = []
-        gen.print("cut = False")  # TODO: Only if needed.
-        if is_loop:
-            gen.print("while (")
-        else:
-            gen.print("if (")
-        with gen.indent():
-            first = True
-            for item in self.items:
-                if first:
-                    first = False
-                else:
-                    gen.print("and")
-                item.pgen_item(gen, names)
-        gen.print("):")
-        with gen.indent():
-            action = self.action
-            if not action:
-                action = f"[{', '.join(names)}]"
-            else:
-                assert action[0] == '{' and action[-1] == '}', repr(action)
-                action = action[1:-1].strip()
-            if is_loop:
-                gen.print(f"children.append({action})")
-                gen.print(f"mark = self.mark()")
-            else:
-                gen.print(f"return {action}")
-        gen.print("self.reset(mark)")
-        # Skip remaining alternatives if a cut was reached.
-        gen.print("if cut: return None")  # TODO: Only if needed.
 
     def collect_vars(self, gen: ParserGenerator) -> Dict[str, Optional[str]]:
-        names: List[str] = []
+        names = []
         types = {}
         for item in self.items:
             name, type = item.add_var(gen, names)
             if name:
                 types[name] = type
         return types
-
-    def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
-        # TODO: Refactor this -- there are too many is_loop checks.
-        gen.print(f"// {self}")
-        names: List[str] = []
-        if is_loop:
-            gen.print("while (")
-        else:
-            gen.print("if (")
-        with gen.indent():
-            first = True
-            for item in self.items:
-                if first:
-                    first = False
-                else:
-                    gen.print("&&")
-                item.cgen_item(gen, names)
-        gen.print(") {")
-        with gen.indent():
-            action = self.action
-            if not action:
-                ## gen.print(f'fprintf(stderr, "Hit at %d: {self}, {names}\\n", p->mark);')
-                if len(names) > 1:
-                    gen.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
-                else:
-                    gen.print(f"res = {names[0]};")
-            else:
-                assert action[0] == '{' and action[-1] == '}', repr(action)
-                action = action[1:-1].strip()
-                gen.print(f"res = {action};")
-                ## gen.print(f'fprintf(stderr, "Hit with action at %d: {self}, {names}, {action}\\n", p->mark);')
-            if is_loop:
-                gen.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-                gen.print(f'if (!children) panic("realloc {rulename}");')
-                gen.print(f"children[n++] = res;")
-                gen.print("mark = p->mark;")
-            else:
-                if rulename:
-                    gen.print(f"insert_memo(p, mark, {rulename}_type, res);")
-                gen.print(f"goto done;")
-        gen.print("}")
-        gen.print("p->mark = mark;")
 
 
 class NamedItem:
@@ -473,6 +251,9 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
+    def __iter__(self):
+        yield self.item
+
     def visit(self, rules: Dict[str, Rule]) -> bool:
         self.nullable = self.item.visit(rules)
         return self.nullable
@@ -481,52 +262,7 @@ class NamedItem:
         return self.item.initial_names()
 
     def collect_todo(self, gen: ParserGenerator) -> None:
-        self.item.make_call(gen, True)
-
-    def pgen_item(self, gen: ParserGenerator, names: List[str]):
-        name, call = self.item.make_call(gen, cpython=False)
-        if self.name:
-            name = self.name
-        if not name:
-            gen.print(call)
-        else:
-            if name != 'cut':
-                name = dedupe(name, names)
-            gen.print(f"({name} := {call})")
-
-    def add_var(self, gen: ParserGenerator, names: List[str]) -> Tuple[Optional[str], Optional[str]]:
-        name, call = self.item.make_call(gen, cpython=True)
-        type = None
-        if name and name != 'cut':
-            if name.endswith('_var'):
-                rulename = name[:-4]
-                rule = gen.rules.get(rulename)
-                if rule is not None:
-                    if rule.is_loop():
-                        type = 'asdl_seq *'
-                    else:
-                        type = rule.type
-                elif name.startswith('_loop'):
-                    type = 'asdl_seq *'
-            if self.name:
-                name = self.name
-            name = dedupe(name, names)
-        return name, type
-
-    def cgen_item(self, gen: ParserGenerator, names: List[str]):
-        name, call = self.make_call(gen, cpython=True)
-        if not name:
-            gen.print(call)
-        else:
-            if name != 'cut':
-                name = dedupe(name, names)
-            gen.print(f"({name} = {call})")
-
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        name, call = self.item.make_call(gen, cpython)
-        if self.name:
-            name = self.name
-        return name, call
+        gen.callmakervisitor.visit(self.item)
 
 
 class Lookahead:
@@ -537,22 +273,14 @@ class Lookahead:
     def __str__(self):
         return f"{self.sign}{self.node}"
 
+    def __iter__(self):
+        yield self.node
+
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
     def initial_names(self) -> AbstractSet[str]:
         return set()
-
-    @abstractmethod
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        raise NotImplementedError
-
-    def make_call_helper(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
-        name, call = self.node.make_call(gen, cpython)
-        head, tail = call.split('(', 1)
-        assert tail[-1] == ')'
-        tail = tail[:-1]
-        return head, tail
 
 
 class PositiveLookahead(Lookahead):
@@ -562,12 +290,6 @@ class PositiveLookahead(Lookahead):
     def __repr__(self):
         return f"PositiveLookahead({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        head, tail = self.make_call_helper(gen, cpython)
-        if cpython:
-            return None, f"positive_lookahead({head}, {tail})"
-        else:
-            return None, f"self.positive_lookahead({head}, {tail})"
 
 class NegativeLookahead(Lookahead):
     def __init__(self, node: Plain):
@@ -575,13 +297,6 @@ class NegativeLookahead(Lookahead):
 
     def __repr__(self):
         return f"NegativeLookahead({self.node!r})"
-
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        head, tail = self.make_call_helper(gen, cpython)
-        if cpython:
-            return None, f"negative_lookahead({head}, {tail})"
-        else:
-            return None, f"self.negative_lookahead({head}, {tail})"
 
 
 class Opt:
@@ -594,12 +309,8 @@ class Opt:
     def __repr__(self):
         return f"Opt({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        name, call = self.node.make_call(gen, cpython)
-        if cpython:
-            return "opt_var", f"{call}, 1"  # Using comma operator!
-        else:
-            return "opt", f"{call},"  # Note trailing comma!
+    def __iter__(self):
+        yield self.node
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
@@ -619,9 +330,8 @@ class Repeat:
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
-    @abstractmethod
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        raise NotImplementedError
+    def __iter__(self):
+        yield self.node
 
     def initial_names(self) -> AbstractSet[str]:
         return self.node.initial_names()
@@ -637,16 +347,6 @@ class Repeat0(Repeat):
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        if self.memo is not None:
-            return self.memo
-        name = gen.name_loop(self.node, False)
-        if cpython:
-            self.memo = f"{name}_var", f"{name}_rule(p)"
-        else:
-            self.memo = name, f"self.{name}(),"  # Also a trailing comma!
-        return self.memo
-
 
 class Repeat1(Repeat):
     def __str__(self):
@@ -657,16 +357,6 @@ class Repeat1(Repeat):
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return False
-
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        if self.memo is not None:
-            return self.memo
-        name = gen.name_loop(self.node, True)
-        if cpython:
-            self.memo = f"{name}_var", f"{name}_rule(p)"  # But not here!
-        else:
-            self.memo = name, f"self.{name}()"  # But no trailing comma here!
-        return self.memo
 
 
 class Group:
@@ -679,14 +369,14 @@ class Group:
     def __repr__(self):
         return f"Group({self.rhs!r})"
 
+    def __iter__(self):
+        yield self.rhs
+
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return self.rhs.visit(rules)
 
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
-
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
-        return self.rhs.make_call(gen, cpython)
 
 
 Plain = Union[Leaf, Group]
@@ -708,7 +398,7 @@ class GrammarParser(Parser):
             rules[rule.name] = rule
             mark = self.mark()
         if self.expect('ENDMARKER'):
-            return rules
+            return Rules(rules)
         return None
 
     @memoize
@@ -878,4 +568,3 @@ class GrammarParser(Parser):
             assert string
             return StringLeaf(string.string)
         return None
-

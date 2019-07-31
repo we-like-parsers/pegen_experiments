@@ -16,7 +16,8 @@ import traceback
 
 from typing import Final
 
-from pegen.parser_generator import ParserGenerator
+from pegen.python_generator import ParserGenerator as PythonParserGenerator
+from pegen.c_generator import ParserGenerator as CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
 from pegen.grammar import GrammarParser
@@ -82,10 +83,10 @@ def main() -> None:
     if not args.quiet:
         if args.verbose:
             print("Raw Grammar:")
-            for rule in rules.values():
+            for rule in rules.rules.values():
                 print(" ", repr(rule))
         print("Clean Grammar:")
-        for rule in rules.values():
+        for rule in rules.rules.values():
             print(" ", rule)
 
     output = args.output
@@ -95,11 +96,9 @@ def main() -> None:
         else:
             output = "parse.py"
     with open(output, 'w') as file:
-        genr = ParserGenerator(rules, file)
-        if args.cpython:
-            genr.generate_cpython_extension(args.filename)
-        else:
-            genr.generate_python_module(args.filename)
+        gen_cls = CParserGenerator if args.cpython else PythonParserGenerator
+        gen = gen_cls(rules, file)
+        gen.generate(args.filename)
 
     if args.verbose:
         print("First Graph:")

@@ -1,15 +1,13 @@
-import ast
 import io
 import textwrap
-import token
 import tokenize
 
 from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
 import pytest
 
-from pegen.grammar import GrammarParser
-from pegen.parser_generator import ParserGenerator
+from pegen.grammar import GrammarParser, GrammarVisitor
+from pegen.python_generator import ParserGenerator
 from pegen.tokenizer import grammar_tokenizer, Tokenizer
 
 
@@ -17,7 +15,7 @@ def generate_parser(rules):
     # Generate a parser.
     out = io.StringIO()
     genr = ParserGenerator(rules, out)
-    genr.generate_python_module("<string>")
+    genr.generate("<string>")
 
     # Load the generated parser class.
     ns = {}
@@ -56,7 +54,7 @@ def test_parse_grammar():
     sum: t1=term '+' t2=term { action } | term
     term: NUMBER
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules['start']) == "start: sum NEWLINE"
     assert str(rules['sum']) == "sum: t1=term '+' t2=term { action } | term"
@@ -68,7 +66,7 @@ def test_typed_rules():
     sum[int]: t1=term '+' t2=term { action } | term
     term[int]: NUMBER
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules['start']) == "start[int]: sum NEWLINE"
     assert str(rules['sum']) == "sum[int]: t1=term '+' t2=term { action } | term"
@@ -212,6 +210,7 @@ def test_left_recursive():
     """
     rules = parse_string(grammar, GrammarParser)
     parser_class = generate_parser(rules)
+    rules = rules.rules
     assert not rules['start'].left_recursive
     assert rules['expr'].left_recursive
     assert not rules['term'].left_recursive
@@ -260,6 +259,7 @@ def test_nullable():
     rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
     genr = ParserGenerator(rules, out)
+    rules = rules.rules
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
 
@@ -272,6 +272,7 @@ def test_advanced_left_recursive():
     rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
     genr = ParserGenerator(rules, out)
+    rules = rules.rules
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
     assert rules['start'].left_recursive
@@ -287,10 +288,11 @@ def test_mutually_left_recursive():
     rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
     genr = ParserGenerator(rules, out)
+    rules = rules.rules
     assert not rules['start'].left_recursive
     assert rules['foo'].left_recursive
     assert rules['bar'].left_recursive
-    genr.generate_python_module("<string>")
+    genr.generate("<string>")
     ns = {}
     exec(out.getvalue(), ns)
     parser_class = ns['GeneratedParser']
@@ -365,3 +367,83 @@ def test_cut():
     assert node == [TokenInfo(OP, string='(', start=(1, 0), end=(1, 1), line='(1)'),
                     [TokenInfo(NUMBER, string='1', start=(1, 1), end=(1, 2), line='(1)')],
                     TokenInfo(OP, string=')', start=(1, 2), end=(1, 3), line='(1)')]
+
+
+class TestGrammarVisitor:
+
+    class Visitor(GrammarVisitor):
+        def __init__(self):
+            self.n_nodes = 0
+
+        def visit(self, node):
+            self.n_nodes += 1
+            super().visit(node)
+
+    def test_parse_trivial_grammar(self):
+        grammar = """
+        start: 'a'
+        """
+        rules = parse_string(grammar, GrammarParser)
+        visitor = self.Visitor()
+
+        visitor.visit(rules)
+
+        assert visitor.n_nodes == 6
+
+    def test_parse_or_grammar(self):
+        grammar = """
+        start: rule
+        rule: 'a' | 'b'
+        """
+        rules = parse_string(grammar, GrammarParser)
+        visitor = self.Visitor()
+
+        visitor.visit(rules)
+
+        # Rules/Rule/Rhs/Alt/NamedItem/NameLeaf   -> 6
+        #       Rule/Rhs/                         -> 2
+        #                Alt/NamedItem/StringLeaf -> 3
+        #                Alt/NamedItem/StringLeaf -> 3
+
+        assert visitor.n_nodes == 14
+
+    def test_parse_repeat1_grammar(self):
+        grammar = """
+        start: 'a'+
+        """
+        rules = parse_string(grammar, GrammarParser)
+        visitor = self.Visitor()
+
+        visitor.visit(rules)
+
+        # Rules/Rule/Rhs/Alt/NamedItem/Repeat1/StringLeaf -> 6
+
+        assert visitor.n_nodes == 7
+
+    def test_parse_repeat0_grammar(self):
+        grammar = """
+        start: 'a'*
+        """
+        rules = parse_string(grammar, GrammarParser)
+        visitor = self.Visitor()
+
+        visitor.visit(rules)
+
+        # Rules/Rule/Rhs/Alt/NamedItem/Repeat0/StringLeaf -> 6
+
+        assert visitor.n_nodes == 7
+
+
+    def test_parse_optional_grammar(self):
+        grammar = """
+        start: 'a' ['b']
+        """
+        rules = parse_string(grammar, GrammarParser)
+        visitor = self.Visitor()
+
+        visitor.visit(rules)
+
+        # Rules/Rule/Rhs/Alt/NamedItem/StringLeaf                       -> 6
+        #                    NamedItem/Opt/Rhs/Alt/NamedItem/Stringleaf -> 6
+
+        assert visitor.n_nodes == 12
