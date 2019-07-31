@@ -23,27 +23,27 @@ def generate(rules):
     print(f"class ToyParser(Parser):")
     for rule in rules:
         print()
-        print(f"  @memoize")
-        print(f"  def {rule.name}(self):")
-        print(f"    pos = self.mark()")
+        print(f"    @memoize")
+        print(f"    def {rule.name}(self):")
+        print(f"        pos = self.mark()")
         for alt in rule.alts:
             items = []
-            print(f"    if (True")
+            print(f"        if (True")
             for item in alt:
                 if is_string(item):
-                    print(f"        and self.expect({item})")
+                    print(f"            and self.expect({item})")
                 else:
                     var = item.lower()
                     if var in items:
                         var += str(len(items))
                     items.append(var)
                     if is_lower(item):
-                        print(f"        and ({var} := self.{item}())")
+                        print(f"            and ({var} := self.{item}())")
                     elif is_upper(item):
-                        print(f"        and ({var} := self.expect({item}))")
+                        print(f"            and ({var} := self.expect({item}))")
                     else:
                         assert False, f"What kind of item is {item}?"
-            print(f"    ):")
-            print(f"        return Node({rule.name!r}, [{', '.join(items)}])")
-            print(f"    self.reset(pos)")
-        print(f"    return None")
+            print(f"        ):")
+            print(f"            return Node({rule.name!r}, [{', '.join(items)}])")
+            print(f"        self.reset(pos)")
+        print(f"        return None")
