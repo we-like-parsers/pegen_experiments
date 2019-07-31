@@ -64,7 +64,7 @@ def memoize_left_rec(method: Callable[[Parser], T]):
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> T:
+    def left_rec_symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -134,8 +134,8 @@ def memoize_left_rec(method: Callable[[Parser], T]):
                 self.reset(endmark)
         return tree
 
-    symbol_wrapper.__wrapped__ = method
-    return symbol_wrapper
+    left_rec_symbol_wrapper.__wrapped__ = method
+    return left_rec_symbol_wrapper
 
 
 def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> bool:
