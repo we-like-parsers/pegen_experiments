@@ -7,10 +7,13 @@ import time
 import token
 import tokenize
 import traceback
-from typing import AbstractSet, Callable, Dict, Generic, Iterable, Optional, List, TypeVar, Union
+from typing import AbstractSet, Callable, Dict, Generic, Iterable, List, Optional, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
 from pegen.tokenizer import exact_token_types
+
+if TYPE_CHECKING:
+    from pegen.parser_generator import ParserGenerator
 
 
 def dedupe(name: str, names: List[str]) -> str:
@@ -24,12 +27,12 @@ def dedupe(name: str, names: List[str]) -> str:
 
 
 class Rule:
-    def __init__(self, name: str, type: str, rhs: Rhs):
+    def __init__(self, name: str, type: Optional[str], rhs: Rhs):
         self.name = name
         self.type = type
         self.rhs = rhs
         self.visited = False
-        self.nullable = None
+        self.nullable = False
         self.left_recursive = False
         self.leader = False
 
@@ -45,13 +48,12 @@ class Rule:
     def __repr__(self):
         return f"Rule({self.name!r}, {self.type!r}, {self.rhs!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         if self.visited:
             # A left-recursive rule is considered non-nullable.
             return False
         self.visited = True
         self.nullable = self.rhs.visit(rules)
-        assert self.nullable is not None
         return self.nullable
 
     def initial_names(self) -> AbstractSet[str]:
@@ -188,6 +190,15 @@ class Leaf:
     def __str__(self):
         return self.value
 
+    def visit(self, rules: Dict[str, Rule]) -> bool:
+        raise NotImplementedError
+
+    def initial_names(self) -> AbstractSet[str]:
+        raise NotImplementedError
+
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        raise NotImplementedError
+
 
 class NameLeaf(Leaf):
     """The value is the name."""
@@ -202,7 +213,7 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         if self.value in rules:
             return rules[self.value].visit(rules)
         # Token or unknown; never empty.
@@ -237,7 +248,7 @@ class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         # The string token '' is considered empty.
         return not self.value
 
@@ -269,7 +280,7 @@ class Rhs:
     def __repr__(self):
         return f"Rhs({self.alts!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         for alt in self.alts:
             if alt.visit(rules):
                 return True
@@ -341,7 +352,7 @@ class Alt:
             args.append(f"action={self.action!r}")
         return f"Alt({', '.join(args)})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         for item in self.items:
             if not item.visit(rules):
                 return False
@@ -446,7 +457,7 @@ class NamedItem:
     def __init__(self, name: Optional[str], item: Item):
         self.name = name
         self.item = item
-        self.nullable = None
+        self.nullable = False
 
     def __str__(self):
         if self.name:
@@ -457,9 +468,8 @@ class NamedItem:
     def __repr__(self):
         return f"NamedItem({self.name!r}, {self.item!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         self.nullable = self.item.visit(rules)
-        assert self.nullable is not None
         return self.nullable
 
     def initial_names(self) -> AbstractSet[str]:
@@ -582,7 +592,7 @@ class Opt:
         else:
             return "opt", f"{call},"  # Note trailing comma!
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
     def initial_names(self) -> AbstractSet[str]:
@@ -596,6 +606,12 @@ class Repeat:
         self.node = node
         self.memo = None
 
+    def visit(self, rules: Dict[str, Rule]) -> bool:
+        raise NotImplementedError
+
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+        raise NotImplementedError
+
     def initial_names(self) -> AbstractSet[str]:
         return self.node.initial_names()
 
@@ -607,7 +623,7 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
@@ -628,8 +644,7 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
-        # TODO: What if self.node is itself nullable?
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         return False
 
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
@@ -653,7 +668,7 @@ class Group:
     def __repr__(self):
         return f"Group({self.rhs!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> Optional[bool]:
+    def visit(self, rules: Dict[str, Rule]) -> bool:
         return self.rhs.visit(rules)
 
     def initial_names(self) -> AbstractSet[str]:

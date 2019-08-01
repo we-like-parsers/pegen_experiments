@@ -2,7 +2,7 @@ from __future__ import annotations  # Requires Python 3.7 or later
 
 import token
 import tokenize
-from typing import List, Iterable
+from typing import List, Iterator
 
 Mark = int  # NewType('Mark', int)
 
@@ -13,7 +13,7 @@ token.tok_name[CURLY_STUFF] = 'CURLY_STUFF'
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
 
-def shorttok(tok: tokenizer.TokenInfo) -> str:
+def shorttok(tok: tokenize.TokenInfo) -> str:
     return "%-25.25s" % f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
 
@@ -25,7 +25,7 @@ class Tokenizer:
 
     _tokens: List[tokenize.TokenInfo]
 
-    def __init__(self, tokengen: Iterable[TokenInfo], *, verbose=False):
+    def __init__(self, tokengen: Iterator[tokenize.TokenInfo], *, verbose=False):
         self._tokengen = tokengen
         self._tokens = []
         self._index = 0
@@ -38,7 +38,7 @@ class Tokenizer:
         cached = True
         while self._index == len(self._tokens):
             tok = next(self._tokengen)
-            if tok.type in (token.NL, token.COMMENT):
+            if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
             if tok.type == token.ERRORTOKEN and tok.string.isspace():
                 continue
@@ -54,7 +54,7 @@ class Tokenizer:
         """Return the next token *without* updating the index."""
         while self._index == len(self._tokens):
             tok = next(self._tokengen)
-            if tok.type in (token.NL, token.COMMENT):
+            if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
             if tok.type == token.ERRORTOKEN and tok.string.isspace():
                 continue

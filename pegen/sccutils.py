@@ -3,7 +3,7 @@
 from typing import *
 
 def strongly_connected_components(vertices: AbstractSet[str],
-                                  edges: Dict[str, Iterable[str]]) -> Iterator[Set[str]]:
+                                  edges: Dict[str, AbstractSet[str]]) -> Iterator[AbstractSet[str]]:
     """Compute Strongly Connected Components of a directed graph.
 
     Args:
@@ -48,7 +48,7 @@ def strongly_connected_components(vertices: AbstractSet[str],
 
 
 def topsort(data: Dict[AbstractSet[str],
-                       Set[AbstractSet[str]]]) -> Iterable[Set[AbstractSet[str]]]:
+                       Set[AbstractSet[str]]]) -> Iterable[AbstractSet[AbstractSet[str]]]:
     """Topological sort.
 
     Args:
@@ -96,7 +96,7 @@ def topsort(data: Dict[AbstractSet[str],
     assert not data, "A cyclic dependency exists amongst %r" % data
 
 
-def find_cycles_in_scc(graph: Dict[str, Set[str]], scc: Set[str], start: str) -> Iterable[List[str]]:
+def find_cycles_in_scc(graph: Dict[str, AbstractSet[str]], scc: AbstractSet[str], start: str) -> Iterable[List[str]]:
     """Find cycles in SCC emanating from start.
 
     Yields lists of the form ['A', 'B', 'C', 'A'], which means there's

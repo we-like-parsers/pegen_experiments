@@ -14,6 +14,8 @@ import token
 import tokenize
 import traceback
 
+from typing import Final
+
 from pegen.parser_generator import ParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
@@ -23,7 +25,7 @@ from pegen.grammar import GrammarParser
 def print_memstats() -> bool:
     MiB: Final = 2 ** 20
     try:
-        import psutil
+        import psutil  # type: ignore
     except ImportError:
         return False
     print("Memory stats:")

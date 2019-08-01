@@ -8,6 +8,7 @@ from pegen.grammar import Rule
 from pegen.grammar import Rhs
 from pegen.grammar import Alt
 from pegen.grammar import NamedItem
+from pegen.grammar import Plain
 
 MODULE_PREFIX = """\
 #!/usr/bin/env python3.8
@@ -83,7 +84,7 @@ class ParserGenerator:
         self.counter = 0  # For name_rule()/name_loop()
 
     @contextlib.contextmanager
-    def indent(self) -> None:
+    def indent(self) -> Iterator[None]:
         self.level += 1
         try:
             yield
@@ -172,7 +173,7 @@ def compute_nullables(rules: Dict[str, Rule]) -> None:
         rule.visit(rules)
 
 
-def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, Set[str]], List[Set[str]]]:
+def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, AbstractSet[str]], List[AbstractSet[str]]]:
     graph = make_first_graph(rules)
     sccs = list(sccutils.strongly_connected_components(graph.keys(), graph))
     for scc in sccs:
@@ -199,7 +200,7 @@ def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, Set[str]]
     return graph, sccs
 
 
-def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, str]:
+def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, AbstractSet[str]]:
     """Compute the graph of left-invocations.
 
     There's an edge from A to B if A may invoke B at its initial
@@ -208,7 +209,7 @@ def make_first_graph(rules: Dict[str, Rule]) -> Dict[str, str]:
     Note that this requires the nullable flags to have been computed.
     """
     graph = {}
-    vertices = set()
+    vertices: Set[str] = set()
     for rulename, rhs in rules.items():
         graph[rulename] = names = rhs.initial_names()
         vertices |= names

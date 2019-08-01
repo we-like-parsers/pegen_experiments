@@ -5,7 +5,7 @@ import sys
 import time
 import token
 import tokenize
-from typing import TypeVar, Generic, Dict, Tuple, Callable, Optional, NoReturn
+from typing import Callable, Dict, Generic, Optional, Tuple, TypeVar
 
 from pegen.tokenizer import CURLY_STUFF
 from pegen.tokenizer import exact_token_types
@@ -16,7 +16,7 @@ from pegen.tokenizer import Tokenizer
 T = TypeVar('T')
 
 
-def memoize(method: Callable[[Parser], T]):
+def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     """Memoize a symbol method."""
     method_name = method.__name__
 
@@ -56,11 +56,11 @@ def memoize(method: Callable[[Parser], T]):
                 self.reset(endmark)
         return tree
 
-    symbol_wrapper.__wrapped__ = method
+    symbol_wrapper.__wrapped__ = method  # type: ignore
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser], T]):
+def memoize_left_rec(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
@@ -134,14 +134,14 @@ def memoize_left_rec(method: Callable[[Parser], T]):
                 self.reset(endmark)
         return tree
 
-    left_rec_symbol_wrapper.__wrapped__ = method
+    left_rec_symbol_wrapper.__wrapped__ = method  # type: ignore
     return left_rec_symbol_wrapper
 
 
-def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> bool:
+def memoize_expect(method: Callable[[Parser, str], T]) -> Callable[[Parser, str], T]:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: Parser, type: str) -> Optional[tokenize.TokenInfo]:
+    def expect_wrapper(self: Parser, type: str) -> T:
         mark = self.mark()
         key = mark, type
         # Fast path: cache hit.
@@ -167,7 +167,7 @@ def memoize_expect(method: Callable[[Parser], Optional[tokenize.TokenInfo]]) -> 
         self.reset(endmark)
         return res
 
-    expect_wrapper.__wrapped__ = method
+    expect_wrapper.__wrapped__ = method  # type: ignore
     return expect_wrapper
 
 
@@ -178,10 +178,8 @@ class Parser(Generic[T]):
         self._tokenizer = tokenizer
         self._verbose = verbose
         self._level = 0
-        self._symbol_cache: Dict[Tuple[Mark,
-                                       Callable[[Parser], Optional[T]]],
-                                 Tuple[Optional[T], Mark]] = {}
-        self._token_cache: Dict[Tuple[Mark, str], bool] = {}
+        self._symbol_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
+        self._token_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
         # Pass through common tokeniser methods.
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
@@ -252,7 +250,7 @@ class Parser(Generic[T]):
         self.reset(mark)
         return not ok
 
-    def make_syntax_error(self, filename="<unknown>") -> NoReturn:
+    def make_syntax_error(self, filename="<unknown>") -> SyntaxError:
         tok = self._tokenizer.diagnose()
         return SyntaxError("pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line))
 
