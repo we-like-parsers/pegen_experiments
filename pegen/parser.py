@@ -14,13 +14,14 @@ from pegen.tokenizer import Mark
 from pegen.tokenizer import Tokenizer
 
 T = TypeVar('T')
+S = TypeVar('S')
 
 
-def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
+def memoize(method: Callable[[Parser[T]], Optional[S]]) -> Callable[[Parser[T]], Optional[S]]:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> T:
+    def symbol_wrapper(self: Parser[T]) -> Optional[S]:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -60,11 +61,11 @@ def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
+def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Parser[T]], Optional[T]]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def left_rec_symbol_wrapper(self: Parser) -> T:
+    def left_rec_symbol_wrapper(self: Parser[T]) -> Optional[T]:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -138,10 +139,10 @@ def memoize_left_rec(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     return left_rec_symbol_wrapper
 
 
-def memoize_expect(method: Callable[[Parser, str], T]) -> Callable[[Parser, str], T]:
+def memoize_expect(method: Callable[[Parser[T], str], Optional[S]]) -> Callable[[Parser[T], str], Optional[S]]:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: Parser, type: str) -> T:
+    def expect_wrapper(self: Parser[T], type: str) -> Optional[S]:
         mark = self.mark()
         key = mark, type
         # Fast path: cache hit.
@@ -180,7 +181,7 @@ class Parser(Generic[T]):
         self._level = 0
         self._symbol_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
         self._token_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
-        # Pass through common tokeniser methods.
+        # Pass through common tokenizer methods.
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
@@ -238,13 +239,13 @@ class Parser(Generic[T]):
             return self._tokenizer.getnext()
         return None
 
-    def positive_lookahead(self, func: Callable[..., T], *args) -> Optional[T]:
+    def positive_lookahead(self, func: Callable[..., Optional[T]], *args) -> Optional[T]:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
         return ok
 
-    def negative_lookahead(self, func: Callable[..., T], *args) -> bool:
+    def negative_lookahead(self, func: Callable[..., Optional[T]], *args) -> bool:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)

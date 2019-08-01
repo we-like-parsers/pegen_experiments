@@ -7,7 +7,7 @@ import time
 import token
 import tokenize
 import traceback
-from typing import AbstractSet, Callable, Dict, Generic, Iterable, List, Optional, Tuple, TYPE_CHECKING, TypeVar, Union
+from typing import AbstractSet, Any, Callable, Dict, Generic, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
 from pegen.tokenizer import exact_token_types
@@ -196,7 +196,7 @@ class Leaf:
     def initial_names(self) -> AbstractSet[str]:
         raise NotImplementedError
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
 
@@ -222,7 +222,7 @@ class NameLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return {self.value}
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         name = self.value
         if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
             name = name.lower()
@@ -255,7 +255,7 @@ class StringLeaf(Leaf):
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         if cpython:
             val = ast.literal_eval(self.value)
             if re.match(r'[a-zA-Z_]\w*\Z', val):
@@ -272,7 +272,7 @@ class StringLeaf(Leaf):
 class Rhs:
     def __init__(self, alts: List[Alt]):
         self.alts = alts
-        self.memo = None
+        self.memo: Optional[Tuple[Optional[str], str]] = None
 
     def __str__(self):
         return " | ".join(str(alt) for alt in self.alts)
@@ -287,7 +287,7 @@ class Rhs:
         return False
 
     def initial_names(self) -> AbstractSet[str]:
-        names = set()
+        names: Set[str] = set()
         for alt in self.alts:
             names |= alt.initial_names()
         return names
@@ -317,7 +317,7 @@ class Rhs:
         for alt in self.alts:
             alt.cgen_block(gen, is_loop, rulename)
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         if self.memo is not None:
             return self.memo
         if len(self.alts) == 1 and len(self.alts[0].items) == 1:
@@ -327,7 +327,7 @@ class Rhs:
             if cpython:
                 self.memo = f"{name}_var", f"{name}_rule(p)"
             else:
-                self.memo =name, f"self.{name}()"
+                self.memo = name, f"self.{name}()"
         return self.memo
 
 
@@ -359,7 +359,7 @@ class Alt:
         return True
 
     def initial_names(self) -> AbstractSet[str]:
-        names = set()
+        names: Set[str] = set()
         for item in self.items:
             names |= item.initial_names()
             if not item.nullable:
@@ -371,7 +371,7 @@ class Alt:
             item.collect_todo(gen)
 
     def pgen_block(self, gen: ParserGenerator, is_loop: bool = False):
-        names = []
+        names: List[str] = []
         gen.print("cut = False")  # TODO: Only if needed.
         if is_loop:
             gen.print("while (")
@@ -402,8 +402,8 @@ class Alt:
         # Skip remaining alternatives if a cut was reached.
         gen.print("if cut: return None")  # TODO: Only if needed.
 
-    def collect_vars(self, gen: ParserGenerator) -> Dict[str, str]:
-        names = []
+    def collect_vars(self, gen: ParserGenerator) -> Dict[str, Optional[str]]:
+        names: List[str] = []
         types = {}
         for item in self.items:
             name, type = item.add_var(gen, names)
@@ -413,7 +413,7 @@ class Alt:
     def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
         # TODO: Refactor this -- there are too many is_loop checks.
         gen.print(f"// {self}")
-        names = []
+        names: List[str] = []
         if is_loop:
             gen.print("while (")
         else:
@@ -489,10 +489,10 @@ class NamedItem:
                 name = dedupe(name, names)
             gen.print(f"({name} := {call})")
 
-    def add_var(self, gen: ParserGenerator, names: List[str]) -> Tuple[str, str]:
+    def add_var(self, gen: ParserGenerator, names: List[str]) -> Tuple[Optional[str], Optional[str]]:
         name, call = self.item.make_call(gen, cpython=True)
         type = None
-        if name != 'cut':
+        if name and name != 'cut':
             if name.endswith('_var'):
                 rulename = name[:-4]
                 rule = gen.rules.get(rulename)
@@ -517,7 +517,7 @@ class NamedItem:
                 name = dedupe(name, names)
             gen.print(f"({name} = {call})")
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         name, call = self.item.make_call(gen, cpython)
         if self.name:
             name = self.name
@@ -553,7 +553,7 @@ class PositiveLookahead(Lookahead):
     def __repr__(self):
         return f"PositiveLookahead({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         head, tail = self.make_call_helper(gen, cpython)
         if cpython:
             return None, f"positive_lookahead({head}, {tail})"
@@ -567,7 +567,7 @@ class NegativeLookahead(Lookahead):
     def __repr__(self):
         return f"NegativeLookahead({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         head, tail = self.make_call_helper(gen, cpython)
         if cpython:
             return None, f"negative_lookahead({head}, {tail})"
@@ -585,7 +585,7 @@ class Opt:
     def __repr__(self):
         return f"Opt({self.node!r})"
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         name, call = self.node.make_call(gen, cpython)
         if cpython:
             return "opt_var", f"{call}, 1"  # Using comma operator!
@@ -604,12 +604,12 @@ class Repeat:
 
     def __init__(self, node: Plain):
         self.node = node
-        self.memo = None
+        self.memo: Optional[str] = None
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
     def initial_names(self) -> AbstractSet[str]:
@@ -626,7 +626,7 @@ class Repeat0(Repeat):
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         if self.memo is not None:
             return self.memo
         name = gen.name_loop(self.node, False)
@@ -647,7 +647,7 @@ class Repeat1(Repeat):
     def visit(self, rules: Dict[str, Rule]) -> bool:
         return False
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         if self.memo is not None:
             return self.memo
         name = gen.name_loop(self.node, True)
@@ -674,7 +674,7 @@ class Group:
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
 
-    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         return self.rhs.make_call(gen, cpython)
 
 
@@ -682,7 +682,7 @@ Plain = Union[Leaf, Group]
 Item = Union[Plain, Opt, Repeat]
 
 
-class GrammarParser(Parser):
+class GrammarParser(Parser[Any]):
     """Hand-written parser for Grammar files."""
 
     @memoize
@@ -693,6 +693,7 @@ class GrammarParser(Parser):
         mark = self.mark()
         rules = {}
         while rule := self.rule():
+            assert rule
             rules[rule.name] = rule
             mark = self.mark()
         if self.expect('ENDMARKER'):
@@ -709,6 +710,7 @@ class GrammarParser(Parser):
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
+            assert name
             return Rule(name.string, None, alts)
         self.reset(mark)
         if ((name := self.name()) and
@@ -728,6 +730,7 @@ class GrammarParser(Parser):
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
+            assert name
             return Rule(name.string, type.string + '*', alts)
         self.reset(mark)
         return None
@@ -788,6 +791,8 @@ class GrammarParser(Parser):
         """
         mark = self.mark()
         if (name := self.name()) and self.expect('=') and (item := self.item()):
+            assert name
+            assert item
             return NamedItem(name.string, item)
         self.reset(mark)
         item = self.item()
@@ -805,6 +810,7 @@ class GrammarParser(Parser):
         """
         mark = self.mark()
         if (lookahead := (self.expect('&') or self.expect('!'))) and (atom := self.atom()):
+            assert lookahead
             if lookahead.string == '&':
                 return PositiveLookahead(atom)
             else:
@@ -822,6 +828,7 @@ class GrammarParser(Parser):
             return Opt(alts)
         self.reset(mark)
         if atom := self.atom():
+            assert atom
             mark = self.mark()
             if self.expect('?'):
                 return Opt(atom)
@@ -839,11 +846,14 @@ class GrammarParser(Parser):
         """
         mark = self.mark()
         if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
+            assert alts
             return Group(alts)
         self.reset(mark)
         if name := self.name():
+            assert name
             return NameLeaf(name.string)
         if string := self.string():
+            assert string
             return StringLeaf(string.string)
         return None
 
