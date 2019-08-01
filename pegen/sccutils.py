@@ -18,10 +18,10 @@ def strongly_connected_components(vertices: AbstractSet[str],
 
     From http://code.activestate.com/recipes/578507/.
     """
-    identified = set()  # type: Set[str]
-    stack = []  # type: List[str]
-    index = {}  # type: Dict[str, int]
-    boundaries = []  # type: List[int]
+    identified: Set[str] = set()
+    stack: List[str] = []
+    index: Dict[str, int] = {}
+    boundaries: List[int] = []
 
     def dfs(v: str) -> Iterator[Set[str]]:
         index[v] = len(stack)

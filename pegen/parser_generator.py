@@ -137,7 +137,7 @@ class ParserGenerator:
         self.print(EXTENSION_SUFFIX.rstrip('\n') % dict(mode=mode))
 
     def collect_todo(self) -> None:
-        done = set()  # type: Set[str]
+        done: Set[str] = set()
         while True:
             alltodo = set(self.todo)
             todo = alltodo - done
