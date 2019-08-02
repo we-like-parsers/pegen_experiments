@@ -7,6 +7,7 @@ import time
 import token
 import tokenize
 import traceback
+from abc import abstractmethod
 from typing import AbstractSet, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
@@ -407,7 +408,8 @@ class Alt:
         types = {}
         for item in self.items:
             name, type = item.add_var(gen, names)
-            types[name] = type
+            if name:
+                types[name] = type
         return types
 
     def cgen_block(self, gen: ParserGenerator, is_loop: bool, rulename: Optional[str]):
@@ -538,7 +540,10 @@ class Lookahead:
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
-    def make_call_helper(self, gen: ParserGenerator, cpython: bool) -> str:
+    def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
+        raise NotImplementedError
+
+    def make_call_helper(self, gen: ParserGenerator, cpython: bool) -> Tuple[str, str]:
         name, call = self.node.make_call(gen, cpython)
         head, tail = call.split('(', 1)
         assert tail[-1] == ')'
@@ -576,7 +581,7 @@ class NegativeLookahead(Lookahead):
 
 
 class Opt:
-    def __init__(self, node: Plain):
+    def __init__(self, node: Item):
         self.node = node
 
     def __str__(self):
@@ -604,7 +609,7 @@ class Repeat:
 
     def __init__(self, node: Plain):
         self.node = node
-        self.memo: Optional[str] = None
+        self.memo: Optional[Tuple[Optional[str], str]] = None
 
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
@@ -679,7 +684,7 @@ class Group:
 
 
 Plain = Union[Leaf, Group]
-Item = Union[Plain, Opt, Repeat, Lookahead]
+Item = Union[Plain, Opt, Repeat, Lookahead, Rhs]
 
 
 class GrammarParser(Parser):
@@ -711,6 +716,7 @@ class GrammarParser(Parser):
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
             assert name
+            assert alts
             return Rule(name.string, None, alts)
         self.reset(mark)
         if ((name := self.name()) and
@@ -720,6 +726,9 @@ class GrammarParser(Parser):
                 self.expect(':') and
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
+            assert name
+            assert type
+            assert alts
             return Rule(name.string, type.string, alts)
         self.reset(mark)
         if ((name := self.name()) and
@@ -731,6 +740,8 @@ class GrammarParser(Parser):
                 (alts := self.alternatives()) and
                 self.expect('NEWLINE')):
             assert name
+            assert type
+            assert alts
             return Rule(name.string, type.string + '*', alts)
         self.reset(mark)
         return None
@@ -743,6 +754,7 @@ class GrammarParser(Parser):
         mark = self.mark()
         alts = []
         if alt := self.alternative():
+            assert alt
             alts.append(alt)
         else:
             return None
@@ -763,6 +775,7 @@ class GrammarParser(Parser):
         mark = ubermark = self.mark()
         items = []
         while item := self.named_item():
+            assert item
             items.append(item)
             mark = self.mark()
         if not items:
@@ -773,6 +786,7 @@ class GrammarParser(Parser):
             icut = len(items)
             mark = self.mark()
             while item := self.named_item():
+                assert item
                 items.append(item)
                 mark = self.mark()
         if self.expect('$'):
@@ -826,6 +840,7 @@ class GrammarParser(Parser):
         """
         mark = self.mark()
         if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
+            assert alts
             return Opt(alts)
         self.reset(mark)
         if atom := self.atom():
