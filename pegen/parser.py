@@ -5,7 +5,7 @@ import sys
 import time
 import token
 import tokenize
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, cast, Dict, Optional, Tuple, TypeVar
 
 from pegen.tokenizer import CURLY_STUFF
 from pegen.tokenizer import exact_token_types
@@ -15,15 +15,16 @@ from pegen.tokenizer import Tokenizer
 
 T = TypeVar('T')
 P = TypeVar('P', bound='Parser')
+F = TypeVar('F', bound=Callable[..., Any])
 
 
-def memoize(method: Callable[[P], T]) -> Callable[[P], T]:
+def memoize(method: F) -> F:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: P) -> T:
+    def memoize_wrapper(self: P, *args: Any) -> T:
         mark = self.mark()
-        key = mark, method_name
+        key = mark, method_name, args
         # Fast path: cache hit, and not verbose.
         if key in self._cache and not self._verbose:
             tree, endmark = self._cache[key]
@@ -36,7 +37,7 @@ def memoize(method: Callable[[P], T]) -> Callable[[P], T]:
             if verbose:
                 print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
             self._level += 1
-            tree = method(self)
+            tree = method(self, *args)
             self._level -= 1
             if verbose:
                 print(f"{fill}... {method_name} -> {tree!s:.100}")
@@ -49,17 +50,17 @@ def memoize(method: Callable[[P], T]) -> Callable[[P], T]:
             self.reset(endmark)
         return tree
 
-    symbol_wrapper.__wrapped__ = method  # type: ignore
-    return symbol_wrapper
+    memoize_wrapper.__wrapped__ = method  # type: ignore
+    return cast(F, memoize_wrapper)
 
 
 def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Optional[T]]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def left_rec_symbol_wrapper(self: P) -> Optional[T]:
+    def memoize_left_rec_wrapper(self: P) -> Optional[T]:
         mark = self.mark()
-        key = mark, method_name
+        key = mark, method_name, ()
         # Fast path: cache hit, and not verbose.
         if key in self._cache and not self._verbose:
             tree, endmark = self._cache[key]
@@ -124,33 +125,8 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
                 self.reset(endmark)
         return tree
 
-    left_rec_symbol_wrapper.__wrapped__ = method  # type: ignore
-    return left_rec_symbol_wrapper
-
-
-def memoize_expect(method: Callable[[P, str], T]) -> Callable[[P, str], T]:
-    """Memoize the expect() method."""
-
-    def expect_wrapper(self: P, type: str) -> T:
-        mark = self.mark()
-        key = mark, type
-        # Fast path: cache hit.
-        if key in self._cache:
-            res, endmark = self._cache[key]
-            self.reset(endmark)
-            return res
-        # Slow path.
-        if key not in self._cache:
-            res = method(self, type)
-            endmark = self.mark()
-            self._cache[key] = res, endmark
-        else:
-            res, endmark = self._cache[key]
-        self.reset(endmark)
-        return res
-
-    expect_wrapper.__wrapped__ = method  # type: ignore
-    return expect_wrapper
+    memoize_left_rec_wrapper.__wrapped__ = method  # type: ignore
+    return memoize_left_rec_wrapper
 
 
 class Parser:
@@ -160,7 +136,7 @@ class Parser:
         self._tokenizer = tokenizer
         self._verbose = verbose
         self._level = 0
-        self._cache: Dict[Tuple[Mark, str], Tuple[Any, Mark]] = {}
+        self._cache: Dict[Tuple[Mark, str, Tuple[Any, ...]], Tuple[Any, Mark]] = {}
         # Pass through common tokenizer methods.
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
@@ -204,7 +180,7 @@ class Parser:
             return self._tokenizer.getnext()
         return None
 
-    @memoize_expect
+    @memoize
     def expect(self, type: str) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.string == type:
