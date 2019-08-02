@@ -191,12 +191,15 @@ class Leaf:
     def __str__(self):
         return self.value
 
+    @abstractmethod
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
     def initial_names(self) -> AbstractSet[str]:
         raise NotImplementedError
 
+    @abstractmethod
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
@@ -540,6 +543,7 @@ class Lookahead:
     def initial_names(self) -> AbstractSet[str]:
         return set()
 
+    @abstractmethod
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
@@ -611,9 +615,11 @@ class Repeat:
         self.node = node
         self.memo: Optional[Tuple[Optional[str], str]] = None
 
+    @abstractmethod
     def visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
     def make_call(self, gen: ParserGenerator, cpython: bool) -> Tuple[Optional[str], str]:
         raise NotImplementedError
 
