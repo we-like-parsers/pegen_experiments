@@ -39,5 +39,5 @@ time_stdlib:
 
 tags: TAGS
 
-TAGS: pegen/*.py
-	etags pegen/*.py
+TAGS: pegen/*.py test/test_pegen.py
+	etags pegen/*.py test/test_pegen.py
