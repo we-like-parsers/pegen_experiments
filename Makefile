@@ -36,3 +36,8 @@ time: pegen/parse.so
 
 time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
+
+tags: TAGS
+
+TAGS: pegen/*.py
+	etags pegen/*.py
