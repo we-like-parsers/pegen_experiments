@@ -6,7 +6,7 @@ import ast
 import sys
 import tokenize
 
-from pegen import memoize, memoize_left_rec, Parser
+from pegen.parser import memoize, memoize_left_rec, Parser
 
 
 class GeneratedParser(Parser):
@@ -1564,5 +1564,5 @@ class GeneratedParser(Parser):
 
 
 if __name__ == '__main__':
-    from pegen import simple_parser_main
+    from pegen.parser import simple_parser_main
     simple_parser_main(GeneratedParser)

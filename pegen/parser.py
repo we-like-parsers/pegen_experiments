@@ -14,13 +14,14 @@ from pegen.tokenizer import Mark
 from pegen.tokenizer import Tokenizer
 
 T = TypeVar('T')
+P = TypeVar('P', bound='Parser')
 
 
-def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
+def memoize(method: Callable[[P], T]) -> Callable[[P], T]:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser) -> T:
+    def symbol_wrapper(self: P) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -52,11 +53,11 @@ def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser], Optional[T]]) -> Callable[[Parser], Optional[T]]:
+def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Optional[T]]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def left_rec_symbol_wrapper(self: Parser) -> Optional[T]:
+    def left_rec_symbol_wrapper(self: P) -> Optional[T]:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
@@ -127,10 +128,10 @@ def memoize_left_rec(method: Callable[[Parser], Optional[T]]) -> Callable[[Parse
     return left_rec_symbol_wrapper
 
 
-def memoize_expect(method: Callable[[Parser, str], T]) -> Callable[[Parser, str], T]:
+def memoize_expect(method: Callable[[P, str], T]) -> Callable[[P, str], T]:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: Parser, type: str) -> T:
+    def expect_wrapper(self: P, type: str) -> T:
         mark = self.mark()
         key = mark, type
         # Fast path: cache hit.

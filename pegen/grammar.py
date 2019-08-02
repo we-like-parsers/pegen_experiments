@@ -679,7 +679,7 @@ class Group:
 
 
 Plain = Union[Leaf, Group]
-Item = Union[Plain, Opt, Repeat]
+Item = Union[Plain, Opt, Repeat, Lookahead]
 
 
 class GrammarParser(Parser):
@@ -804,13 +804,14 @@ class GrammarParser(Parser):
         return NamedItem(None, item)
 
     @memoize
-    def lookahead(self) -> Optional[NamedItem]:
+    def lookahead(self) -> Optional[Lookahead]:
         """
         lookahead: ('&' | '!') atom
         """
         mark = self.mark()
         if (lookahead := (self.expect('&') or self.expect('!'))) and (atom := self.atom()):
             assert lookahead
+            assert atom
             if lookahead.string == '&':
                 return PositiveLookahead(atom)
             else:
