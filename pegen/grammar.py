@@ -7,7 +7,7 @@ import time
 import token
 import tokenize
 import traceback
-from typing import AbstractSet, Any, Callable, Dict, Generic, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
+from typing import AbstractSet, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
 from pegen.tokenizer import exact_token_types
@@ -682,7 +682,7 @@ Plain = Union[Leaf, Group]
 Item = Union[Plain, Opt, Repeat]
 
 
-class GrammarParser(Parser[Any]):
+class GrammarParser(Parser):
     """Hand-written parser for Grammar files."""
 
     @memoize

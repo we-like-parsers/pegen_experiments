@@ -5,7 +5,7 @@ import sys
 import time
 import token
 import tokenize
-from typing import Callable, Dict, Generic, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 from pegen.tokenizer import CURLY_STUFF
 from pegen.tokenizer import exact_token_types
@@ -14,28 +14,24 @@ from pegen.tokenizer import Mark
 from pegen.tokenizer import Tokenizer
 
 T = TypeVar('T')
-S = TypeVar('S')
 
 
-def memoize(method: Callable[[Parser[T]], Optional[S]]) -> Callable[[Parser[T]], Optional[S]]:
+def memoize(method: Callable[[Parser], T]) -> Callable[[Parser], T]:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def symbol_wrapper(self: Parser[T]) -> Optional[S]:
+    def symbol_wrapper(self: Parser) -> T:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
-        if key in self._symbol_cache and not self._verbose:
-            tree, endmark = self._symbol_cache[key]
-            if tree:
-                self.reset(endmark)
-            else:
-                assert mark == endmark
+        if key in self._cache and not self._verbose:
+            tree, endmark = self._cache[key]
+            self.reset(endmark)
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
         fill = '  ' * self._level
-        if key not in self._symbol_cache:
+        if key not in self._cache:
             if verbose:
                 print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
             self._level += 1
@@ -43,43 +39,35 @@ def memoize(method: Callable[[Parser[T]], Optional[S]]) -> Callable[[Parser[T]],
             self._level -= 1
             if verbose:
                 print(f"{fill}... {method_name} -> {tree!s:.100}")
-            if tree:
-                endmark = self.mark()
-            else:
-                endmark = mark
-                self.reset(endmark)
-            self._symbol_cache[key] = tree, endmark
+            endmark = self.mark()
+            self._cache[key] = tree, endmark
         else:
-            tree, endmark = self._symbol_cache[key]
+            tree, endmark = self._cache[key]
             if verbose:
                 print(f"{fill}{method_name} -> {tree!s:.100}")
-            if tree:
-                self.reset(endmark)
+            self.reset(endmark)
         return tree
 
     symbol_wrapper.__wrapped__ = method  # type: ignore
     return symbol_wrapper
 
 
-def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Parser[T]], Optional[T]]:
+def memoize_left_rec(method: Callable[[Parser], Optional[T]]) -> Callable[[Parser], Optional[T]]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def left_rec_symbol_wrapper(self: Parser[T]) -> Optional[T]:
+    def left_rec_symbol_wrapper(self: Parser) -> Optional[T]:
         mark = self.mark()
         key = mark, method_name
         # Fast path: cache hit, and not verbose.
-        if key in self._symbol_cache and not self._verbose:
-            tree, endmark = self._symbol_cache[key]
-            if tree:
-                self.reset(endmark)
-            else:
-                assert mark == endmark
+        if key in self._cache and not self._verbose:
+            tree, endmark = self._cache[key]
+            self.reset(endmark)
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
         fill = '  ' * self._level
-        if key not in self._symbol_cache:
+        if key not in self._cache:
             if verbose:
                 print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
             self._level += 1
@@ -92,7 +80,7 @@ def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Pa
             # variable.)
 
             # Prime the cache with a failure.
-            self._symbol_cache[key] = None, mark
+            self._cache[key] = None, mark
             lastresult, lastmark = None, mark
             depth = 0
             if verbose:
@@ -113,7 +101,7 @@ def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Pa
                     if verbose:
                         print(f"{fill}Bailing with {lastresult!s:.100} to {lastmark}")
                     break
-                self._symbol_cache[key] = lastresult, lastmark = result, endmark
+                self._cache[key] = lastresult, lastmark = result, endmark
 
             self.reset(lastmark)
             tree = lastresult
@@ -126,9 +114,9 @@ def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Pa
             else:
                 endmark = mark
                 self.reset(endmark)
-            self._symbol_cache[key] = tree, endmark
+            self._cache[key] = tree, endmark
         else:
-            tree, endmark = self._symbol_cache[key]
+            tree, endmark = self._cache[key]
             if verbose:
                 print(f"{fill}{method_name} -> {tree!s:.100}")
             if tree:
@@ -139,32 +127,24 @@ def memoize_left_rec(method: Callable[[Parser[T]], Optional[T]]) -> Callable[[Pa
     return left_rec_symbol_wrapper
 
 
-def memoize_expect(method: Callable[[Parser[T], str], Optional[S]]) -> Callable[[Parser[T], str], Optional[S]]:
+def memoize_expect(method: Callable[[Parser, str], T]) -> Callable[[Parser, str], T]:
     """Memoize the expect() method."""
 
-    def expect_wrapper(self: Parser[T], type: str) -> Optional[S]:
+    def expect_wrapper(self: Parser, type: str) -> T:
         mark = self.mark()
         key = mark, type
         # Fast path: cache hit.
-        if key in self._token_cache:
-            res, endmark = self._token_cache[key]
-            if res:
-                self.reset(endmark)
-                # Uncomment these when parsing Python, to save
-                # up to 80% of memory (though little time!).
-                # self._token_cache.clear()
-                # self._symbol_cache.clear()
+        if key in self._cache:
+            res, endmark = self._cache[key]
+            self.reset(endmark)
             return res
         # Slow path.
-        if key not in self._token_cache:
+        if key not in self._cache:
             res = method(self, type)
-            if res:
-                endmark = self.mark()
-            else:
-                endmark = mark
-            self._token_cache[key] = res, endmark
+            endmark = self.mark()
+            self._cache[key] = res, endmark
         else:
-            res, endmark = self._token_cache[key]
+            res, endmark = self._cache[key]
         self.reset(endmark)
         return res
 
@@ -172,15 +152,14 @@ def memoize_expect(method: Callable[[Parser[T], str], Optional[S]]) -> Callable[
     return expect_wrapper
 
 
-class Parser(Generic[T]):
+class Parser:
     """Parsing base class."""
 
     def __init__(self, tokenizer: Tokenizer, *, verbose=False):
         self._tokenizer = tokenizer
         self._verbose = verbose
         self._level = 0
-        self._symbol_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
-        self._token_cache: Dict[Tuple[Mark, str], Tuple[Optional[T], Mark]] = {}
+        self._cache: Dict[Tuple[Mark, str], Tuple[Any, Mark]] = {}
         # Pass through common tokenizer methods.
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
@@ -239,13 +218,13 @@ class Parser(Generic[T]):
             return self._tokenizer.getnext()
         return None
 
-    def positive_lookahead(self, func: Callable[..., Optional[T]], *args) -> Optional[T]:
+    def positive_lookahead(self, func: Callable[..., T], *args) -> T:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
         return ok
 
-    def negative_lookahead(self, func: Callable[..., Optional[T]], *args) -> bool:
+    def negative_lookahead(self, func: Callable[..., Any], *args) -> bool:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
@@ -322,8 +301,7 @@ def simple_parser_main(parser_class):
             print()
         print("Caches sizes:")
         print(f"  token array : {len(tokenizer._tokens):10}")
-        print(f"  symbol cache: {len(parser._symbol_cache):10}")
-        print(f"  token cache : {len(parser._token_cache):10}")
+        print(f"        cache : {len(parser._cache):10}")
         print_memstats()
 
 

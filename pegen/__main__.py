@@ -134,8 +134,7 @@ def main() -> None:
             print()
         print("Caches sizes:")
         print(f"  token array : {len(tokenizer._tokens):10}")
-        print(f"  symbol cache: {len(parser._symbol_cache):10}")
-        print(f"  token cache : {len(parser._token_cache):10}")
+        print(f"        cache : {len(parser._cache):10}")
         if not print_memstats():
             print("(Can't find psutil; install it for memory stats.)")
 
