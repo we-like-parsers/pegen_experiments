@@ -4,21 +4,19 @@ import textwrap
 import token
 import tokenize
 
+from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
+
 import pytest
 
-import pegen
-
-TokenInfo = tokenize.TokenInfo
-NAME = token.NAME
-NEWLINE = token.NEWLINE
-NUMBER = token.NUMBER
-OP = token.OP
+from pegen.grammar import GrammarParser
+from pegen.parser_generator import ParserGenerator
+from pegen.tokenizer import grammar_tokenizer, Tokenizer
 
 
 def generate_parser(rules):
     # Generate a parser.
     out = io.StringIO()
-    genr = pegen.ParserGenerator(rules, out)
+    genr = ParserGenerator(rules, out)
     genr.generate_python_module("<string>")
 
     # Load the generated parser class.
@@ -30,7 +28,7 @@ def generate_parser(rules):
 def run_parser(file, parser_class, *, verbose=False):
     # Run a parser on a file (stream).
     # Note that this always recognizes {...} as CURLY_STUFF.
-    tokenizer = pegen.Tokenizer(pegen.grammar_tokenizer(tokenize.generate_tokens(file.readline)))
+    tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
     parser = parser_class(tokenizer, verbose=verbose)
     result = parser.start()
     if result is None:
@@ -48,7 +46,7 @@ def parse_string(source, parser_class, *, dedent=True, verbose=False):
 
 def make_parser(source):
     # Combine parse_string() and generate_parser().
-    rules = parse_string(source, pegen.GrammarParser)
+    rules = parse_string(source, GrammarParser)
     return generate_parser(rules)
 
 
@@ -58,7 +56,7 @@ def test_parse_grammar():
     sum: t1=term '+' t2=term { action } | term
     term: NUMBER
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules['start']) == "start: sum NEWLINE"
     assert str(rules['sum']) == "sum: t1=term '+' t2=term { action } | term"
@@ -70,7 +68,7 @@ def test_typed_rules():
     sum[int]: t1=term '+' t2=term { action } | term
     term[int]: NUMBER
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules['start']) == "start[int]: sum NEWLINE"
     assert str(rules['sum']) == "sum[int]: t1=term '+' t2=term { action } | term"
@@ -212,7 +210,7 @@ def test_left_recursive():
     bar: NAME*
     baz: NAME?
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     parser_class = generate_parser(rules)
     assert not rules['start'].left_recursive
     assert rules['expr'].left_recursive
@@ -259,9 +257,9 @@ def test_nullable():
     start: sign NUMBER
     sign: ['-' | '+']
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = pegen.ParserGenerator(rules, out)
+    genr = ParserGenerator(rules, out)
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
 
@@ -271,9 +269,9 @@ def test_advanced_left_recursive():
     start: NUMBER | sign start
     sign: ['-']
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = pegen.ParserGenerator(rules, out)
+    genr = ParserGenerator(rules, out)
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
     assert rules['start'].left_recursive
@@ -286,9 +284,9 @@ def test_mutually_left_recursive():
     foo: bar 'A' | 'B'
     bar: foo 'C' | 'D'
     """
-    rules = parse_string(grammar, pegen.GrammarParser)
+    rules = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = pegen.ParserGenerator(rules, out)
+    genr = ParserGenerator(rules, out)
     assert not rules['start'].left_recursive
     assert rules['foo'].left_recursive
     assert rules['bar'].left_recursive
