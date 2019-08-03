@@ -17,7 +17,7 @@ class GrammarVisitor:
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node, *args, **kwargs)
 
-    def visit_TokenInfo():
+    def visit_TokenInfo(self):
         pass
 
     def generic_visit(self, node, *args, **kwargs):
@@ -31,6 +31,7 @@ class GrammarVisitor:
 
 
 class Rules:
+
     def __init__(self, rules):
         self.rules = rules
 
@@ -45,6 +46,7 @@ class Rules:
 
 
 class Rule:
+
     def __init__(self, name: str, type: Optional[str], rhs: Rhs):
         self.name = name
         self.type = type
@@ -96,6 +98,7 @@ class Rule:
 
 
 class Leaf:
+
     def __init__(self, value: str):
         self.value = value
 
@@ -153,6 +156,7 @@ class StringLeaf(Leaf):
 
 
 class Rhs:
+
     def __init__(self, alts: List[Alt]):
         self.alts = alts
         self.memo: Optional[Tuple[Optional[str], str]] = None
@@ -184,6 +188,7 @@ class Rhs:
 
 
 class Alt:
+
     def __init__(self, items: List[NamedItem], *, icut: int = -1, action: Optional[str] = None):
         self.items = items
         self.icut = icut
@@ -226,17 +231,8 @@ class Alt:
             item.collect_todo(gen)
 
 
-    def collect_vars(self, gen: ParserGenerator) -> Dict[str, Optional[str]]:
-        names = []
-        types = {}
-        for item in self.items:
-            name, type = item.add_var(gen, names)
-            if name:
-                types[name] = type
-        return types
-
-
 class NamedItem:
+
     def __init__(self, name: Optional[str], item: Item):
         self.name = name
         self.item = item
@@ -266,6 +262,7 @@ class NamedItem:
 
 
 class Lookahead:
+
     def __init__(self, node: Plain, sign: str):
         self.node = node
         self.sign = sign
@@ -284,6 +281,7 @@ class Lookahead:
 
 
 class PositiveLookahead(Lookahead):
+
     def __init__(self, node: Plain):
         super().__init__(node, '&')
 
@@ -292,6 +290,7 @@ class PositiveLookahead(Lookahead):
 
 
 class NegativeLookahead(Lookahead):
+
     def __init__(self, node: Plain):
         super().__init__(node, '!')
 
@@ -300,6 +299,7 @@ class NegativeLookahead(Lookahead):
 
 
 class Opt:
+
     def __init__(self, node: Item):
         self.node = node
 
@@ -338,6 +338,7 @@ class Repeat:
 
 
 class Repeat0(Repeat):
+
     def __str__(self):
         return f"({self.node})*"
 
@@ -349,6 +350,7 @@ class Repeat0(Repeat):
 
 
 class Repeat1(Repeat):
+
     def __str__(self):
         return f"({self.node})+"
 
@@ -360,6 +362,7 @@ class Repeat1(Repeat):
 
 
 class Group:
+
     def __init__(self, rhs: Rhs):
         self.rhs = rhs
 
@@ -387,7 +390,7 @@ class GrammarParser(Parser):
     """Hand-written parser for Grammar files."""
 
     @memoize
-    def start(self) -> Optional[Dict[str, Rule]]:
+    def start(self) -> Optional[Rules]:
         """
         start: rule+ ENDMARKER
         """

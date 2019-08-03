@@ -16,8 +16,9 @@ import traceback
 
 from typing import Final
 
-from pegen.python_generator import ParserGenerator as PythonParserGenerator
-from pegen.c_generator import ParserGenerator as CParserGenerator
+from pegen.parser_generator import ParserGenerator
+from pegen.python_generator import PythonParserGenerator
+from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
 from pegen.grammar import GrammarParser
@@ -96,22 +97,25 @@ def main() -> None:
         else:
             output = "parse.py"
     with open(output, 'w') as file:
-        gen_cls = CParserGenerator if args.cpython else PythonParserGenerator
-        gen = gen_cls(rules, file)
+        gen: ParserGenerator
+        if args.cpython:
+            gen = CParserGenerator(rules.rules, file)
+        else:
+            gen = PythonParserGenerator(rules.rules, file)
         gen.generate(args.filename)
 
     if args.verbose:
         print("First Graph:")
-        for src, dsts in genr.first_graph.items():
+        for src, dsts in gen.first_graph.items():
             print(f"  {src} -> {', '.join(dsts)}")
         print("First SCCS:")
-        for scc in genr.first_sccs:
+        for scc in gen.first_sccs:
             print(" ", scc, end="")
             if len(scc) > 1:
                 print("  # Indirectly left-recursive")
             else:
                 name = next(iter(scc))
-                if name in genr.first_graph[name]:
+                if name in gen.first_graph[name]:
                     print("  # Left-recursive")
                 else:
                     print()

@@ -1,13 +1,18 @@
 from __future__ import annotations  # Requires Python 3.7 or later
 
 import contextlib
+from abc import abstractmethod
 from typing import *
 
 from pegen import sccutils
 from pegen.grammar import Rule, Rhs, Alt, NamedItem, Plain
+from pegen.grammar import GrammarVisitor
 
 
 class ParserGenerator:
+
+    callmakervisitor: GrammarVisitor
+
     def __init__(self, rules: Dict[str, Rule], file: Optional[IO[Text]]):
         self.rules = rules
         self.file = file
@@ -16,6 +21,10 @@ class ParserGenerator:
         self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
         self.todo = self.rules.copy()  # Rules to generate
         self.counter = 0  # For name_rule()/name_loop()
+
+    @abstractmethod
+    def generate(self, filename: str) -> None:
+        raise NotImplementedError
 
     @contextlib.contextmanager
     def indent(self) -> Iterator[None]:

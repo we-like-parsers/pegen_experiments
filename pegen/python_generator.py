@@ -1,8 +1,8 @@
-from typing import Optional, IO, Text
+from typing import Dict, Optional, IO, Text
 
 from pegen.grammar import GrammarVisitor
 from pegen import grammar
-from pegen.parser_generator import dedupe, ParserGenerator as BaseParserGenerator
+from pegen.parser_generator import dedupe, ParserGenerator
 
 MODULE_PREFIX = """\
 #!/usr/bin/env python3.8
@@ -24,7 +24,8 @@ if __name__ == '__main__':
 """
 
 
-class CallMakerVisitor(GrammarVisitor):
+class PythonCallMakerVisitor(GrammarVisitor):
+
     def __init__(self, parser_generator):
         self.gen = parser_generator
         self.cache = {}
@@ -94,10 +95,11 @@ class CallMakerVisitor(GrammarVisitor):
         return self.visit(node.rhs)
 
 
-class ParserGenerator(BaseParserGenerator, GrammarVisitor):
-    def __init__(self, rules: grammar.Rules, file: Optional[IO[Text]]):
-        super().__init__(rules.rules, file)
-        self.callmakervisitor = CallMakerVisitor(self)
+class PythonParserGenerator(ParserGenerator, GrammarVisitor):
+
+    def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
+        super().__init__(rules, file)
+        self.callmakervisitor = PythonCallMakerVisitor(self)
 
     def generate(self, filename: str) -> None:
         self.print(MODULE_PREFIX.format(filename=filename))

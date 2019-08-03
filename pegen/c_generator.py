@@ -4,7 +4,7 @@ from typing import Optional, IO, Text, List, Dict, Tuple
 
 from pegen.grammar import GrammarVisitor
 from pegen import grammar
-from pegen.parser_generator import dedupe, ParserGenerator as BaseParserGenerator
+from pegen.parser_generator import dedupe, ParserGenerator
 from pegen.tokenizer import exact_token_types
 
 EXTENSION_PREFIX = """\
@@ -51,7 +51,8 @@ PyInit_parse(void)
 """
 
 
-class CallMakerVisitor(GrammarVisitor):
+class CCallMakerVisitor(GrammarVisitor):
+
     def __init__(self, parser_generator):
         self.gen = parser_generator
         self.cache = {}
@@ -128,10 +129,11 @@ class CallMakerVisitor(GrammarVisitor):
         return self.visit(node.rhs)
 
 
-class ParserGenerator(BaseParserGenerator, GrammarVisitor):
-    def __init__(self, rules: grammar.Rules, file: Optional[IO[Text]]):
-        super().__init__(rules.rules, file)
-        self.callmakervisitor = CallMakerVisitor(self)
+class CParserGenerator(ParserGenerator, GrammarVisitor):
+
+    def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
+        super().__init__(rules, file)
+        self.callmakervisitor = CCallMakerVisitor(self)
 
     def generate(self, filename: str) -> None:
         self.collect_todo()
@@ -268,7 +270,7 @@ class ParserGenerator(BaseParserGenerator, GrammarVisitor):
 
     def visit_Alt(self, node, is_loop: bool, rulename: Optional[str]):
         self.print(f"// {node}")
-        names = []
+        names: List[str] = []
         if is_loop:
             self.print("while (")
         else:
@@ -307,15 +309,17 @@ class ParserGenerator(BaseParserGenerator, GrammarVisitor):
         self.print("}")
         self.print("p->mark = mark;")
 
-    def collect_vars(self, node) -> Dict[str, str]:
-        names = []
+    def collect_vars(self, node) -> Dict[str, Optional[str]]:
+        names: List[str] = []
         types = {}
         for item in node.items:
             name, type = self.add_var(item, names)
             types[name] = type
         return types
 
-    def add_var(self, node, names: List[str]) -> Tuple[str, str]:
+    def add_var(self, node, names: List[str]) -> Tuple[str, Optional[str]]:
+        name: str
+        call: str
         name, call = self.callmakervisitor.visit(node.item)
         type = None
         if name != 'cut':

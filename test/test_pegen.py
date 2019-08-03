@@ -7,14 +7,14 @@ from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 import pytest
 
 from pegen.grammar import GrammarParser, GrammarVisitor
-from pegen.python_generator import ParserGenerator
+from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import grammar_tokenizer, Tokenizer
 
 
 def generate_parser(rules):
     # Generate a parser.
     out = io.StringIO()
-    genr = ParserGenerator(rules, out)
+    genr = PythonParserGenerator(rules, out)
     genr.generate("<string>")
 
     # Load the generated parser class.
@@ -44,7 +44,7 @@ def parse_string(source, parser_class, *, dedent=True, verbose=False):
 
 def make_parser(source):
     # Combine parse_string() and generate_parser().
-    rules = parse_string(source, GrammarParser)
+    rules = parse_string(source, GrammarParser).rules
     return generate_parser(rules)
 
 
@@ -208,9 +208,8 @@ def test_left_recursive():
     bar: NAME*
     baz: NAME?
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     parser_class = generate_parser(rules)
-    rules = rules.rules
     assert not rules['start'].left_recursive
     assert rules['expr'].left_recursive
     assert not rules['term'].left_recursive
@@ -256,10 +255,9 @@ def test_nullable():
     start: sign NUMBER
     sign: ['-' | '+']
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     out = io.StringIO()
-    genr = ParserGenerator(rules, out)
-    rules = rules.rules
+    genr = PythonParserGenerator(rules, out)
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
 
@@ -269,10 +267,9 @@ def test_advanced_left_recursive():
     start: NUMBER | sign start
     sign: ['-']
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     out = io.StringIO()
-    genr = ParserGenerator(rules, out)
-    rules = rules.rules
+    genr = PythonParserGenerator(rules, out)
     assert rules['start'].nullable is False  # Not None!
     assert rules['sign'].nullable
     assert rules['start'].left_recursive
@@ -285,10 +282,9 @@ def test_mutually_left_recursive():
     foo: bar 'A' | 'B'
     bar: foo 'C' | 'D'
     """
-    rules = parse_string(grammar, GrammarParser)
+    rules = parse_string(grammar, GrammarParser).rules
     out = io.StringIO()
-    genr = ParserGenerator(rules, out)
-    rules = rules.rules
+    genr = PythonParserGenerator(rules, out)
     assert not rules['start'].left_recursive
     assert rules['foo'].left_recursive
     assert rules['bar'].left_recursive
