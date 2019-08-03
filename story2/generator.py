@@ -12,7 +12,11 @@ from story2.node import Node
 from story2.parser import Parser
 """
 
-def generate(rules):
+import sys
+
+def generate(rules, stream=None):
+    if stream:
+        sys.stdout = stream
     print(HEADER)
     print(f"class ToyParser(Parser):")
     for rule in rules:
