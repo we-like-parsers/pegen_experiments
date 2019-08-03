@@ -5,7 +5,7 @@ from tokenize import generate_tokens
 
 from story2.grammar import GrammarParser
 from story2.tokenizer import Tokenizer
-from story2.generator2 import generate
+from story2.generator3 import generate
 
 def main():
     file = "story2/toy.gram"
