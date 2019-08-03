@@ -14,37 +14,42 @@ from story2.parser import Parser
 
 import sys
 
+p = print  # Shorthand
+
 
 def generate(rules, stream=None):
     if stream:
         sys.stdout = stream
-    print(HEADER)
+    p(HEADER)
     generate_parser_class(rules)
 
 
 def generate_parser_class(rules):
-    print(f"class ToyParser(Parser):")
+    p(f"class ToyParser(Parser):")
     for rule in rules:
-        print()
-        print(f"    @memoize")
-        print(f"    def {rule.name}(self):")
-        print(f"        pos = self.mark()")
+        p()
+        p(f"    @memoize")
+        p(f"    def {rule.name}(self):")
+        p(f"        pos = self.mark()")
         for alt in rule.alts:
             items = []
-            print(f"        if (True")
+            p(f"        if (True")
             for item in alt:
                 if item[0] in ('"', "'"):
-                    print(f"            and self.expect({item})")
+                    p(f"            and self.expect({item})")
                 else:
                     var = item.lower()
                     if var in items:
                         var += str(len(items))
                     items.append(var)
                     if item.isupper():
-                        print(f"            and ({var} := self.expect({item}))")
+                        p("            " +
+                          f"and ({var} := self.expect({item}))")
                     else:
-                        print(f"            and ({var} := self.{item}())")
-            print(f"        ):")
-            print(f"            return Node({rule.name!r}, [{', '.join(items)}])")
-            print(f"        self.reset(pos)")
-        print(f"        return None")
+                        p(f"            " +
+                          f"and ({var} := self.{item}())")
+            p(f"        ):")
+            p(f"            " +
+              f"return Node({rule.name!r}, [{', '.join(items)}])")
+            p(f"        self.reset(pos)")
+        p(f"        return None")
