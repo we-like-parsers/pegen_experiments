@@ -21,7 +21,7 @@ class Rule:
 
 class GrammarParser(Parser):
 
-    def start(self):
+    def grammar(self):
         pos = self.mark()
         if rule := self.rule():
             rules = [rule]
@@ -39,7 +39,8 @@ class GrammarParser(Parser):
                 if alt := self.alternative():
                     alts = [alt]
                     apos = self.mark()
-                    while self.expect("|") and (alt := self.alternative()):
+                    while (self.expect("|")
+                           and (alt := self.alternative())):
                         alts.append(alt)
                         apos = self.mark()
                     self.reset(apos)

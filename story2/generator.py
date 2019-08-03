@@ -14,10 +14,15 @@ from story2.parser import Parser
 
 import sys
 
+
 def generate(rules, stream=None):
     if stream:
         sys.stdout = stream
     print(HEADER)
+    generate_parser_class(rules)
+
+
+def generate_parser_class(rules):
     print(f"class ToyParser(Parser):")
     for rule in rules:
         print()

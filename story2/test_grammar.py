@@ -14,7 +14,7 @@ def test_grammar():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.start()
+    rules = p.grammar()
     assert rules == [Rule('stmt', [['asmt'], ['expr']]), Rule('asmt', [['NAME', "'='", 'expr']]), Rule('expr', [['NAME']])]
 
 def test_failure():
@@ -25,5 +25,5 @@ def test_failure():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.start()
+    rules = p.grammar()
     assert rules is None
