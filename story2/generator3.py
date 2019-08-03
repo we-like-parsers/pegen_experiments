@@ -41,21 +41,21 @@ class Generator:
         with self.indent():
             self.put(f"pos = self.mark()")
             for alt in rule.alts:
-                self.gen_alt(alt)
+                self.gen_alt(alt, rule)
             self.put(f"return None")
 
-    def gen_alt(self, alt):
+    def gen_alt(self, alt, rule):
         items = []
         self.put(f"if (True")
         with self.indent():
             for item in alt:
-                self.gen_item(item)
+                self.gen_item(item, items)
         self.put(f"):")
         with self.indent():
             self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
 
-    def gen_item(self, item):
+    def gen_item(self, item, items):
         if item[0] in ('"', "'"):
             self.put(f"and self.expect({item})")
         else:
