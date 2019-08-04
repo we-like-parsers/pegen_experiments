@@ -1,6 +1,6 @@
 start: statements ENDMARKER
-statements: statement NEWLINE | statement NEWLINE statements
-statement: assignment | expr | if_statement
+statements: statement NEWLINE statements | statement NEWLINE
+statement:  if_statement | assignment | expr
 expr: term '+' expr | term '-' term | term
 term: atom '*' term | atom '/' atom | atom
 atom: NAME | NUMBER | '(' expr ')'

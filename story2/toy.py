@@ -25,21 +25,26 @@ class ToyParser(Parser):
         if (True
             and (statement := self.statement())
             and (newline := self.expect(NEWLINE))
+            and (statements := self.statements())
         ):
-            return Node('statements', [statement, newline])
+            return Node('statements', [statement, newline, statements])
         self.reset(pos)
         if (True
             and (statement := self.statement())
             and (newline := self.expect(NEWLINE))
-            and (statements := self.statements())
         ):
-            return Node('statements', [statement, newline, statements])
+            return Node('statements', [statement, newline])
         self.reset(pos)
         return None
 
     @memoize
     def statement(self):
         pos = self.mark()
+        if (True
+            and (if_statement := self.if_statement())
+        ):
+            return Node('statement', [if_statement])
+        self.reset(pos)
         if (True
             and (assignment := self.assignment())
         ):
@@ -49,11 +54,6 @@ class ToyParser(Parser):
             and (expr := self.expr())
         ):
             return Node('statement', [expr])
-        self.reset(pos)
-        if (True
-            and (if_statement := self.if_statement())
-        ):
-            return Node('statement', [if_statement])
         self.reset(pos)
         return None
 
