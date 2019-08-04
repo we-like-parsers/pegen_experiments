@@ -14,17 +14,14 @@ def memoize(func):
     The function is expected to move the input position iff it returns
     a not-None value.
 
-    The memo is structured as a dict of dict, the outer dict indexed
-    by input position, the inner by function and arguments.
+    The memo is keyed by input position and function arguments.
     """
+
+    memo = {}
 
     def memoize_wrapper(self, *args):
         pos = self.mark()
-        memo = self.memos.get(pos)
-        if memo is None:
-            memo = self.memos[pos] = {}
-        key = (func, args)
-        # Can't use memo.get(key) since result may be None.
+        key = (pos, args)
         if key in memo:
             res, endpos = memo[key]
             self.reset(endpos)

@@ -4,7 +4,6 @@ class Parser:
 
     def __init__(self, tokenizer):
         self.tokenizer = tokenizer
-        self.memos = {}
 
     def mark(self):
         return self.tokenizer.mark()
