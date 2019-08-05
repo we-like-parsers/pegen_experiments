@@ -16,13 +16,13 @@ import traceback
 
 from typing import Final
 
+from pegen.build import compile_c_extension
 from pegen.parser_generator import ParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
 from pegen.grammar import GrammarParser
-
 
 def print_memstats() -> bool:
     MiB: Final = 2 ** 20
@@ -58,6 +58,7 @@ argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print t
 argparser.add_argument('-v', '--verbose', action='count', default=0,
                        help="Print timing stats; repeat for more debug output")
 argparser.add_argument('-c', '--cpython', action='store_true', help="Generate C code for inclusion into CPython")
+argparser.add_argument('--compile-extension', action='store_true', help="Compile generated C code into an extension module")
 argparser.add_argument('-o', '--output', metavar='OUT',
                        help="Where to write the generated parser (default parse.py)")
 argparser.add_argument('filename', help="Grammar description")
@@ -103,6 +104,9 @@ def main() -> None:
         else:
             gen = PythonParserGenerator(rules.rules, file)
         gen.generate(args.filename)
+
+    if args.cpython and args.compile_extension:
+        compile_c_extension(output, verbose=args.verbose)
 
     if args.verbose:
         print("First Graph:")
