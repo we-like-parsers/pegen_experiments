@@ -8,28 +8,21 @@ Search the web for PEG Parsers for reference.
 from __future__ import annotations  # Requires Python 3.7 or later
 
 import argparse
-import pathlib
-import shutil
 import sys
 import time
 import token
 import tokenize
 import traceback
 
-from distutils.core import Distribution, Extension
-from distutils.command.clean import clean
-from distutils.command.build_ext import build_ext
-
 from typing import Final
 
+from pegen.build import compile_c_extension
 from pegen.parser_generator import ParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
 from pegen.grammar import GrammarParser
-
-MOD_DIR = pathlib.Path(__file__)
 
 def print_memstats() -> bool:
     MiB: Final = 2 ** 20
@@ -113,24 +106,7 @@ def main() -> None:
         gen.generate(args.filename)
 
     if args.cpython and args.compile_extension:
-        source_file_path = pathlib.Path(output)
-        extension_name = source_file_path.stem
-        extension = [Extension(extension_name,
-                     sources=[str(MOD_DIR.parent / "pegen.c"), output],
-                     include_dirs=[str(MOD_DIR.parent)],
-                     extra_compile_args=[],)]
-        dist = Distribution({'name': extension_name, 'ext_modules': extension})
-        cmd = build_ext(dist)
-        cmd.inplace = True
-        cmd.ensure_finalized()
-        cmd.run()
-        shutil.move(cmd.get_ext_fullpath(extension_name),
-                    source_file_path.parent / cmd.get_ext_filename(extension_name))
-
-        cmd = clean(dist)
-        cmd.finalize_options()
-        cmd.run()
-
+        compile_c_extension(output)
 
     if args.verbose:
         print("First Graph:")

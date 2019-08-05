@@ -1,3 +1,5 @@
+import ast
+import importlib.util
 import io
 import textwrap
 import tokenize
@@ -8,6 +10,8 @@ import pytest
 
 from pegen.grammar import GrammarParser, GrammarVisitor
 from pegen.python_generator import PythonParserGenerator
+from pegen.c_generator import CParserGenerator
+from pegen.build import compile_c_extension
 from pegen.tokenizer import grammar_tokenizer, Tokenizer
 
 
@@ -46,6 +50,76 @@ def make_parser(source):
     # Combine parse_string() and generate_parser().
     rules = parse_string(source, GrammarParser).rules
     return generate_parser(rules)
+
+
+def import_file(full_name, path):
+    """Import a python module from a path"""
+
+    spec = importlib.util.spec_from_file_location(full_name, path)
+    mod = importlib.util.module_from_spec(spec)
+
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def generate_parser_c_extension(rules, path):
+    """Generate a parser c extension for the given rules in the given path"""
+    source = path / "parse.c"
+    with open(source, "w") as file:
+        genr = CParserGenerator(rules, file)
+        genr.generate("parse.c")
+    extension_path = compile_c_extension(str(source),
+                                         build_dir=str(path / "build"))
+    extension = import_file("parse", extension_path)
+    return extension
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "4+5",
+        "4-5",
+        "4*5",
+        "1+4*5",
+        "1+4/5",
+        "(1+1) + (1+1)",
+        "(1+1) - (1+1)",
+        "(1+1) * (1+1)",
+        "(1+1) / (1+1)",
+    ]
+
+)
+def test_c_parser(expr, tmp_path):
+    grammar = """
+    start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
+    stmt[stmt_ty]: a=expr_stmt { a }
+    expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
+    expr[expr_ty]: ( l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
+                   | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
+                   | t=term { t }
+                   )
+    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
+                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
+                   | f=factor { f }
+                   )
+    factor[expr_ty]: ('(' e=expr ')' { e }
+                     | a=atom { a }
+                     )
+    atom[expr_ty]: ( n=NAME { n }
+                   | n=NUMBER { n }
+                   | s=STRING { s }
+                   )
+    """
+    rules = parse_string(grammar, GrammarParser).rules
+    extension = generate_parser_c_extension(rules, tmp_path)
+
+    parse_file = tmp_path / "cprog.txt"
+    with open(parse_file, "w") as file:
+        file.write(expr)
+
+    the_ast = extension.parse(str(parse_file))
+    expected_ast = ast.parse(expr)
+    assert ast.dump(the_ast) == ast.dump(expected_ast)
 
 
 def test_parse_grammar():
