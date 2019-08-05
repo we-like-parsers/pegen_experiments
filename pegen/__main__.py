@@ -106,7 +106,7 @@ def main() -> None:
         gen.generate(args.filename)
 
     if args.cpython and args.compile_extension:
-        compile_c_extension(output)
+        compile_c_extension(output, verbose=args.verbose)
 
     if args.verbose:
         print("First Graph:")
