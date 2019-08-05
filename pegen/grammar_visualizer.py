@@ -24,9 +24,9 @@ class ASTGrammarPrinter:
             return repr(node)
         return node.__class__.__name__
 
-    def print_grammar_ast(self, rules):
+    def print_grammar_ast(self, rules, printer=print):
         for rule in rules.rules.values():
-            print(self.print_nodes_recursively(rule))
+            printer(self.print_nodes_recursively(rule))
 
     def print_nodes_recursively(self, node, prefix="", istail=True):
 
