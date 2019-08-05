@@ -24,3 +24,10 @@ matrix:
       env:
           - TEST_CMD="mypy pegen"
 
+    - name: "makefile_targets"
+      python: 3.8-dev
+      env:
+          - PYTHON="python"
+      script:
+          - make dump
+          - make test
