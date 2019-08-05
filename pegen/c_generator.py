@@ -35,8 +35,6 @@ parse_string(PyObject *self, PyObject *args)
     return run_parser_from_string(the_string, (void *)start_rule, %(mode)s);
 }
 
-
-
 static PyMethodDef ParseMethods[] = {
     {"parse_file",  parse_file, METH_VARARGS, "Parse a file."},
     {"parse_string",  parse_string, METH_VARARGS, "Parse a string."},

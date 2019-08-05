@@ -13,13 +13,17 @@ clean:
 
 dump: pegen/parse.c
 	cat -n $(TESTFILE)
-	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse('$(TESTFILE)'); print(ast.dump(t))"
+	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)'); print(ast.dump(t))"
+
+# Note: These targets really depend on the generated shared object in pegen/parse.*.so but
+# this has different names in different systems so we are abusing the implicit dependency on
+# parse.c by the use of --compile-extension.
 
 test: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
 
 time: pegen/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse('$(TIMEFILE)')"
+	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)')"
 
 time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"

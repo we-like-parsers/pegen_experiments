@@ -65,7 +65,7 @@ fill_token(Parser *p)
 
     if (p->fill == p->size) {
         int newsize = p->size * 2;
-        p->tokens = realloc(p->tokens, newsize * sizeof(Token));
+        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token));
         if (p->tokens == NULL)
             panic("Realloc tokens failed");
         memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token));
@@ -114,8 +114,7 @@ is_memoized(Parser *p, int type, void *pres)
         }
     }
     // fprintf(stderr, "%d < %d: not memoized\n", p->mark, p->fill);
-    return 0;
-}
+    return 0; }
 
 Token *
 expect_token(Parser *p, int type)
@@ -224,20 +223,20 @@ PyObject *
 run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 {
     int fail = 0;
-    Parser *p = malloc(sizeof(Parser));
+    Parser *p = PyMem_Malloc(sizeof(Parser));
     if (p == NULL)
         panic("Out of memory for Parser");
 
     assert(tok != NULL);
     p->tok = tok;
-    p->tokens = malloc(sizeof(Token));
+    p->tokens = PyMem_Malloc(sizeof(Token));
     memset(p->tokens, '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
 
     p->arena = PyArena_New();
-    if (!p->arena){
+    if (!p->arena) {
         fail = 1;
         goto exit;
     }
@@ -253,16 +252,23 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
 exit:
 
-    free(p->tokens);
-    PyArena_Free(p->arena);
-    free(p);
+    PyMem_Free(p->tokens);
 
-    if (fail)
+    if (fail) {
+        PyArena_Free(p->arena);
+        PyMem_Free(p);
         return NULL;
+    }
 
-    if (mode == 1)
-        return PyAST_mod2obj(res);
+    if (mode == 1){
+        PyObject* result =  PyAST_mod2obj(res);
+        PyArena_Free(p->arena);
+        PyMem_Free(p);
+        return result;
+    }
 
+    PyArena_Free(p->arena);
+    PyMem_Free(p);
     Py_RETURN_NONE;
 }
 
