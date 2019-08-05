@@ -222,7 +222,7 @@ keyword_token(Parser *p, const char *val)
 PyObject *
 run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 {
-    int fail = 0;
+    PyObject* result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
     if (p == NULL)
         panic("Out of memory for Parser");
@@ -230,6 +230,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     assert(tok != NULL);
     p->tok = tok;
     p->tokens = PyMem_Malloc(sizeof(Token));
+    if (!p->tokens)
+        panic("Out of memory for tokens");
     memset(p->tokens, '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
@@ -237,7 +239,6 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
     p->arena = PyArena_New();
     if (!p->arena) {
-        fail = 1;
         goto exit;
     }
 
@@ -246,30 +247,24 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         PyErr_Format(PyExc_SyntaxError, "error at mark %d, fill %d, size %d", p->mark, p->fill, p->size);
-        fail = 1;
         goto exit;
+    }
+
+    if (mode == 1) {
+        result =  PyAST_mod2obj(res);
+    } else {
+        result = Py_None;
+        Py_INCREF(result);
     }
 
 exit:
 
     PyMem_Free(p->tokens);
-
-    if (fail) {
+    if (p->arena != NULL) {
         PyArena_Free(p->arena);
-        PyMem_Free(p);
-        return NULL;
     }
-
-    if (mode == 1){
-        PyObject* result =  PyAST_mod2obj(res);
-        PyArena_Free(p->arena);
-        PyMem_Free(p);
-        return result;
-    }
-
-    PyArena_Free(p->arena);
     PyMem_Free(p);
-    Py_RETURN_NONE;
+    return result;
 }
 
 PyObject *
