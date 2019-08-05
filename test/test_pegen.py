@@ -75,22 +75,7 @@ def generate_parser_c_extension(rules, path):
     return extension
 
 
-@pytest.mark.parametrize(
-    "expr",
-    [
-        "4+5",
-        "4-5",
-        "4*5",
-        "1+4*5",
-        "1+4/5",
-        "(1+1) + (1+1)",
-        "(1+1) - (1+1)",
-        "(1+1) * (1+1)",
-        "(1+1) / (1+1)",
-    ]
-
-)
-def test_c_parser(expr, tmp_path):
+def test_c_parser(tmp_path):
     grammar = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
     stmt[stmt_ty]: a=expr_stmt { a }
@@ -114,13 +99,22 @@ def test_c_parser(expr, tmp_path):
     rules = parse_string(grammar, GrammarParser).rules
     extension = generate_parser_c_extension(rules, tmp_path)
 
-    parse_file = tmp_path / "cprog.txt"
-    with open(parse_file, "w") as file:
-        file.write(expr)
+    expressions = [
+        "4+5",
+        "4-5",
+        "4*5",
+        "1+4*5",
+        "1+4/5",
+        "(1+1) + (1+1)",
+        "(1+1) - (1+1)",
+        "(1+1) * (1+1)",
+        "(1+1) / (1+1)",
+    ]
 
-    the_ast = extension.parse(str(parse_file))
-    expected_ast = ast.parse(expr)
-    assert ast.dump(the_ast) == ast.dump(expected_ast)
+    for expr in expressions:
+        the_ast = extension.parse_string(expr)
+        expected_ast = ast.parse(expr)
+        assert ast.dump(the_ast) == ast.dump(expected_ast)
 
 
 def test_parse_grammar():

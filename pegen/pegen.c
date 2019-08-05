@@ -65,7 +65,7 @@ fill_token(Parser *p)
 
     if (p->fill == p->size) {
         int newsize = p->size * 2;
-        p->tokens = realloc(p->tokens, newsize * sizeof(Token));
+        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token));
         if (p->tokens == NULL)
             panic("Realloc tokens failed");
         memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token));
@@ -114,8 +114,7 @@ is_memoized(Parser *p, int type, void *pres)
         }
     }
     // fprintf(stderr, "%d < %d: not memoized\n", p->mark, p->fill);
-    return 0;
-}
+    return 0; }
 
 Token *
 expect_token(Parser *p, int type)
@@ -221,42 +220,81 @@ keyword_token(Parser *p, const char *val)
 }
 
 PyObject *
-run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 {
-    FILE *fp = fopen(filename, "rb");
-    if (fp == NULL)
-        panic("Can't open file");
-
-    Parser *p = malloc(sizeof(Parser));
+    PyObject* result = NULL;
+    Parser *p = PyMem_Malloc(sizeof(Parser));
     if (p == NULL)
         panic("Out of memory for Parser");
 
-    p->tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
-    if (p->tok == NULL)
-        return NULL;
-
-    p->tokens = malloc(sizeof(Token));
+    assert(tok != NULL);
+    p->tok = tok;
+    p->tokens = PyMem_Malloc(sizeof(Token));
+    if (!p->tokens)
+        panic("Out of memory for tokens");
     memset(p->tokens, '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
 
     p->arena = PyArena_New();
-    if (!p->arena)
-        return NULL;
+    if (!p->arena) {
+        goto exit;
+    }
 
     fill_token(p);
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         PyErr_Format(PyExc_SyntaxError, "error at mark %d, fill %d, size %d", p->mark, p->fill, p->size);
-        return NULL;
+        goto exit;
     }
 
-    // TODO: Free stuff
-    if (mode == 1)
-        return PyAST_mod2obj(res);
-    Py_RETURN_NONE;
+    if (mode == 1) {
+        result =  PyAST_mod2obj(res);
+    } else {
+        result = Py_None;
+        Py_INCREF(result);
+    }
+
+exit:
+
+    PyMem_Free(p->tokens);
+    if (p->arena != NULL) {
+        PyArena_Free(p->arena);
+    }
+    PyMem_Free(p);
+    return result;
+}
+
+PyObject *
+run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL)
+        panic("Can't open file");
+
+    struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
+
+    if (tok == NULL)
+        return NULL;
+
+    PyObject* result = run_parser(tok, start_rule_func, mode);
+    PyTokenizer_Free(tok);
+    return result;
+}
+
+PyObject *
+run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int mode)
+{
+    struct tok_state* tok = PyTokenizer_FromString(str, 1);
+
+    if (tok == NULL)
+        return NULL;
+
+    PyObject* result = run_parser(tok, start_rule_func, mode);
+    PyTokenizer_Free(tok);
+    return result;
 }
 
 asdl_seq *
