@@ -3,8 +3,8 @@ import shutil
 
 import distutils.log
 from distutils.core import Distribution, Extension
-from distutils.command.clean import clean
-from distutils.command.build_ext import build_ext
+from distutils.command.clean import clean # type: ignore
+from distutils.command.build_ext import build_ext # type: ignore
 
 MOD_DIR = pathlib.Path(__file__)
 
