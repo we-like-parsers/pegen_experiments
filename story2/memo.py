@@ -24,7 +24,6 @@ def memoize(func):
         if memo is None:
             memo = self.memos[pos] = {}
         key = (func, args)
-        # Can't use memo.get(key) since result may be None.
         if key in memo:
             res, endpos = memo[key]
             self.reset(endpos)
