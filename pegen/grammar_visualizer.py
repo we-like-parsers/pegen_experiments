@@ -1,4 +1,5 @@
 import argparse
+import sys
 import tokenize
 
 from pegen.tokenizer import Tokenizer
@@ -24,7 +25,7 @@ class ASTGrammarPrinter:
         return node.__class__.__name__
 
     def print_grammar_ast(self, rules):
-        for rule in rules.values():
+        for rule in rules.rules.values():
             print(self.print_nodes_recursively(rule))
 
     def print_nodes_recursively(self, node, prefix="", istail=True):
@@ -52,6 +53,10 @@ def main() -> None:
         tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
         parser = GrammarParser(tokenizer)
         rules = parser.start()
+
+    if rules is None:
+        print("ERROR: Failed to parse grammar file", file=sys.stderr)
+        sys.exit(1)
 
     visitor = ASTGrammarPrinter()
     visitor.print_grammar_ast(rules)
