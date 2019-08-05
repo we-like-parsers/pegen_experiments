@@ -1,4 +1,4 @@
-from typing import Dict, Optional, IO, Text
+from typing import Any, Dict, List, Optional, IO, Text
 
 from pegen.grammar import GrammarVisitor
 from pegen import grammar
@@ -26,9 +26,9 @@ if __name__ == '__main__':
 
 class PythonCallMakerVisitor(GrammarVisitor):
 
-    def __init__(self, parser_generator):
+    def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
-        self.cache = {}
+        self.cache: Dict[Any, Any] = {}
 
     def visit_NameLeaf(self, node):
         name = node.value
@@ -153,7 +153,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             self.visit(alt, is_loop=is_loop)
 
     def visit_Alt(self, node, is_loop):
-        names = []
+        names: List[str] = []
         self.print("cut = False")  # TODO: Only if needed.
         if is_loop:
             self.print("while (")

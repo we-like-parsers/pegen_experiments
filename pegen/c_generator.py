@@ -1,6 +1,6 @@
 import ast
 import re
-from typing import Optional, IO, Text, List, Dict, Tuple
+from typing import Any, Optional, IO, Text, List, Dict, Tuple
 
 from pegen.grammar import GrammarVisitor
 from pegen import grammar
@@ -53,9 +53,9 @@ PyInit_parse(void)
 
 class CCallMakerVisitor(GrammarVisitor):
 
-    def __init__(self, parser_generator):
+    def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
-        self.cache = {}
+        self.cache: Dict[Any, Any] = {}
 
     def visit_NameLeaf(self, node):
         name = node.value

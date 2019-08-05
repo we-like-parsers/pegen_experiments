@@ -5,6 +5,7 @@ import sys
 import time
 import token
 import tokenize
+import traceback
 from typing import Any, Callable, cast, Dict, Optional, Tuple, TypeVar
 
 from pegen.tokenizer import CURLY_STUFF
@@ -279,6 +280,6 @@ def simple_parser_main(parser_class):
         print("Caches sizes:")
         print(f"  token array : {len(tokenizer._tokens):10}")
         print(f"        cache : {len(parser._cache):10}")
-        print_memstats()
+        ## print_memstats()
 
 
