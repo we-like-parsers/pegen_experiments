@@ -221,20 +221,15 @@ keyword_token(Parser *p, const char *val)
 }
 
 PyObject *
-run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 {
-    FILE *fp = fopen(filename, "rb");
-    if (fp == NULL)
-        panic("Can't open file");
-
+    int fail = 0;
     Parser *p = malloc(sizeof(Parser));
     if (p == NULL)
         panic("Out of memory for Parser");
 
-    p->tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
-    if (p->tok == NULL)
-        return NULL;
-
+    assert(tok != NULL);
+    p->tok = tok;
     p->tokens = malloc(sizeof(Token));
     memset(p->tokens, '\0', sizeof(Token));
     p->mark = 0;
@@ -242,21 +237,63 @@ run_parser(const char *filename, void *(start_rule_func)(Parser *), int mode)
     p->size = 1;
 
     p->arena = PyArena_New();
-    if (!p->arena)
-        return NULL;
+    if (!p->arena){
+        fail = 1;
+        goto exit;
+    }
 
     fill_token(p);
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         PyErr_Format(PyExc_SyntaxError, "error at mark %d, fill %d, size %d", p->mark, p->fill, p->size);
-        return NULL;
+        fail = 1;
+        goto exit;
     }
 
-    // TODO: Free stuff
+exit:
+
+    free(p->tokens);
+    PyArena_Free(p->arena);
+    free(p);
+
+    if (fail)
+        return NULL;
+
     if (mode == 1)
         return PyAST_mod2obj(res);
+
     Py_RETURN_NONE;
+}
+
+PyObject *
+run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL)
+        panic("Can't open file");
+
+    struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
+
+    if (tok == NULL)
+        return NULL;
+
+    PyObject* result = run_parser(tok, start_rule_func, mode);
+    PyTokenizer_Free(tok);
+    return result;
+}
+
+PyObject *
+run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int mode)
+{
+    struct tok_state* tok = PyTokenizer_FromString(str, 1);
+
+    if (tok == NULL)
+        return NULL;
+
+    PyObject* result = run_parser(tok, start_rule_func, mode);
+    PyTokenizer_Free(tok);
+    return result;
 }
 
 asdl_seq *

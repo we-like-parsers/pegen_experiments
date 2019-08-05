@@ -5,7 +5,7 @@ GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 
-pegen/parse.c: $(GRAMMAR) pegen/*.py
+pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
 
 clean:

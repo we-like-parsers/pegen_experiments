@@ -22,11 +22,24 @@ parse_file(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "s", &filename))
         return NULL;
-    return run_parser(filename, (void *)start_rule, %(mode)s);
+    return run_parser_from_file(filename, (void *)start_rule, %(mode)s);
 }
 
+static PyObject *
+parse_string(PyObject *self, PyObject *args)
+{
+    const char *the_string;
+
+    if (!PyArg_ParseTuple(args, "s", &the_string))
+        return NULL;
+    return run_parser_from_string(the_string, (void *)start_rule, %(mode)s);
+}
+
+
+
 static PyMethodDef ParseMethods[] = {
-    {"parse",  parse_file, METH_VARARGS, "Parse a file."},
+    {"parse_file",  parse_file, METH_VARARGS, "Parse a file."},
+    {"parse_string",  parse_string, METH_VARARGS, "Parse a string."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
