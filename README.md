@@ -1,6 +1,7 @@
 PEG parser generator
 ====================
 [![Build Status](https://travis-ci.com/gvanrossum/pegen.svg?branch=master)](https://travis-ci.com/gvanrossum/pegen)
+[![Coverage Status](https://coveralls.io/repos/github/gvanrossum/pegen/badge.svg?branch=master)](https://coveralls.io/github/gvanrossum/pegen?branch=master)
 
 This is a work in progress.  Right now it can read a grammar (using an
 extension of the notation used by pgen2 for CPython's Grammar) and
