@@ -1,3 +1,76 @@
+Visualizer design
+=================
+
+Basic idea: the parser generates a log of JSON records that we can
+visualize separately (or in real time?).  This design allows for
+different visualizers.  Also, the generation of logging events can be
+enabled/disabled in the meta-compiler, so you can have an optimized
+parser that doesn't need to check for verbose flags (and is more
+readable on top).
+
+Top row: tokenizer state.  A line of tokens (just quoted strings) with
+a box around the one currently at the mark.  If we haven't peeked yet,
+just a bar.  Examples:
+
+
+```
+# Next token is '=':
+                         +---+
+ 'if' 'x' '+' 'y' ':' 'x'|'='|
+                         +---+
+
+# Next token hasn't been read yet:
+                             +
+ 'if' 'x' '+' 'y' ':' 'x' '='|
+                             +
+
+# Next token is '=', beyond that in the tokens buffer are three more:
+                         +---+
+ 'if' 'x' '+' 'y' ':' 'x'|'='| '1' '+' 'y'
+                         +---+
+
+```
+
+Below that: parsing stack. Each parsing method that's been called and
+hasn't returned yet is listed (oldest frame on top).  The first
+character of the method name is aligned with the beginning of the
+corresponding token in the top row.  Parsing methods that did return
+and are still in play are listed below that in square brackets
+(truncated as needed to fit).  Example:
+
+```
+                             +
+ 'if' 'x' '+' 'y' ':' 'x' '='|
+                             +
+
+ statement...
+ if_statement...
+      [expr-----]      statement...
+                       assignment...
+                       [t]     expr...
+                               term...
+                               atom...
+```
+
+(`[t]` stands for `[term]`, it's been truncated to correctly indicate
+the extent.)
+
+At this point various `expect()` calls are made and the array of
+tokens will expand to show the box with `'1'` in it.
+
+Finally, below that, is the memo cache.  This is indented the same as
+the parsing stack, with some kind of indicator of success or failure,
+and a range (for success).  We should try not to repeat what's already
+shown above (`[expr-----]` and `[t]`), and maybe suppress all tokens.
+I'm not actually sure what to do here yet.  Example:
+
+```
+      [expr-----]
+      [t]     [t]
+      [a]     [a]
+```
+
+
 Design for the C code
 =====================
 
