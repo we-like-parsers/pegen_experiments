@@ -45,7 +45,6 @@ class Visualizer:
         w.addstr(" ".join(symbols))
         self.cursor = 0, offsets[pos]
         self.display_stack()
-        ## self.wait()
 
     def display_stack(self):
         w = self.w

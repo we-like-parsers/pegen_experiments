@@ -16,7 +16,11 @@ def main():
         vis = Visualizer()
         tok = Tokenizer(tokengen, vis)
         p = GrammarParser(tok)
-        rules = p.grammar()
+        try:
+            rules = p.grammar()
+            vis.wait()
+        finally:
+            vis.close()
     if not rules:
         sys.exit("Fail")
     print("[")
