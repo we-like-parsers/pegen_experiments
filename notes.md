@@ -1,3 +1,392 @@
+Revised visualizer design
+=========================
+
+Turns out the box around the current token is distracting, because it
+looks like the box "contracts and expands" as the cursor moves right
+and the token lookahead buffer is filled.  So instead I went with a
+simple arrow pointing at the next token -- if there is no next token
+yet, it points to the space where the next token will be.
+
+I'm still looking for a better way to show the state of the parser.
+Apart from the call stack, I also want to indicate the progress
+through each rule as we parse.  Currently when we parse through e.g.
+```
+statement: if_statement | assignment | expr
+if_statement: 'if' expr ':' statement
+expr: term '+' expr | term
+term: atom '*' term | atom
+atom: NAME | NUMBER | '(' expr ')'
+```
+we show the call stack, e.g.
+```
+statement()
+if_statement()
+     expr()
+     term()
+     atom()
+     expect(NAME)
+```
+but we don't show what happened to the `'if'` keyword and we don't
+know if that term() call corresponds to the first alternative in
+expr (i.e. `term '+' expr`) or the second (i.e. just `term`).
+
+Maybe instead of just `expr()` we can show the entire rule for expr
+with a highlight showing where we currently are, e.g.
+```
+expr: term '+' expr | term
+      ^^^^
+```
+
+Using curses we could do this using highlights.  We could show this
+for each line, and move the tokens below. We could also add guides
+to connect the rule to the token, e.g.
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+|    expr: term '+' expr | term
+           ^^^^
+|    term: atom '*' term | atom
+                ^^^
+|    |     expect('*')
+|    |     |
+'if' 'foo' '*' 'bar' ':' 'baz'
+           ^
+```
+(I hope it will be less messy with highlights than ^^^^.)
+
+Basically I am now trying to show the parse tree under development.
+Let's start with the *final* parse tree (I am flipping again to having
+the tokens at the top):
+```
+'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
+
+     atom      atom      target    atom      atom
+     term      term                term      term
+               expr                          expr
+     expr__________                expr__________
+                         assignment______________
+if_statement_____________________________________
+statement________________________________________
+statements________________________________________________
+start_______________________________________________________________
+```
+
+This builds up from the bottom to the top, from left to right.
+Q: Should items be pushed as far up as they can, or as far down?
+The above pushes up; here's pushing down, also with tokens added:
+```
+'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
+
+                                             NAME
+               NAME                NAME      atom
+     NAME      atom                atom      term
+     atom      term      NAME      term  '*' expr
+     term  '+' expr      targe '=' expr__________
+     expr__________      assignment______________
+if_statement_____________________________________
+statement________________________________________  NEWLINE
+statements________________________________________________ ENDMARKER
+start_______________________________________________________________
+```
+
+This static image doesn't show the "false parses" (the attempts to
+parse that fail) but as it builds up those do get included -- until
+they are discarded.
+
+Let's build up a small part.
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+              ^^^^
+```
+
+This means we're in statement(), and it's called into the first (and
+only) item of the first alternative, `if_statement()`.  So we're also
+in `if_statement()`, which has one alternative of four items, and
+we're at the first item, `'if'`.  Now we call into `expect('if')`,
+which is rendered like this:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+              ^^^^
+expect('if')
+```
+
+If we weren't looking at `'if'`, it would return `None`, showing as
+```
+expect('if') -> None
+```
+(just like currently).  But as it's a success, it will show as
+```
+expect('if') -> 'if'
+```
+and then this will sink down to the cache, and the cursor in
+`if_statement` will move:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+```
+
+Then we'll add another call to the stack (`expr`), which is also
+indented so as to align it with the token at which we're starting to
+look for it (i.e., at `'foo'`):
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+```
+
+Then this causes another call to `term`, and that another to `atom`:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+           ^^^^
+     atom: NAME | NUMBER | '(' expr ')'
+           ^^^^
+```
+
+Now we call `expect(NAME)`:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+           ^^^^
+     atom: NAME | NUMBER | '(' expr ')'
+           ^^^^
+     expect(NAME)
+```
+and that succeeds:
+```
+     expect(NAME) -> NAME('foo')
+```
+
+Then the `expect()` call gets dropped from the stack into the cache,
+and then `atom()` also returns.  It gets displayed as a successful
+return first:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+           ^^^^
+     atom() -> NAME('foo')
+```
+
+Then the `term` rule moves to the next item:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                ^^^
+```
+
+Then we call `expect('*')`:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                ^^^
+           expect('*')
+```
+but this fails:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                ^^^
+           expect('*') -> None
+```
+
+So then the `term` rule moves to the second alternative:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                           ^^^^
+```
+
+At this point `atom()` is immediately satisfied from the cache, so we
+get
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                           ^^^^
+     atom() -> NAME('foo')
+```
+
+Then the whole thing repeats, `term` moves on to `'/'`, which fails,
+and then `term` moves on to the third alternative:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term: atom '*' term | atom '/' atom | atom
+                                           ^^^^
+     atom() -> NAME('foo')
+```
+
+This time this is accepted so we get
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+           ^^^^
+     term() -> atom() -> NAME('foo')
+```
+
+Now we finally move on to the second item in `expr`:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+                ^^^
+```
+(the `term` drops to the cache).
+
+The `expect('+')` call succeeds and we move on to the third item:
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+                    ^^^^
+```
+
+This goes through similar girations until we get
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr: term '+' expr | term '-' term | term
+                    ^^^^
+               expr() -> term() -> atom() -> NAME('bar')
+```
+
+Then the outer `expr` succeeds and we get
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr() -> (term() -> atom() -> NAME('foo')) '+' (expr() -> term() -> atom() -> NAME('bar'))
+```
+
+Or perhaps compressed?
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr() -> term() '+' expr()
+```
+
+Or perhaps rendered vertically?
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr() ->
+         term() -> atom() -> NAME('foo')
+         '+'
+         expr() -> term() -> atom() -> NAME('bar')
+```
+
+Or perhaps aligned with the tokens?
+```
+statement: if_statement | assignment | expr
+           ^^^^^^^^^^^^
+if_statement: 'if' expr ':' statement
+                   ^^^^
+     expr() ->
+     |+- term() -> atom() -> NAME('foo')
+     ||    +- '+'
+     ||    |   +- expr() -> term() -> atom() -> NAME('bar')
+     ||    |   |
+'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
+```
+
+Or perhaps at this point show a partial parse tree?
+```
+        statement
+            |
+      if_statement
+            |
+ +----------+------+--------+
+ |          |      |        |
+'if'       expr   ':'   statement
+ :          |      ?        ?
+ :     +----+----+
+ :     |    |    |
+ :    term '+'  expr
+ :     |    :    |
+ :    atom  :   term
+ :     |    :    |
+ :    NAME  :   atom
+ :     :    :    |
+ :     :    :   NAME
+ :     :    :    :
+'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
+```
+
+
+(For reference the fully tokenized input:)
+```
+'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
+```
+
+
 Visualizer design
 =================
 
