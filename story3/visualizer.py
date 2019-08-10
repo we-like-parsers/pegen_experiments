@@ -11,11 +11,13 @@ class Visualizer:
 
     def __init__(self):
         self.offsets = [0]
-        self.cursor = 0, 0
+        self.cursor_y, self.cursor_x = 0, 0
         self.stack = []
         self.cache = []
         self.w = curses.initscr()
+        curses.start_color()
         curses.noecho()
+        self.w.keypad(True)
         self.vis_tokens([], 0)
 
     def close(self):
@@ -42,25 +44,31 @@ class Visualizer:
         self.display_stack()
         w.move(0, 0)
         w.clrtobot()
+        w.addstr("Tokenization buffer:", curses.A_REVERSE)
+        w.move(1, 0)
         w.addstr(" ".join(symbols))
-        self.cursor = 0, offsets[pos]
+        y, x = divmod(offsets[pos], curses.COLS)
+        self.cursor_y, self.cursor_x = 1 + y, x
         self.display_stack()
 
     def display_stack(self):
         w = self.w
-        w.move(4, 0)
+        i = self.cursor_y
+        i += 2
+        w.move(i, 0)
         w.clrtobot()
-        i = 4
+        w.addstr(i, 0, "Parsing stack:", curses.A_REVERSE)
+        i += 1
         for pos, s, res in self.stack:
             if self.offsets[pos] >= curses.COLS:
                 continue
             if res:
                 s += " -> " + res
-            if self.offsets[pos] + len(s) > curses.COLS:
-                s = s[:curses.COLS - self.offsets[pos]]
-            w.addstr(i, self.offsets[pos], s)
+            w.addnstr(i, self.offsets[pos], s, curses.COLS - self.offsets[pos])
             i += 1
-        i += 3
+        i += 1
+        w.addstr(i, 0, "Memoization cache:", curses.A_REVERSE)
+        i += 1
         for pos, s, res in reversed(self.cache):
             if i >= curses.LINES:
                 break
@@ -68,11 +76,9 @@ class Visualizer:
                 continue
             if res:
                 s += " -> " + res
-            if self.offsets[pos] + len(s) > curses.COLS:
-                s = s[:curses.COLS - self.offsets[pos]]
-            w.addstr(i, self.offsets[pos], s)
+            w.addnstr(i, self.offsets[pos], s, curses.COLS - self.offsets[pos])
             i += 1
-        w.move(*self.cursor)
+        w.move(self.cursor_y, self.cursor_x)
 
     def show_call(self, pos, name, args):
         while self.stack and self.stack[-1][-1]:

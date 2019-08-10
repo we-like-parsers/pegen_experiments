@@ -19,6 +19,7 @@ def main():
         try:
             tree = p.statements()
             while True:
+                curses.flash()
                 vis.wait()
         finally:
             vis.close()

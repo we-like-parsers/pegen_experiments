@@ -5,7 +5,7 @@ from tokenize import generate_tokens
 
 from story3.grammar import GrammarParser
 from story3.tokenizer import Tokenizer
-from story3.generator import generate
+from story3.generator3 import generate
 from story3.visualizer import Visualizer
 
 def main():
@@ -13,14 +13,19 @@ def main():
     print("Reading", file)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
-        vis = Visualizer()
+        if "-q" in sys.argv:
+            vis = None
+        else:
+            vis = Visualizer()
         tok = Tokenizer(tokengen, vis)
         p = GrammarParser(tok)
         try:
             rules = p.grammar()
-            vis.wait()
+            if vis:
+                vis.wait()
         finally:
-            vis.close()
+            if vis:
+                vis.close()
     if not rules:
         sys.exit("Fail")
     print("[")

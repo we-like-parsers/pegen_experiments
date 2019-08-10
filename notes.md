@@ -380,6 +380,10 @@ Or perhaps at this point show a partial parse tree?
 'if' 'foo' '+' 'bar' ':' 'baz' '=' 'one' '*' 'two' NEWLINE ENDMARKER
 ```
 
+Idea: let's add a toggle to the UI.  The "normal" mode displays call
+stacks, with minimal info about parse trees; the "alternative" mode
+displays parse trees, disregarding call stacks.
+
 
 (For reference the fully tokenized input:)
 ```
