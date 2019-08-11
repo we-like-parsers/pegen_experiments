@@ -17,7 +17,7 @@ def main():
         tok = Tokenizer(tokengen, vis)
         p = ToyParser(tok)
         try:
-            tree = p.statements()
+            tree = p.statement()
             while True:
                 curses.flash()
                 vis.wait()

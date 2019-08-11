@@ -11,7 +11,7 @@ class Visualizer:
 
     def __init__(self):
         self.offsets = [0]
-        self.cursor_y, self.cursor_x = 0, 0
+        self.cursor_x = 0
         self.stack = []
         self.cache = []
         self.w = curses.initscr()
@@ -41,25 +41,18 @@ class Visualizer:
             offset += len(s) + 1
             offsets.append(offset)
         self.offsets = offsets
-        self.display_stack()
-        w.move(0, 0)
-        w.clrtobot()
-        w.addstr("Tokenization buffer:", curses.A_REVERSE)
-        w.move(1, 0)
-        w.addstr(" ".join(symbols))
-        y, x = divmod(offsets[pos], curses.COLS)
-        self.cursor_y, self.cursor_x = 1 + y, x
-        self.display_stack()
+        self.cursor_x = offsets[pos]
 
     def display_stack(self):
         w = self.w
-        y = self.cursor_y
-        y += 2
-        w.move(y, 0)
+        w.move(0, 0)
         w.clrtobot()
-        w.addstr(y, 0, "Parsing stack:", curses.A_REVERSE)
-        y += 1
-        for (pos, s, res), rule in self.stack:
+        y = (curses.LINES // 2 - 1) - len(self.stack)
+        clip = 0
+        if y < 0:
+            clip = -y
+            y = 0
+        for (pos, s, res), rule in self.stack[clip:]:
             if rule and not res:
                 name, alts, indices = rule
                 x = self.offsets[pos]
@@ -74,7 +67,11 @@ class Visualizer:
                         w.addnstr(" |", curses.COLS - x)
                         y, x = w.getyx()
                     for item_i, item in enumerate(alt):
-                        w.addnstr(" ", curses.COLS - x)
+                        if alt_i == alt_index and item_index < item_i < item_index + num_items:
+                            attr = curses.A_UNDERLINE
+                        else:
+                            attr = 0
+                        w.addnstr(" ", curses.COLS - x, attr)
                         y, x = w.getyx()
                         if alt_i == alt_index and item_index <= item_i < item_index + num_items:
                             attr = curses.A_UNDERLINE
@@ -82,7 +79,6 @@ class Visualizer:
                             attr = 0
                         w.addnstr(item, curses.COLS - x, attr)
                         y, x = w.getyx()
-                    
             else:
                 if self.offsets[pos] >= curses.COLS:
                     continue
@@ -90,8 +86,17 @@ class Visualizer:
                     s += " -> " + res
                 w.addnstr(y, self.offsets[pos], s, curses.COLS - self.offsets[pos])
             y += 1
+
+        w.addstr(y, 0, "-"*curses.COLS)
         y += 1
-        w.addstr(y, 0, "Memoization cache:", curses.A_REVERSE)
+
+        cursor_y = y
+        w.addnstr(y, 0, " ".join(self.symbols), curses.COLS)
+        y += 1
+
+        w.addstr(y, 0, "-"*curses.COLS)
+        y += 1
+
         y += 1
         for pos, s, res in reversed(self.cache):
             if y >= curses.LINES:
@@ -102,7 +107,9 @@ class Visualizer:
                 s += " -> " + res
             w.addnstr(y, self.offsets[pos], s, curses.COLS - self.offsets[pos])
             y += 1
-        w.move(self.cursor_y, self.cursor_x)
+
+        w.move(cursor_y, min(curses.COLS - 1, self.cursor_x))
+        self.wait()
 
     def show_call(self, pos, name, args):
         while self.stack and self.stack[-1][0][-1]:
@@ -120,7 +127,6 @@ class Visualizer:
             s = name + str(args)
         self.stack.append(((pos, s, None), None))
         self.display_stack()
-        self.wait()
 
     def show_rule(self, name, alts):
         i = len(self.stack) - 1
@@ -130,7 +136,6 @@ class Visualizer:
         rule = (name, alts, None)
         self.stack[i] = (top, rule)
         self.display_stack()
-        self.wait()
 
     def show_index(self, alt_index, item_index, num_items):
         i = len(self.stack) - 1
@@ -138,8 +143,10 @@ class Visualizer:
             i -= 1
         top, rule = self.stack[i]
         name, alts, indices = rule
-        rule = (name, alts, (alt_index, item_index, num_items))
-        self.stack[i] = top, rule
+        new_rule = (name, alts, (alt_index, item_index, num_items))
+        if new_rule != rule:
+            self.stack[i] = top, new_rule
+            self.display_stack()
 
 
     def show_return(self, pos, res, endpos):
@@ -152,4 +159,3 @@ class Visualizer:
         top = top_pos, top_s, top_res
         self.stack[i] = top, rule
         self.display_stack()
-        self.wait()

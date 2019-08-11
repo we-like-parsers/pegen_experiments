@@ -39,7 +39,6 @@ class ToyParser(Parser):
             self.show_index(0, 0, 3)
             return Node('statements', [statement, newline, statements])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(1, 0)
             and (statement := self.statement())
@@ -63,7 +62,6 @@ class ToyParser(Parser):
             self.show_index(0, 0, 1)
             return Node('statement', [if_statement])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(1, 0)
             and (assignment := self.assignment())
@@ -71,7 +69,6 @@ class ToyParser(Parser):
             self.show_index(1, 0, 1)
             return Node('statement', [assignment])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(2, 0)
             and (expr := self.expr())
@@ -97,7 +94,6 @@ class ToyParser(Parser):
             self.show_index(0, 0, 3)
             return Node('expr', [term, expr])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(1, 0)
             and (term := self.term())
@@ -109,7 +105,6 @@ class ToyParser(Parser):
             self.show_index(1, 0, 3)
             return Node('expr', [term, term1])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(2, 0)
             and (term := self.term())
@@ -135,7 +130,6 @@ class ToyParser(Parser):
             self.show_index(0, 0, 3)
             return Node('term', [atom, term])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(1, 0)
             and (atom := self.atom())
@@ -147,7 +141,6 @@ class ToyParser(Parser):
             self.show_index(1, 0, 3)
             return Node('term', [atom, atom1])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(2, 0)
             and (atom := self.atom())
@@ -169,7 +162,6 @@ class ToyParser(Parser):
             self.show_index(0, 0, 1)
             return Node('atom', [name])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(1, 0)
             and (number := self.expect(NUMBER))
@@ -177,7 +169,6 @@ class ToyParser(Parser):
             self.show_index(1, 0, 1)
             return Node('atom', [number])
         self.reset(pos)
-        self.show_index(0, 0, 0)
         if (True
             and self.show_index(2, 0)
             and self.expect('(')

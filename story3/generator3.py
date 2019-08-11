@@ -43,7 +43,7 @@ class Generator:
             self.put(f"pos = self.mark()")
             for i, alt in enumerate(rule.alts):
                 self.gen_alt(alt, rule, i)
-                self.put(f"self.show_index(0, 0, 0)")
+            self.put(f"self.show_index(0, 0, 0)")
             self.put(f"return None")
 
     def gen_alt(self, alt, rule, alt_index):
