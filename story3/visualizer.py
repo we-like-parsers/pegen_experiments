@@ -53,36 +53,60 @@ class Visualizer:
 
     def display_stack(self):
         w = self.w
-        i = self.cursor_y
-        i += 2
-        w.move(i, 0)
+        y = self.cursor_y
+        y += 2
+        w.move(y, 0)
         w.clrtobot()
-        w.addstr(i, 0, "Parsing stack:", curses.A_REVERSE)
-        i += 1
-        for pos, s, res in self.stack:
-            if self.offsets[pos] >= curses.COLS:
-                continue
-            if res:
-                s += " -> " + res
-            w.addnstr(i, self.offsets[pos], s, curses.COLS - self.offsets[pos])
-            i += 1
-        i += 1
-        w.addstr(i, 0, "Memoization cache:", curses.A_REVERSE)
-        i += 1
+        w.addstr(y, 0, "Parsing stack:", curses.A_REVERSE)
+        y += 1
+        for (pos, s, res), rule in self.stack:
+            if rule and not res:
+                name, alts, indices = rule
+                x = self.offsets[pos]
+                w.move(y, x)
+                w.addnstr(name + ":", curses.COLS - x)
+                y, x = w.getyx()
+                if not indices:
+                    indices = 0, 0, 0
+                alt_index, item_index, num_items = indices
+                for alt_i, alt in enumerate(alts):
+                    if alt_i > 0:
+                        w.addnstr(" |", curses.COLS - x)
+                        y, x = w.getyx()
+                    for item_i, item in enumerate(alt):
+                        w.addnstr(" ", curses.COLS - x)
+                        y, x = w.getyx()
+                        if alt_i == alt_index and item_index <= item_i < item_index + num_items:
+                            attr = curses.A_UNDERLINE
+                        else:
+                            attr = 0
+                        w.addnstr(item, curses.COLS - x, attr)
+                        y, x = w.getyx()
+                    
+            else:
+                if self.offsets[pos] >= curses.COLS:
+                    continue
+                if res:
+                    s += " -> " + res
+                w.addnstr(y, self.offsets[pos], s, curses.COLS - self.offsets[pos])
+            y += 1
+        y += 1
+        w.addstr(y, 0, "Memoization cache:", curses.A_REVERSE)
+        y += 1
         for pos, s, res in reversed(self.cache):
-            if i >= curses.LINES:
+            if y >= curses.LINES:
                 break
             if self.offsets[pos] >= curses.COLS:
                 continue
             if res:
                 s += " -> " + res
-            w.addnstr(i, self.offsets[pos], s, curses.COLS - self.offsets[pos])
-            i += 1
+            w.addnstr(y, self.offsets[pos], s, curses.COLS - self.offsets[pos])
+            y += 1
         w.move(self.cursor_y, self.cursor_x)
 
     def show_call(self, pos, name, args):
-        while self.stack and self.stack[-1][-1]:
-            val = self.stack.pop()
+        while self.stack and self.stack[-1][0][-1]:
+            val, rule = self.stack.pop()
             if val in self.cache:
                 self.cache.remove(val)
             self.cache.append(val)
@@ -94,14 +118,38 @@ class Visualizer:
                 s = f"{name}({args[0]!r})"
         else:
             s = name + str(args)
-        self.stack.append((pos, s, None))
+        self.stack.append(((pos, s, None), None))
         self.display_stack()
         self.wait()
 
+    def show_rule(self, name, alts):
+        i = len(self.stack) - 1
+        while i >= 0 and self.stack[i][0][-1]:
+            i -= 1
+        top, rule = self.stack[i]
+        rule = (name, alts, None)
+        self.stack[i] = (top, rule)
+        self.display_stack()
+        self.wait()
+
+    def show_index(self, alt_index, item_index, num_items):
+        i = len(self.stack) - 1
+        while i >= 0 and self.stack[i][0][-1]:
+            i -= 1
+        top, rule = self.stack[i]
+        name, alts, indices = rule
+        rule = (name, alts, (alt_index, item_index, num_items))
+        self.stack[i] = top, rule
+
+
     def show_return(self, pos, res, endpos):
         i = len(self.stack) - 1
-        while i >= 0 and self.stack[i][-1]:
+        while i >= 0 and self.stack[i][0][-1]:
             i -= 1
-        self.stack[i] = self.stack[i][:2] + (alt_repr(res),)
+        top, rule = self.stack[i]
+        top_pos, top_s, top_res = top
+        top_res = alt_repr(res)
+        top = top_pos, top_s, top_res
+        self.stack[i] = top, rule
         self.display_stack()
         self.wait()

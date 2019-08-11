@@ -39,23 +39,27 @@ class Generator:
         self.put(f"@memoize")
         self.put(f"def {rule.name}(self):")
         with self.indent():
+            self.put(f"self.show_rule({rule.name!r}, {rule.alts!r})")
             self.put(f"pos = self.mark()")
-            for alt in rule.alts:
-                self.gen_alt(alt, rule)
+            for i, alt in enumerate(rule.alts):
+                self.gen_alt(alt, rule, i)
+                self.put(f"self.show_index(0, 0, 0)")
             self.put(f"return None")
 
-    def gen_alt(self, alt, rule):
+    def gen_alt(self, alt, rule, alt_index):
         items = []
         self.put(f"if (True")
         with self.indent():
-            for item in alt:
-                self.gen_item(item, items)
+            for i, item in enumerate(alt):
+                self.gen_item(item, items, alt_index, i)
         self.put(f"):")
         with self.indent():
+            self.put(f"self.show_index({alt_index}, 0, {len(alt)})")
             self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
 
-    def gen_item(self, item, items):
+    def gen_item(self, item, items, alt_index, item_index):
+        self.put(f"and self.show_index({alt_index}, {item_index})")
         if item[0] in ('"', "'"):
             self.put(f"and self.expect({item})")
         else:

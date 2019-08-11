@@ -13,9 +13,8 @@ def main():
     print("Reading", file)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
-        if "-q" in sys.argv:
-            vis = None
-        else:
+        vis = None
+        if "-v" in sys.argv:
             vis = Visualizer()
         tok = Tokenizer(tokengen, vis)
         p = GrammarParser(tok)
