@@ -7,7 +7,7 @@ install:
 - pip install pytest
 - pip install pytest-cov
 - pip install coveralls
-- pip install git+https://github.com/python/mypy.git@refs/pull/6899/head
+- pip install git+https://github.com/python/mypy.git
 script:
 - $TEST_CMD
 after_success:
