@@ -12,22 +12,25 @@ token_name(int type)
 
 // Here, mark is the start of the node, while p->mark is the end.
 // If node==NULL, they should be the same.
-void
+int
 insert_memo(Parser *p, int mark, int type, void *node)
 {
     // Insert in front
     Memo *m = PyArena_Malloc(p->arena, sizeof(Memo));
-    if (m == NULL)
-        panic("Out of arena space");  // TODO: How to handle malloc failures
+    if (m == NULL) {
+        PyErr_Format(PyExc_MemoryError, "Out of arena space");
+        return -1;
+    }
     m->type = type;
     m->node = node;
     m->mark = p->mark;
     m->next = p->tokens[mark].memo;
     p->tokens[mark].memo = m;
+    return 0;
 }
 
 // Like insert_memo(), but updates an existing node if found.
-void
+int
 update_memo(Parser *p, int mark, int type, void *node)
 {
     for (Memo *m = p->tokens[mark].memo; m != NULL; m = m->next) {
@@ -35,18 +38,11 @@ update_memo(Parser *p, int mark, int type, void *node)
             // Update existing node.
             m->node = node;
             m->mark = p->mark;
-            return;
+            return 0;
         }
     }
     // Insert new node.
-    insert_memo(p, mark, type, node);
-}
-
-void
-panic(char *message)
-{
-    fprintf(stderr, "panic: pgen-generated parser: %s\n", message);
-    exit(2);
+    return insert_memo(p, mark, type, node);
 }
 
 void *
@@ -55,19 +51,23 @@ CONSTRUCTOR(Parser *p, ...)
     return (void *)1;
 }
 
-static void
+static int
 fill_token(Parser *p)
 {
     char *start, *end;
     int type = PyTokenizer_Get(p->tok, &start, &end);
-    if (type == ERRORTOKEN)
-        panic("Error token");
+    if (type == ERRORTOKEN) {
+        PyErr_Format(PyExc_ValueError, "Error token");
+        return -1;
+    }
 
     if (p->fill == p->size) {
         int newsize = p->size * 2;
         p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token));
-        if (p->tokens == NULL)
-            panic("Realloc tokens failed");
+        if (p->tokens == NULL) {
+            PyErr_Format(PyExc_MemoryError, "Realloc tokens failed");
+            return -1;
+        }
         memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token));
         p->size = newsize;
     }
@@ -75,8 +75,9 @@ fill_token(Parser *p)
     Token *t = p->tokens + p->fill;
     t->type = type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
-    if (t->bytes == NULL)
-        panic("PyBytes_FromStringAndSize failed");
+    if (t->bytes == NULL) {
+        return -1;
+    }
     PyArena_AddPyObject(p->arena, t->bytes);
 
     int lineno = type == STRING ? p->tok->first_lineno : p->tok->lineno;
@@ -95,13 +96,17 @@ fill_token(Parser *p)
 
     // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
+    return 0;
 }
 
 int  // bool
 is_memoized(Parser *p, int type, void *pres)
 {
-    if (p->mark == p->fill)
-        fill_token(p);
+    if (p->mark == p->fill) {
+        if (fill_token(p)) {
+            return -1;
+        }
+    }
 
     Token *t = &p->tokens[p->mark];
 
@@ -114,13 +119,17 @@ is_memoized(Parser *p, int type, void *pres)
         }
     }
     // fprintf(stderr, "%d < %d: not memoized\n", p->mark, p->fill);
-    return 0; }
+    return 0;
+}
 
 Token *
 expect_token(Parser *p, int type)
 {
-    if (p->mark == p->fill)
-        fill_token(p);
+    if (p->mark == p->fill) {
+        if (fill_token(p)) {
+            return NULL;
+        }
+    }
     Token *t = p->tokens + p->mark;
     if (t->type != type) {
         // fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
@@ -146,11 +155,14 @@ name_token(Parser *p)
     char *s;
     Py_ssize_t n;
     if (PyBytes_AsStringAndSize(t->bytes, &s, &n) < 0)
-        panic("bytes");
+        return NULL;
     PyObject *id = PyUnicode_DecodeUTF8(s, n, NULL);
     if (id == NULL)
-        panic("unicode");
-    PyArena_AddPyObject(p->arena, id);
+        return NULL;
+    if (PyArena_AddPyObject(p->arena, id) < 0) {
+        Py_DECREF(id);
+        return NULL;
+    }
     // TODO: What new_identifier() does.
     return Name(id, Load, t->line, t->col, t->endline, t->endcol, p->arena);
 }
@@ -181,9 +193,13 @@ number_token(Parser *p)
         return NULL;
     // TODO: Check for float, complex.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
-    if (c == NULL)
-        panic("long");
-    PyArena_AddPyObject(p->arena, c);
+    if (c == NULL) {
+        return NULL;
+    }
+    if (PyArena_AddPyObject(p->arena, c) < 0) {
+        Py_DECREF(c);
+        return NULL;
+    }
     return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
@@ -196,13 +212,16 @@ string_token(Parser *p)
     char *s = NULL;
     Py_ssize_t len = 0;
     if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
-        panic("bytes");
+        return NULL;
     // Strip quotes.
     // TODO: Properly handle all forms of string quotes and backslashes.
     PyObject *c = PyUnicode_FromStringAndSize(s+1, len-2);
     if (!c)
-        panic("string");
-    PyArena_AddPyObject(p->arena, c);
+        return NULL;
+    if (PyArena_AddPyObject(p->arena, c) < 0) {
+        Py_DECREF(c);
+        return NULL;
+    }
     return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
 }
 
@@ -224,14 +243,17 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 {
     PyObject* result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
-    if (p == NULL)
-        panic("Out of memory for Parser");
-
+    if (p == NULL) {
+        PyErr_Format(PyExc_MemoryError, "Out of memory for Parser");
+        goto exit;
+    }
     assert(tok != NULL);
     p->tok = tok;
     p->tokens = PyMem_Malloc(sizeof(Token));
-    if (!p->tokens)
-        panic("Out of memory for tokens");
+    if (!p->tokens) {
+        PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
+        goto exit;
+    }
     memset(p->tokens, '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
@@ -242,7 +264,9 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         goto exit;
     }
 
-    fill_token(p);
+    if (fill_token(p)) {
+        goto exit;
+    }
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
@@ -271,8 +295,10 @@ PyObject *
 run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
 {
     FILE *fp = fopen(filename, "rb");
-    if (fp == NULL)
-        panic("Can't open file");
+    if (fp == NULL) {
+        PyErr_Format(PyExc_OSError, "Can't open file");
+        return NULL;
+    }
 
     struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
 
@@ -301,7 +327,9 @@ asdl_seq *
 singleton_seq(Parser *p, void *a)
 {
     asdl_seq *seq = _Py_asdl_seq_new(1, p->arena);
-    if (!seq) panic("_Py_asdl_seq_new");
+    if (!seq) {
+        return NULL;
+    }
     asdl_seq_SET(seq, 0, a);
     return seq;
 }
