@@ -15,7 +15,6 @@ class Visualizer:
         self.stack = []
         self.cache = []
         self.w = curses.initscr()
-        curses.start_color()
         curses.noecho()
         self.w.keypad(True)
         self.vis_tokens([], 0)
