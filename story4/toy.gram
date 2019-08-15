@@ -1,0 +1,9 @@
+start: statements ENDMARKER
+statements: statement NEWLINE statements | statement NEWLINE
+statement:  if_statement | assignment | expr
+expr: term '+' expr | term '-' term | term
+term: atom '*' term | atom '/' atom | atom
+atom: NAME | NUMBER | '(' expr ')'
+assignment: target '=' expr
+target: NAME
+if_statement: 'if' expr ':' statement
