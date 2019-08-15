@@ -9,7 +9,7 @@ HEADER = """\
 
 from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
 
-from story4.memo import memoize
+from story4.memo import memoize, memoize_left_rec
 from story4.node import Node
 from story4.parser import Parser
 """
@@ -35,8 +35,25 @@ class Generator:
         finally:
             self.indentation = save
 
+    def is_left_rec(self, rule):
+        # TODO: Indirect left recursion (hidden behind possibly-empty
+        # items) and mutual left recursion (recursion involving
+        # multiple rules).  Indirect recursion only becomes important
+        # once we support PEG features like optional or repeated
+        # items.  Mutual left recursion is currently an undetected
+        # grammar bug -- don't do this!  (A full implementation is in
+        # the ../pegen/parser_generator.py module.)
+        for alt in rule.alts:
+            for item in alt[:1]:
+                if item == rule.name:
+                    return True
+        return False
+
     def gen_rule(self, rule):
-        self.put(f"@memoize")
+        if self.is_left_rec(rule):
+            self.put(f"@memoize_left_rec")
+        else:
+            self.put(f"@memoize")
         self.put(f"def {rule.name}(self):")
         with self.indent():
             self.put(f"self.show_rule({rule.name!r}, {rule.alts!r})")

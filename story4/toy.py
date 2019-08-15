@@ -2,7 +2,7 @@
 
 from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
 
-from story4.memo import memoize
+from story4.memo import memoize, memoize_left_rec
 from story4.node import Node
 from story4.parser import Parser
 
@@ -79,31 +79,31 @@ class ToyParser(Parser):
         self.show_index(0, 0, 0)
         return None
 
-    @memoize
+    @memoize_left_rec
     def expr(self):
-        self.show_rule('expr', [['term', "'+'", 'expr'], ['term', "'-'", 'term'], ['term']])
+        self.show_rule('expr', [['expr', "'+'", 'term'], ['expr', "'-'", 'term'], ['term']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (term := self.term())
+            and (expr := self.expr())
             and self.show_index(0, 1)
             and self.expect('+')
             and self.show_index(0, 2)
-            and (expr := self.expr())
+            and (term := self.term())
         ):
             self.show_index(0, 0, 3)
-            return Node('expr', [term, expr])
+            return Node('expr', [expr, term])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (term := self.term())
+            and (expr := self.expr())
             and self.show_index(1, 1)
             and self.expect('-')
             and self.show_index(1, 2)
-            and (term1 := self.term())
+            and (term := self.term())
         ):
             self.show_index(1, 0, 3)
-            return Node('expr', [term, term1])
+            return Node('expr', [expr, term])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
@@ -115,31 +115,31 @@ class ToyParser(Parser):
         self.show_index(0, 0, 0)
         return None
 
-    @memoize
+    @memoize_left_rec
     def term(self):
-        self.show_rule('term', [['atom', "'*'", 'term'], ['atom', "'/'", 'atom'], ['atom']])
+        self.show_rule('term', [['term', "'*'", 'atom'], ['term', "'/'", 'atom'], ['atom']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (atom := self.atom())
+            and (term := self.term())
             and self.show_index(0, 1)
             and self.expect('*')
             and self.show_index(0, 2)
-            and (term := self.term())
+            and (atom := self.atom())
         ):
             self.show_index(0, 0, 3)
-            return Node('term', [atom, term])
+            return Node('term', [term, atom])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (atom := self.atom())
+            and (term := self.term())
             and self.show_index(1, 1)
             and self.expect('/')
             and self.show_index(1, 2)
-            and (atom1 := self.atom())
+            and (atom := self.atom())
         ):
             self.show_index(1, 0, 3)
-            return Node('term', [atom, atom1])
+            return Node('term', [term, atom])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)

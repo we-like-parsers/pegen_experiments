@@ -43,3 +43,49 @@ def memoize(func):
         return res
 
     return memoize_wrapper
+
+
+def memoize_left_rec(func):
+    """Memoize a left-recursive parsing method.
+
+    This is similar to @memoize but loops until no longer parse is obtained.
+
+    Inspired by https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
+    """
+
+    def memoize_left_rec_wrapper(self, *args):
+        vis = self.tokenizer.vis
+        pos = self.mark()
+        if vis is not None:
+            vis.show_call(pos, func.__name__, args)
+        memo = self.memos.get(pos)
+        if memo is None:
+            memo = self.memos[pos] = {}
+        key = (func, args)
+        if key in memo:
+            res, endpos = memo[key]
+            self.reset(endpos)
+        else:
+            # This is where we deviate from @memoize.
+
+            # Prime the cache with a failure.
+            memo[key] = lastres, lastpos = None, pos
+
+            # Loop until no longer parse is obtained.
+            while True:
+                self.reset(pos)
+                res = func(self, *args)
+                endpos = self.mark()
+                if endpos <= lastpos:
+                    break
+                memo[key] = lastres, lastpos = res, endpos
+
+            res = lastres
+            self.reset(lastpos)
+
+        if vis is not None:
+            vis.show_return(pos, res, endpos)
+        return res
+
+    return memoize_left_rec_wrapper
+        
