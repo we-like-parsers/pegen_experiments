@@ -39,7 +39,7 @@ class Visualizer:
             key = self.w.getch()
             if key == ord('q'):
                 sys.exit(0)
-            if key == ord('b') or key == curses.KEY_BACKSPACE or key == curses.KEY_LEFT:
+            if key == ord('b') or key == curses.KEY_BACKSPACE or key == 127 or key == curses.KEY_DC or key == curses.KEY_LEFT:
                 if self.past:
                     self.future.append(self.get_state())
                     self.set_state(self.past.pop())
@@ -60,6 +60,9 @@ class Visualizer:
                     ## else:
                     ##     curses.flash()
                     return
+            w = self.w
+            w.move(curses.LINES - 1, max(0, curses.COLS - 10))
+            w.addstr(f"[{key}]")
             curses.beep()  # Unrecognized input.
 
     def done(self):

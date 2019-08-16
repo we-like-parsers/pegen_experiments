@@ -18,7 +18,6 @@ def main():
         p = ToyParser(tok)
         try:
             tree = p.statements()
-            curses.beep()
             vis.done()
         finally:
             vis.close()
