@@ -21,7 +21,7 @@ def main():
         try:
             rules = p.grammar()
             if vis:
-                vis.wait()
+                vis.done()
         finally:
             if vis:
                 vis.close()

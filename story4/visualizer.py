@@ -12,20 +12,61 @@ class Visualizer:
     def __init__(self):
         self.offsets = [0]
         self.cursor_x = 0
+        self.symbols = []
         self.stack = []
         self.cache = []
+        self.past = []
+        self.future = []
         self.w = curses.initscr()
         curses.noecho()
         self.w.keypad(True)
         self.vis_tokens([], 0)
+        self.going = True
+        self.display_and_wait()
 
     def close(self):
         curses.echo()
         curses.endwin()
 
+    def get_state(self):
+        return (self.cursor_x, self.symbols[:], self.stack[:], self.cache[:])
+
+    def set_state(self, state):
+        self.cursor_x, self.symbols, self.stack, self.cache = state
+
     def wait(self):
-        if chr(self.w.getch()) in 'qQ':
-            sys.exit(0)
+        while True:
+            key = self.w.getch()
+            if key == ord('q'):
+                sys.exit(0)
+            if key == ord('b') or key == curses.KEY_BACKSPACE or key == curses.KEY_LEFT:
+                if self.past:
+                    self.future.append(self.get_state())
+                    self.set_state(self.past.pop())
+                    self.display()
+                    continue
+                else:
+                    curses.flash()
+                    continue
+            if key == ord('f') or key == ord(' ') or key == curses.KEY_RIGHT:
+                if self.future:
+                    self.past.append(self.get_state())
+                    self.set_state(self.future.pop())
+                    self.display()
+                    continue
+                else:
+                    if self.going:
+                        self.past.append(self.get_state())
+                    ## else:
+                    ##     curses.flash()
+                    return
+            curses.beep()  # Unrecognized input.
+
+    def done(self):
+        self.going = False
+        while True:
+            curses.flash()
+            self.wait()
 
     def vis_tokens(self, tokens, pos):
         w = self.w
@@ -42,7 +83,7 @@ class Visualizer:
         self.offsets = offsets
         self.cursor_x = offsets[pos]
 
-    def display_stack(self):
+    def display(self):
         w = self.w
         w.move(0, 0)
         w.clrtobot()
@@ -107,6 +148,9 @@ class Visualizer:
             y += 1
 
         w.move(cursor_y, min(curses.COLS - 1, self.cursor_x))
+
+    def display_and_wait(self):
+        self.display()
         self.wait()
 
     def call_repr(self, name, args):
@@ -131,7 +175,7 @@ class Visualizer:
         self.stack.append((val, None))
         if val in self.cache:
             self.cache.remove(val)
-        self.display_stack()
+        self.display_and_wait()
 
     def stuff_cache(self, pos, name, args, res):
         res = alt_repr(res)
@@ -139,7 +183,7 @@ class Visualizer:
         v2 = (pos, s)
         self.cache[:] = [v for v in self.cache if v[:2] != v2]
         self.cache.append((pos, s, res))
-        self.display_stack()
+        self.display_and_wait()
 
     def show_rule(self, name, alts):
         i = len(self.stack) - 1
@@ -148,7 +192,7 @@ class Visualizer:
         top, rule = self.stack[i]
         rule = (name, alts, None)
         self.stack[i] = (top, rule)
-        self.display_stack()
+        self.display_and_wait()
 
     def show_index(self, alt_index, item_index, num_items):
         i = len(self.stack) - 1
@@ -159,7 +203,7 @@ class Visualizer:
         new_rule = (name, alts, (alt_index, item_index, num_items))
         if new_rule != rule:
             self.stack[i] = top, new_rule
-            self.display_stack()
+            self.display_and_wait()
 
     def show_return(self, pos, res, endpos):
         i = len(self.stack) - 1
@@ -170,4 +214,4 @@ class Visualizer:
         top_res = alt_repr(res)
         top = top_pos, top_s, top_res
         self.stack[i] = top, rule
-        self.display_stack()
+        self.display_and_wait()
