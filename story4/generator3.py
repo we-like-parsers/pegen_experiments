@@ -52,11 +52,13 @@ class Generator:
     def gen_rule(self, rule):
         if self.is_left_rec(rule):
             self.put(f"@memoize_left_rec")
+            leftrec = "'*' + "
         else:
             self.put(f"@memoize")
+            leftrec = ""
         self.put(f"def {rule.name}(self):")
         with self.indent():
-            self.put(f"self.show_rule({rule.name!r}, {rule.alts!r})")
+            self.put(f"self.show_rule({leftrec}{rule.name!r}, {rule.alts!r})")
             self.put(f"pos = self.mark()")
             for i, alt in enumerate(rule.alts):
                 self.gen_alt(alt, rule, i)

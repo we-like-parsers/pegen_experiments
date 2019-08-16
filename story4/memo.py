@@ -57,7 +57,7 @@ def memoize_left_rec(func):
         vis = self.tokenizer.vis
         pos = self.mark()
         if vis is not None:
-            vis.show_call(pos, func.__name__, args)
+            vis.show_call(pos, "*" + func.__name__, args)
         memo = self.memos.get(pos)
         if memo is None:
             memo = self.memos[pos] = {}
@@ -88,4 +88,3 @@ def memoize_left_rec(func):
         return res
 
     return memoize_left_rec_wrapper
-        

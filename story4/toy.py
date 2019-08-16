@@ -81,7 +81,7 @@ class ToyParser(Parser):
 
     @memoize_left_rec
     def expr(self):
-        self.show_rule('expr', [['expr', "'+'", 'term'], ['expr', "'-'", 'term'], ['term']])
+        self.show_rule('*' + 'expr', [['expr', "'+'", 'term'], ['expr', "'-'", 'term'], ['term']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -117,7 +117,7 @@ class ToyParser(Parser):
 
     @memoize_left_rec
     def term(self):
-        self.show_rule('term', [['term', "'*'", 'atom'], ['term', "'/'", 'atom'], ['atom']])
+        self.show_rule('*' + 'term', [['term', "'*'", 'atom'], ['term', "'/'", 'atom'], ['atom']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
