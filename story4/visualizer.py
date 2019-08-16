@@ -96,7 +96,6 @@ class Visualizer:
         w.addstr(y, 0, "-"*curses.COLS)
         y += 1
 
-        y += 1
         for pos, s, res in reversed(self.cache):
             if y >= curses.LINES:
                 break
@@ -110,13 +109,7 @@ class Visualizer:
         w.move(cursor_y, min(curses.COLS - 1, self.cursor_x))
         self.wait()
 
-    def show_call(self, pos, name, args):
-        while self.stack and self.stack[-1][0][-1]:
-            val, rule = self.stack.pop()
-            if val in self.cache:
-                self.cache.remove(val)
-            self.cache.append(val)
-        w = self.w
+    def call_repr(self, name, args):
         if name == 'expect' and len(args) == 1:
             if isinstance(args[0], int):
                 s = f"{name}({token.tok_name.get(args[0], str(args[0]))})"
@@ -124,7 +117,28 @@ class Visualizer:
                 s = f"{name}({args[0]!r})"
         else:
             s = name + str(args)
-        self.stack.append(((pos, s, None), None))
+        return s
+
+    def show_call(self, pos, name, args):
+        while self.stack and self.stack[-1][0][-1]:
+            val, rule = self.stack.pop()
+            v2 = val[:2]
+            self.cache[:] = [v for v in self.cache if v[:2] != v2]
+            self.cache.append(val)
+        w = self.w
+        s = self.call_repr(name, args)
+        val = (pos, s, None)
+        self.stack.append((val, None))
+        if val in self.cache:
+            self.cache.remove(val)
+        self.display_stack()
+
+    def stuff_cache(self, pos, name, args, res):
+        res = alt_repr(res)
+        s = self.call_repr(name, args)
+        v2 = (pos, s)
+        self.cache[:] = [v for v in self.cache if v[:2] != v2]
+        self.cache.append((pos, s, res))
         self.display_stack()
 
     def show_rule(self, name, alts):
@@ -146,7 +160,6 @@ class Visualizer:
         if new_rule != rule:
             self.stack[i] = top, new_rule
             self.display_stack()
-
 
     def show_return(self, pos, res, endpos):
         i = len(self.stack) - 1

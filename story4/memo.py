@@ -70,6 +70,8 @@ def memoize_left_rec(func):
 
             # Prime the cache with a failure.
             memo[key] = lastres, lastpos = None, pos
+            if vis is not None:
+                vis.stuff_cache(pos, "*" + func.__name__, args, None)
 
             # Loop until no longer parse is obtained.
             while True:
@@ -79,6 +81,8 @@ def memoize_left_rec(func):
                 if endpos <= lastpos:
                     break
                 memo[key] = lastres, lastpos = res, endpos
+                if vis is not None:
+                    vis.stuff_cache(pos, "*" + func.__name__, args, res)
 
             res = lastres
             self.reset(lastpos)
