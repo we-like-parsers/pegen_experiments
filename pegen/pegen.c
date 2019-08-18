@@ -18,7 +18,6 @@ insert_memo(Parser *p, int mark, int type, void *node)
     // Insert in front
     Memo *m = PyArena_Malloc(p->arena, sizeof(Memo));
     if (m == NULL) {
-        PyErr_Format(PyExc_MemoryError, "Out of arena space");
         return -1;
     }
     m->type = type;
@@ -103,7 +102,7 @@ int  // bool
 is_memoized(Parser *p, int type, void *pres)
 {
     if (p->mark == p->fill) {
-        if (fill_token(p)) {
+        if (fill_token(p) < 0) {
             return -1;
         }
     }
@@ -126,7 +125,7 @@ Token *
 expect_token(Parser *p, int type)
 {
     if (p->mark == p->fill) {
-        if (fill_token(p)) {
+        if (fill_token(p) < 0) {
             return NULL;
         }
     }
@@ -264,7 +263,7 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         goto exit;
     }
 
-    if (fill_token(p)) {
+    if (fill_token(p) < 0) {
         goto exit;
     }
 
@@ -296,7 +295,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
-        PyErr_Format(PyExc_OSError, "Can't open file");
+        PyErr_SetFromErrnoWithFilename(PyExc_OSError, filename);
         return NULL;
     }
 
