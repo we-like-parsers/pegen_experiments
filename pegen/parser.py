@@ -80,7 +80,8 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
             # previous result.  For an explanation why this works, see
             # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
             # (But we use the memoization cache instead of a static
-            # variable.)
+            # variable; perhaps this is similar to a paper by Warth et al.
+            # (http://web.cs.ucla.edu/~todd/research/pub.php?id=pepm08).
 
             # Prime the cache with a failure.
             self._cache[key] = None, mark
