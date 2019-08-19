@@ -1,4 +1,5 @@
 import ast
+import itertools
 import re
 from typing import Any, Optional, IO, Text, List, Dict, Tuple
 
@@ -145,6 +146,42 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
         super().__init__(rules, file)
         self.callmakervisitor = CCallMakerVisitor(self)
+        self._varname_counter = 0
+
+    def unique_varname(self, name="tmpvar"):
+        new_var = name + "_" + str(self._varname_counter)
+        self._varname_counter += 1
+        return new_var
+
+    def call_with_errorcheck_return(self, call_text, returnval):
+        error_var = self.unique_varname()
+        self.print(f"int {error_var} = {call_text};")
+        self.print(f"if ({error_var}) {{")
+        with self.indent():
+            self.print(f"return {returnval};")
+        self.print(f"}}")
+
+    def call_with_errorcheck_goto(self, call_text, goto_target):
+        error_var = self.unique_varname()
+        self.print(f"int {error_var} = {call_text};")
+        self.print(f"if ({error_var}) {{")
+        with self.indent():
+            self.print(f"goto {goto_target};")
+        self.print(f"}}")
+
+    def out_of_memory_return(self, expr, returnval, message="Parser out of memory"):
+        self.print(f"if ({expr}) {{")
+        with self.indent():
+            self.print(f'PyErr_Format(PyExc_MemoryError, "{message}");')
+            self.print(f"return {returnval};")
+        self.print(f"}}")
+
+    def out_of_memory_goto(self, expr, goto_target, message="Parser out of memory"):
+        self.print(f"if ({expr}) {{")
+        with self.indent():
+            self.print(f'PyErr_Format(PyExc_MemoryError, "{message}");')
+            self.print(f"goto {goto_target};")
+        self.print(f"}}")
 
     def generate(self, filename: str) -> None:
         self.collect_todo()
@@ -199,7 +236,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("int resmark = p->mark;")
                 self.print("while (1) {")
                 with self.indent():
-                    self.print(f"update_memo(p, mark, {node.name}_type, res);")
+                    self.call_with_errorcheck_return(
+                            f"update_memo(p, mark, {node.name}_type, res)", "res")
                     self.print("p->mark = mark;")
                     self.print(f"void *raw = {node.name}_raw(p);")
                     self.print("if (raw == NULL || p->mark <= resmark)")
@@ -227,7 +265,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("int mark = p->mark;")
             if is_loop:
                 self.print("void **children = PyMem_Malloc(0);")
-                self.print(f'if (!children) panic("malloc {node.name}");')
+                self.out_of_memory_return(f'!children', "NULL")
                 self.print("ssize_t n = 0;")
             self.visit(rhs, is_loop=is_loop, rulename=node.name if memoize else None)
             if is_loop:
@@ -238,7 +276,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                         self.print("return NULL;")
                     self.print("}")
                 self.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
-                self.print(f'if (!seq) panic("asdl_seq_new {node.name}");')
+                self.out_of_memory_return(f'!seq', "NULL", message=f'asdl_seq_new {node.name}')
                 self.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
                 self.print("PyMem_Free(children);")
                 if node.name:
@@ -310,7 +348,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 ## self.print(f'fprintf(stderr, "Hit with action at %d: {node}, {names}, {action}\\n", p->mark);')
             if is_loop:
                 self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-                self.print(f'if (!children) panic("realloc {rulename}");')
+                self.out_of_memory_return(f'!children', "NULL", message=f'realloc {rulename}')
                 self.print(f"children[n++] = res;")
                 self.print("mark = p->mark;")
             else:
