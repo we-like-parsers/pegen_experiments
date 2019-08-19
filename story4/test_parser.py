@@ -41,4 +41,4 @@ def test_toy():
     print(tree)
     assert tree and tree.type == "statement"
     assert tree.children[0].type == "expr"
-    assert tree.children[0].children[0].type == "term"
+    assert tree.children[0].children[0].type == "expr"
