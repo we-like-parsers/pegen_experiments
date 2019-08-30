@@ -19,6 +19,24 @@ class Rule:
         return self.name == other.name and self.alts == other.alts
 
 
+class Alt:
+
+    def __init__(self, items, action=None):
+        self.items = items
+        self.action = action
+
+    def __repr__(self):
+        if self.action:
+            return f"Alt({self.items!r}, {self.action!r})"
+        else:
+            return f"Alt({self.items!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Alt):
+            return NotImplemented
+        return self.items == other.items
+
+
 class GrammarParser(Parser):
 
     def grammar(self):
@@ -53,7 +71,8 @@ class GrammarParser(Parser):
         items = []
         while item := self.item():
             items.append(item)
-        return items
+        return Alt(items)
+
 
     def item(self):
         if name := self.expect(NAME):

@@ -33,7 +33,7 @@ def main():
     print("]")
     for rule in rules:
         print(rule.name, end=": ", file=sys.stderr)
-        print(*(" ".join(alt) for alt in rule.alts), sep=" | ", file=sys.stderr)
+        print(*(" ".join(alt.items) for alt in rule.alts), sep=" | ", file=sys.stderr)
     outfile = "story5/toy.py"
     print("Updating", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:

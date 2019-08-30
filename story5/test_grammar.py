@@ -4,7 +4,7 @@ from tokenize import generate_tokens
 
 from story5.tokenizer import Tokenizer
 from story5.parser import Parser
-from story5.grammar import GrammarParser, Rule
+from story5.grammar import Alt, GrammarParser, Rule
 
 def test_grammar():
     program = ("stmt: asmt | expr\n"
@@ -15,7 +15,9 @@ def test_grammar():
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
     rules = p.grammar()
-    assert rules == [Rule('stmt', [['asmt'], ['expr']]), Rule('asmt', [['NAME', "'='", 'expr']]), Rule('expr', [['NAME']])]
+    assert rules == [Rule('stmt', [Alt(['asmt']), Alt(['expr'])]),
+                     Rule('asmt', [Alt(['NAME', "'='", 'expr'])]),
+                     Rule('expr', [Alt(['NAME'])])]
 
 def test_failure():
     program = ("stmt: asmt | expr\n"

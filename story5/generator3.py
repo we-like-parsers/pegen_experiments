@@ -44,7 +44,7 @@ class Generator:
         # grammar bug -- don't do this!  (A full implementation is in
         # the ../pegen/parser_generator.py module.)
         for alt in rule.alts:
-            if alt[0] == rule.name:
+            if alt.items[0] == rule.name:
                 return True
         return False
 
@@ -57,7 +57,8 @@ class Generator:
             leftrec = ""
         self.put(f"def {rule.name}(self):")
         with self.indent():
-            self.put(f"self.show_rule({leftrec}{rule.name!r}, {rule.alts!r})")
+            alts = [alt.items for alt in rule.alts]
+            self.put(f"self.show_rule({leftrec}{rule.name!r}, {alts!r})")
             self.put(f"pos = self.mark()")
             for i, alt in enumerate(rule.alts):
                 self.gen_alt(alt, rule, i)
@@ -68,11 +69,11 @@ class Generator:
         items = []
         self.put(f"if (True")
         with self.indent():
-            for i, item in enumerate(alt):
+            for i, item in enumerate(alt.items):
                 self.gen_item(item, items, alt_index, i)
         self.put(f"):")
         with self.indent():
-            self.put(f"self.show_index({alt_index}, 0, {len(alt)})")
+            self.put(f"self.show_index({alt_index}, 0, {len(alt.items)})")
             self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
 
