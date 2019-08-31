@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.8
 
+import argparse
+import os
 import sys
 from tokenize import generate_tokens
 
@@ -8,8 +10,25 @@ from story5.tokenizer import Tokenizer
 from story5.generator3 import generate
 from story5.visualizer import Visualizer
 
+argparser = argparse.ArgumentParser()
+argparser.add_argument("grammar", nargs="?", default="story5/toy.gram", help="Grammar file (toy.gram)")
+argparser.add_argument("-o", "--output", help="output file (toy.py)")
+argparser.add_argument("-c", "--classname", help="output class name (ToyParser)")
+
 def main():
-    file = "story5/toy.gram"
+    args = argparser.parse_args()
+    file = args.grammar
+    outfile = args.output
+    if not outfile:
+        head, tail = os.path.split(file)
+        base, ext = os.path.splitext(tail)
+        outfile = os.path.join(head, base + ".py")
+    classname = args.classname
+    if not classname:
+        tail = os.path.basename(file)
+        base, ext = os.path.splitext(tail)
+        classname = base.title() + "Parser"
+
     print("Reading", file)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
@@ -33,11 +52,11 @@ def main():
     print("]")
     for rule in rules:
         print(rule.name, end=": ", file=sys.stderr)
-        print(*(" ".join(alt.items) for alt in rule.alts), sep=" | ", file=sys.stderr)
-    outfile = "story5/toy.py"
-    print("Updating", outfile, file=sys.stderr)
+        print(*rule.alts, sep=" | ", file=sys.stderr)
+
+    print("writing class", classname, "to", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:
-        generate(rules, stream)
+        generate(rules, classname, stream)
 
 if __name__ == '__main__':
     main()

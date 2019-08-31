@@ -1,24 +1,43 @@
+import argparse
 import curses
+import importlib
 import sys
 from tokenize import generate_tokens
 
-from story5.toy import ToyParser
+from story5.parser import Parser
 from story5.tokenizer import Tokenizer
 from story5.visualizer import Visualizer
 
 
+argparser = argparse.ArgumentParser()
+argparser.add_argument("program", nargs="?", default="story5/in.txt", help="Sample program (in.txt)")
+argparser.add_argument("-g", "--grammar", default="story5.toy.ToyParser", help="Grammar class (ToyParser)")
+argparser.add_argument("-s", "--start", default="start", help="Start symbol (start)")
+
+
 def main():
-    filename = "story5/in.txt"
-    startname = "start"
-    if sys.argv[1:]:
-        filename = sys.argv[1]
-        if sys.argv[2:]:
-            startname = sys.argv[2]
+    args = argparser.parse_args()
+    filename = args.program
+    startname = args.start
+    modname, classname = args.grammar.rsplit(".", 1)
+    try:
+        mod = importlib.import_module(modname)
+    except ImportError:
+        sys.exit(f"Cannot import {modname}")
+    try:
+        cls = getattr(mod, classname)
+    except AttributeError:
+        sys.exit(f"Module {modname} has no attribute {classname}")
+    if not isinstance(cls, type):
+        sys.exit(f"Object {modname}.{classname} is not a class ({cls!r})")
+    if not issubclass(cls, Parser):
+        sys.exit(f"Object {modname}.{classname} is not a subclass of Parser")
+
     with open(filename) as f:
         tokengen = generate_tokens(f.readline)
         vis = Visualizer()
         tok = Tokenizer(tokengen, vis)
-        p = ToyParser(tok)
+        p = cls(tok)
         start = getattr(p, startname)
         try:
             tree = start()
