@@ -35,6 +35,7 @@ rewriting everything based on the approach from the blogs.  Episodes:
 - [Generating a PEG Parser](https://medium.com/@gvanrossum_83706/generating-a-peg-parser-520057d642a9)
 - [Visualizing PEG Parsing](https://medium.com/@gvanrossum_83706/visualizing-peg-parsing-93a36f259423)
 - [Left-recursive PEG grammars](https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1)
+- [Adding actions to a PEG grammar](https://medium.com/@gvanrossum_83706/adding-actions-to-a-peg-grammar-d5e00fa1092f)
 
 C code generator
 ----------------
