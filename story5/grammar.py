@@ -31,10 +31,17 @@ class Alt:
         else:
             return f"Alt({self.items!r})"
 
+    def __str__(self):
+        items = " ".join(self.items)
+        if self.action:
+            return f"{items} {{ {self.action} }}"
+        else:
+            return items
+
     def __eq__(self, other):
         if not isinstance(other, Alt):
             return NotImplemented
-        return self.items == other.items
+        return self.items == other.items and self.action == other.action
 
 
 class GrammarParser(Parser):
@@ -71,7 +78,24 @@ class GrammarParser(Parser):
         items = []
         while item := self.item():
             items.append(item)
-        return Alt(items)
+        # Look for {...}
+        action = None
+        pos = self.mark()
+        if self.expect("{"):
+            # Collect arbitrary tokens until "}" found, skipping matching {...} pairs.
+            action_tokens = []
+            level = 0
+            while True:
+                token = self.tokenizer.get_token().string
+                if token == "{":
+                    level += 1
+                elif token == "}":
+                    level -= 1
+                    if level < 0:
+                        break
+                action_tokens.append(token)
+            action = " ".join(action_tokens)
+        return Alt(items, action)
 
 
     def item(self):

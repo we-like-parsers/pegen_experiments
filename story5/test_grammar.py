@@ -29,3 +29,24 @@ def test_failure():
     p = GrammarParser(tok)
     rules = p.grammar()
     assert rules is None
+
+def test_action():
+    program = "start: NAME { foo + bar } | NUMBER { -baz }\n"
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.grammar()
+    assert rules == [Rule("start", [Alt(["NAME"], "foo + bar"),
+                                    Alt(["NUMBER"], "- baz")])]
+    assert rules != [Rule("start", [Alt(["NAME"], "foo + bar"),
+                                    Alt(["NUMBER"], "baz")])]
+
+def test_action_repr_str():
+    alt = Alt(["one", "two"])
+    assert repr(alt) == "Alt(['one', 'two'])"
+    assert str(alt) == "one two"
+
+    alt = Alt(["one", "two"], "foo + bar")
+    assert repr(alt) == "Alt(['one', 'two'], 'foo + bar')"
+    assert str(alt) == "one two { foo + bar }"

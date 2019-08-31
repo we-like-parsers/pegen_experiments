@@ -74,7 +74,10 @@ class Generator:
         self.put(f"):")
         with self.indent():
             self.put(f"self.show_index({alt_index}, 0, {len(alt.items)})")
-            self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
+            if alt.action:
+                self.put(f"return {alt.action}")
+            else:
+                self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
 
     def gen_item(self, item, items, alt_index, item_index):
@@ -92,10 +95,10 @@ class Generator:
                 self.put(f"and ({var} := self.{item}())")
 
 
-def generate(rules, stream=None):
+def generate(rules, classname, stream=None):
     gen = Generator(stream)
     gen.put(HEADER)
-    gen.put(f"class ToyParser(Parser):")
+    gen.put(f"class {classname}(Parser):")
     for rule in rules:
         gen.put()
         with gen.indent():
