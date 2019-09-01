@@ -12,8 +12,10 @@ from story5.visualizer import Visualizer
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("grammar", nargs="?", default="story5/toy.gram", help="Grammar file (toy.gram)")
-argparser.add_argument("-o", "--output", help="output file (toy.py)")
-argparser.add_argument("-c", "--classname", help="output class name (ToyParser)")
+argparser.add_argument("-o", "--output", help="Output file (toy.py)")
+argparser.add_argument("-c", "--classname", help="Output class name (ToyParser)")
+argparser.add_argument("-v", "--visualize", action="store_true", help="Use visualizer")
+
 
 def main():
     args = argparser.parse_args()
@@ -33,7 +35,7 @@ def main():
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
         vis = None
-        if "-v" in sys.argv:
+        if args.visualize:
             vis = Visualizer()
         tok = Tokenizer(tokengen, vis)
         p = GrammarParser(tok)
@@ -57,6 +59,7 @@ def main():
     print("writing class", classname, "to", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:
         generate(rules, classname, stream)
+
 
 if __name__ == '__main__':
     main()
