@@ -1,6 +1,6 @@
 """Parser for the grammar file."""
 
-from token import NAME, NEWLINE, STRING, ENDMARKER
+from token import DEDENT, INDENT, NAME, NEWLINE, STRING, ENDMARKER
 
 from story5.parser import Parser
 
@@ -61,16 +61,37 @@ class GrammarParser(Parser):
         pos = self.mark()
         if name := self.expect(NAME):
             if self.expect(":"):
-                if alt := self.alternative():
-                    alts = [alt]
+                if alts := self.alts_newline():
                     apos = self.mark()
-                    while (self.expect("|")
-                           and (alt := self.alternative())):
-                        alts.append(alt)
-                        apos = self.mark()
-                    self.reset(apos)
-                    if self.expect(NEWLINE):
+                    if self.expect(INDENT):
+                        if (self.expect("|") and
+                            (more_alts := self.alts_newline())):
+                            alts.extend(more_alts)
+                            apos = self.mark()
+                            while (self.expect("|") and
+                                   (more_alts := self.alts_newline())):
+                                alts.extend(more_alts)
+                                apos = self.mark()
+                        if self.expect(DEDENT):
+                            return Rule(name.string, alts)
+                    else:
+                        self.reset(apos)
                         return Rule(name.string, alts)
+        self.reset(pos)
+        return None
+
+    def alts_newline(self):
+        pos = self.mark()
+        if alt := self.alternative():
+            alts = [alt]
+            apos = self.mark()
+            while (self.expect("|")
+                   and (alt := self.alternative())):
+                alts.append(alt)
+                apos = self.mark()
+            self.reset(apos)
+            if self.expect(NEWLINE):
+                return alts
         self.reset(pos)
         return None
 

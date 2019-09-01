@@ -50,3 +50,17 @@ def test_action_repr_str():
     alt = Alt(["one", "two"], "foo + bar")
     assert repr(alt) == "Alt(['one', 'two'], 'foo + bar')"
     assert str(alt) == "one two { foo + bar }"
+
+def test_indents():
+    program = ("stmt: foo | bar\n"
+               "    | baz\n"
+               "    | booh | bah\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.grammar()
+    assert rules == [Rule('stmt',
+                          [Alt(['foo']), Alt(['bar']),
+                           Alt(['baz']),
+                           Alt(['booh']), Alt(['bah'])])]
