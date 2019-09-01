@@ -59,39 +59,60 @@ class GrammarParser(Parser):
 
     def rule(self):
         pos = self.mark()
-        if name := self.expect(NAME):
-            if self.expect(":"):
-                if alts := self.alts_newline():
-                    apos = self.mark()
-                    if self.expect(INDENT):
-                        if (self.expect("|") and
-                            (more_alts := self.alts_newline())):
-                            alts.extend(more_alts)
-                            apos = self.mark()
-                            while (self.expect("|") and
-                                   (more_alts := self.alts_newline())):
-                                alts.extend(more_alts)
-                                apos = self.mark()
-                        if self.expect(DEDENT):
-                            return Rule(name.string, alts)
-                    else:
-                        self.reset(apos)
-                        return Rule(name.string, alts)
+        if (name := self.expect(NAME)) and self.expect(":"):
+            if alts := self.alts_newline():
+                pass
+            elif self.expect(NEWLINE):
+                alts = []
+            else:
+                self.reset(pos)
+                return None
+            if alts1 := self.indented_alts():
+                alts.extend(alts1)
+            if alts:
+                return Rule(name.string, alts)
+        self.reset(pos)
+        return None
+
+    def indented_alts(self):
+        pos = self.mark()
+        if self.expect(INDENT):
+            alts = []
+            while alts1 := self.bar_alts_newline():
+                alts.extend(alts1)
+            if self.expect(DEDENT):
+                return alts
+        self.reset(pos)
+        return None
+
+    def bar_alts_newline(self):
+        pos = self.mark()
+        if self.expect("|") and (alts := self.alts_newline()):
+            return alts
         self.reset(pos)
         return None
 
     def alts_newline(self):
         pos = self.mark()
+        if (alts := self.alts()) and self.expect(NEWLINE):
+            return alts
+        self.reset(pos)
+        return None
+
+    def alts(self):
+        pos = self.mark()
         if alt := self.alternative():
             alts = [alt]
-            apos = self.mark()
-            while (self.expect("|")
-                   and (alt := self.alternative())):
+            while alt := self.bar_alt():
                 alts.append(alt)
-                apos = self.mark()
-            self.reset(apos)
-            if self.expect(NEWLINE):
-                return alts
+            return alts
+        self.reset(pos)
+        return None
+
+    def bar_alt(self):
+        pos = self.mark()
+        if self.expect("|") and (alt := self.alternative()):
+            return alt
         self.reset(pos)
         return None
 
@@ -99,6 +120,8 @@ class GrammarParser(Parser):
         items = []
         while item := self.item():
             items.append(item)
+        if not items:
+            return None
         # Look for {...}
         action = None
         pos = self.mark()
@@ -117,7 +140,6 @@ class GrammarParser(Parser):
                 action_tokens.append(token)
             action = " ".join(action_tokens)
         return Alt(items, action)
-
 
     def item(self):
         if name := self.expect(NAME):

@@ -64,3 +64,20 @@ def test_indents():
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
                            Alt(['booh']), Alt(['bah'])])]
+
+def test_indents2():
+    program = ("stmt:\n"
+               "    | foo | bar\n"
+               "    | baz\n"
+               "    | booh | bah\n"
+               "foo: bar\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.grammar()
+    assert rules == [Rule('stmt',
+                          [Alt(['foo']), Alt(['bar']),
+                           Alt(['baz']),
+                           Alt(['booh']), Alt(['bah'])]),
+                     Rule('foo', [Alt(['bar'])])]
