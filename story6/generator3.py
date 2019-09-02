@@ -95,11 +95,11 @@ class Generator:
                 self.put(f"and ({var} := self.{item}())")
 
 
-def generate(rules, classname, stream=None):
+def generate(grammar, classname, stream=None):
     gen = Generator(stream)
     gen.put(HEADER)
     gen.put(f"class {classname}(Parser):")
-    for rule in rules:
+    for rule in grammar.rules.values():
         gen.put()
         with gen.indent():
             gen.gen_rule(rule)

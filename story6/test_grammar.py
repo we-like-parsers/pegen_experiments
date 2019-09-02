@@ -14,7 +14,7 @@ def test_grammar():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.grammar()
+    rules = list(p.grammar().rules.values())
     assert rules == [Rule('stmt', [Alt(['asmt']), Alt(['expr'])]),
                      Rule('asmt', [Alt(['NAME', "'='", 'expr'])]),
                      Rule('expr', [Alt(['NAME'])])]
@@ -27,8 +27,8 @@ def test_failure():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.grammar()
-    assert rules is None
+    grammar = p.grammar()
+    assert grammar is None
 
 def test_action():
     program = "start: NAME { foo + bar } | NUMBER { -baz }\n"
@@ -36,7 +36,7 @@ def test_action():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.grammar()
+    rules = list(p.grammar().rules.values())
     assert rules == [Rule("start", [Alt(["NAME"], "foo + bar"),
                                     Alt(["NUMBER"], "- baz")])]
     assert rules != [Rule("start", [Alt(["NAME"], "foo + bar"),
@@ -59,7 +59,7 @@ def test_indents():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.grammar()
+    rules = list(p.grammar().rules.values())
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -75,9 +75,25 @@ def test_indents2():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.grammar()
+    rules = list(p.grammar().rules.values())
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
                            Alt(['booh']), Alt(['bah'])]),
                      Rule('foo', [Alt(['bar'])])]
+
+def test_meta():
+    program = ("@start 'start'\n"
+               "@foo bar\n"
+               "@bar\n"
+               "stmt: foo\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    grammar = p.grammar()
+    assert grammar
+    assert grammar.rules == {'stmt': Rule('stmt', [Alt(["foo"])])}
+    assert grammar.metas == {'start': 'start',
+                             'foo': 'bar',
+                             'bar': None}

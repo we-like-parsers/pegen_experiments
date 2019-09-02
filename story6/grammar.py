@@ -1,8 +1,18 @@
 """Parser for the grammar file."""
 
-from token import DEDENT, INDENT, NAME, NEWLINE, STRING, ENDMARKER
+from ast import literal_eval
+
+from token import DEDENT, INDENT, NAME, NL, NEWLINE, STRING, ENDMARKER
 
 from story6.parser import Parser
+
+
+class Grammar:
+
+    def __init__(self, rules, metas):
+        self.rules = rules
+        self.metas = metas
+
 
 class Rule:
 
@@ -47,13 +57,39 @@ class Alt:
 class GrammarParser(Parser):
 
     def grammar(self):
+        rules = {}
+        metas = {}
         pos = self.mark()
-        if rule := self.rule():
-            rules = [rule]
-            while rule := self.rule():
-                rules.append(rule)
-            if self.expect(ENDMARKER):
-                return rules
+        while True:
+            if rule := self.rule():
+                rules[rule.name] = rule
+            elif meta := self.meta():
+                key, value = meta
+                metas[key] = value
+            elif self.expect(ENDMARKER):
+                break
+            elif self.expect(NL) or self.expect(NEWLINE):
+                continue
+            else:
+                self.reset(pos)
+                return None
+        return Grammar(rules, metas)
+
+    def meta(self):
+        pos = self.mark()
+        if self.expect("@") and (name := self.expect(NAME)):
+            apos = self.mark()
+            if self.expect(NEWLINE):
+                return (name.string, None)
+            self.reset(apos)
+            if (string := self.expect(STRING)) and self.expect(NEWLINE):
+                return (name.string, literal_eval(string.string))
+            self.reset(apos)
+            if (string := self.expect(NAME)) and self.expect(NEWLINE):
+                return (name.string, string.string)
+            self.reset(apos)
+            if (string := self.expect(NUMBER)) and self.expect(NEWLINE):
+                return (name.string, literal_eval(string.string))
         self.reset(pos)
         return None
 

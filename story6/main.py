@@ -40,25 +40,30 @@ def main():
         tok = Tokenizer(tokengen, vis)
         p = GrammarParser(tok)
         try:
-            rules = p.grammar()
+            grammar = p.grammar()
             if vis:
                 vis.done()
         finally:
             if vis:
                 vis.close()
-    if not rules:
+    if not grammar:
         sys.exit("Fail")
     print("[")
-    for rule in rules:
+    for rule in grammar.rules:
         print(f"  {rule},")
     print("]")
-    for rule in rules:
-        print(rule.name, end=": ", file=sys.stderr)
+    if grammar.metas:
+        print("{")
+        for key, value in grammar.metas.items():
+            print(f"  {key!r}: {value!r}")
+        print("}")
+    for name, rule in grammar.rules.items():
+        print(name, end=": ", file=sys.stderr)
         print(*rule.alts, sep=" | ", file=sys.stderr)
 
     print("writing class", classname, "to", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:
-        generate(rules, classname, stream)
+        generate(grammar, classname, stream)
 
 
 if __name__ == '__main__':
