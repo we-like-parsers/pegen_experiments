@@ -115,8 +115,13 @@ class GrammarParser(Parser):
         pos = self.mark()
         if self.expect(INDENT):
             alts = []
-            while alts1 := self.bar_alts_newline():
-                alts.extend(alts1)
+            while True:
+                if alts1 := self.bar_alts_newline():
+                    alts.extend(alts1)
+                elif self.expect(NL) or self.expect(COMMENT):
+                    pass
+                else:
+                    break
             if self.expect(DEDENT):
                 return alts
         self.reset(pos)
