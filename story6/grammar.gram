@@ -1,0 +1,71 @@
+@class GrammarParser
+
+@subheader """
+from ast import literal_eval
+from token import COMMENT, DEDENT, INDENT, NL, OP
+
+from story6.grammar import Grammar, Rule, Alt
+"""
+
+start: grammar ENDMARKER { grammar }
+
+grammar:
+    | metas rules { Grammar(rules, metas) }
+    | rules { Grammar(rules, []) }
+
+metas:
+    | meta metas { [meta] + metas }
+    | meta { [meta] }
+    | blank metas { metas }
+    | blank { [] }
+
+meta:
+    | "@" NAME NEWLINE { (name.string, None) }
+    | "@" NAME NAME NEWLINE { (name.string, name1.string) }
+    | "@" NAME STRING NEWLINE { (name.string, literal_eval(string.string)) }
+
+rules:
+    | rule rules { [rule] + rules }
+    | rule { [rule] }
+    | blank rules { rules }
+    | blank { [] }
+
+rule:
+    | NAME ":" alts NEWLINE INDENT more_alts DEDENT { Rule(name.string, alts + more_alts) }
+    | NAME ":" NEWLINE INDENT more_alts DEDENT { Rule(name.string, more_alts) }
+    | NAME ":" alts NEWLINE { Rule(name.string, alts) }
+
+more_alts:
+    | "|" alts NEWLINE more_alts { alts + more_alts }
+    | "|" alts NEWLINE { alts }
+
+alts:
+    | alt "|" alts { [alt] + alts }
+    | alt { [alt] }
+
+alt:
+    | items action { Alt(items, action) }
+    | items { Alt(items, None) }
+
+items:
+    | item items { [item] + items }
+    | item { [item] }
+
+item:
+    | NAME { name.string }
+    | STRING {string.string }
+
+action: "{" stuffs "}" { "{" + stuffs + "}" }
+
+stuffs:
+    | stuff stuffs { stuff + " " + stuffs }
+    | stuff { stuff }
+
+stuff:
+    | action { action }
+    | NAME { name.string }
+    | NUMBER { number.string }
+    | STRING { string.string }
+    | OP { op.string if op.string not in ("{", "}") else None }
+
+blank: NL | COMMENT
