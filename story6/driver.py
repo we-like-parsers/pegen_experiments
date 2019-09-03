@@ -13,6 +13,7 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument("program", nargs="?", default="story6/in.txt", help="Sample program (in.txt)")
 argparser.add_argument("-g", "--grammar", default="story6.toy.ToyParser", help="Grammar class (ToyParser)")
 argparser.add_argument("-s", "--start", default="start", help="Start symbol (start)")
+argparser.add_argument("-q", "--quiet", action="store_true", help="Don't use visualizer")
 
 
 def main():
@@ -33,17 +34,33 @@ def main():
     if not issubclass(cls, Parser):
         sys.exit(f"Object {modname}.{classname} is not a subclass of Parser")
 
+    tree = None
     with open(filename) as f:
         tokengen = generate_tokens(f.readline)
-        vis = Visualizer()
-        tok = Tokenizer(tokengen, vis)
-        p = cls(tok)
-        start = getattr(p, startname)
+        if args.quiet:
+            vis = None
+        else:
+            vis = Visualizer()
         try:
+            tok = Tokenizer(tokengen, vis)
+            p = cls(tok)
+            start = getattr(p, startname)
             tree = start()
-            vis.done()
+            if vis:
+                vis.done()
         finally:
-            vis.close()
+            if vis:
+                vis.close()
+
+    if tree:
+        print(tree)
+    else:
+        if tok.tokens:
+            last = tok.tokens[-1]
+            print(f"Line {last.start[0]}:")
+            print(last.line)
+            print(" "*last.start[1] + "^")
+        sys.exit("SyntaxError")
 
 
 main()
