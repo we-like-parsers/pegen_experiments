@@ -1,3 +1,4 @@
-start: expr NEWLINE { expr }
-expr: expr '+' term { expr + term } | expr '-' term { expr - term } | term { term }
-term: NUMBER { float(number.string) }
+@subheader "from ast import literal_eval\n"
+start: e=expr NEWLINE { e }
+expr: e1=expr '+' e2=term { e1 + e2 } | e1=expr '-' e2=term { e1 - e2 } | e=term { e }
+term: NUMBER { literal_eval(number.string) }

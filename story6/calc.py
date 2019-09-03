@@ -6,6 +6,8 @@ from story6.memo import memoize, memoize_left_rec
 from story6.node import Node
 from story6.parser import Parser
 
+from ast import literal_eval
+
 class CalcParser(Parser):
 
     @memoize
@@ -14,12 +16,12 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr := self.expr())
+            and (e := self.expr()) is not None
             and self.show_index(0, 1)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(0, 0, 2)
-            retval = expr
+            retval = e
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -32,36 +34,36 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr := self.expr())
+            and (e1 := self.expr()) is not None
             and self.show_index(0, 1)
-            and self.expect('+')
+            and self.expect('+') is not None
             and self.show_index(0, 2)
-            and (term := self.term())
+            and (e2 := self.term()) is not None
         ):
             self.show_index(0, 0, 3)
-            retval = expr + term
+            retval = e1 + e2
             if retval is not None:
                 return retval
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (expr := self.expr())
+            and (e1 := self.expr()) is not None
             and self.show_index(1, 1)
-            and self.expect('-')
+            and self.expect('-') is not None
             and self.show_index(1, 2)
-            and (term := self.term())
+            and (e2 := self.term()) is not None
         ):
             self.show_index(1, 0, 3)
-            retval = expr - term
+            retval = e1 - e2
             if retval is not None:
                 return retval
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (term := self.term())
+            and (e := self.term()) is not None
         ):
             self.show_index(2, 0, 1)
-            retval = term
+            retval = e
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -74,10 +76,10 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (number := self.expect(NUMBER))
+            and (number := self.expect(NUMBER)) is not None
         ):
             self.show_index(0, 0, 1)
-            retval = float ( number . string )
+            retval = literal_eval ( number . string )
             if retval is not None:
                 return retval
         self.reset(pos)
