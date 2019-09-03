@@ -2,7 +2,7 @@
 
 from ast import literal_eval
 
-from token import DEDENT, INDENT, NAME, NL, NEWLINE, STRING, ENDMARKER
+from token import COMMENT, DEDENT, ENDMARKER, INDENT, NAME, NEWLINE, NL, NUMBER, STRING
 
 from story6.parser import Parser
 
@@ -11,7 +11,9 @@ class Grammar:
 
     def __init__(self, rules, metas):
         self.rules = rules
+        self.rules_dict = {rule.name: rule for rule in rules}
         self.metas = metas
+        self.metas_dict = dict(metas)
 
 
 class Rule:
@@ -65,14 +67,14 @@ class GrammarParser(Parser):
                 rules.append(rule)
             elif meta := self.meta():
                 metas.append(meta)
-            elif self.expect(ENDMARKER):
-                break
-            elif self.expect(NL) or self.expect(NEWLINE):
+            elif self.expect(NL) or self.expect(COMMENT):
                 continue
+            elif self.expect(ENDMARKER):
+                return Grammar(rules, metas)
             else:
-                self.reset(pos)
-                return None
-        return Grammar(rules, metas)
+                break
+        self.reset(pos)
+        return None
 
     def meta(self):
         pos = self.mark()

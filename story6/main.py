@@ -26,10 +26,6 @@ def main():
         base, ext = os.path.splitext(tail)
         outfile = os.path.join(head, base + ".py")
     classname = args.classname
-    if not classname:
-        tail = os.path.basename(file)
-        base, ext = os.path.splitext(tail)
-        classname = base.title() + "Parser"
 
     print("Reading", file)
     with open(file) as f:
@@ -60,6 +56,14 @@ def main():
     for rule in grammar.rules:
         print(rule.name, end=": ", file=sys.stderr)
         print(*rule.alts, sep=" | ", file=sys.stderr)
+
+    if not classname:
+        classname = grammar.metas_dict.get("class")
+        if not classname:
+            tail = os.path.basename(file)
+            base, ext = os.path.splitext(tail)
+            classname = base.title() + "Parser"
+
 
     print("writing class", classname, "to", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:

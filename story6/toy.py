@@ -6,6 +6,8 @@ from story6.memo import memoize, memoize_left_rec
 from story6.node import Node
 from story6.parser import Parser
 
+# This is the toy grammar used in the blog series.
+
 class ToyParser(Parser):
 
     @memoize
@@ -234,3 +236,5 @@ class ToyParser(Parser):
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None
+
+# The end.

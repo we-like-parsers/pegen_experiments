@@ -96,10 +96,18 @@ class Generator:
 
 
 def generate(grammar, classname, stream=None):
+    metas = grammar.metas_dict
     gen = Generator(stream)
-    gen.put(HEADER)
+    header = metas.get("header", HEADER)
+    subheader = metas.get("subheader", "")
+    gen.put(header)
+    if subheader:
+        gen.put(subheader)
     gen.put(f"class {classname}(Parser):")
     for rule in grammar.rules:
         gen.put()
         with gen.indent():
             gen.gen_rule(rule)
+    trailer = metas.get("trailer")
+    if trailer:
+        gen.put(trailer)

@@ -1,3 +1,13 @@
+# Toy grammar.
+
+@class ToyParser
+
+@subheader """# This is the toy grammar used in the blog series.
+"""
+
+@trailer """
+# The end."""
+
 start: statements ENDMARKER
 statements: statement NEWLINE statements
           | statement NEWLINE
