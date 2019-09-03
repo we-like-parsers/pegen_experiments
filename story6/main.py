@@ -50,18 +50,9 @@ def main():
             print(last.line)
             print(" "*last.start[1] + "^")
         sys.exit("SyntaxError")
-    print("[ # Rules")
-    for rule in grammar.rules:
-        print(f"  {rule},")
-    print("]")
-    if grammar.metas:
-        print("[ # Metas")
-        for meta in grammar.metas:
-            print(f"  {meta!r}")
-        print("]")
-    for rule in grammar.rules:
-        print(rule.name, end=": ", file=sys.stderr)
-        print(*rule.alts, sep=" | ", file=sys.stderr)
+
+    print(repr(grammar))
+    print(str(grammar))
 
     if not classname:
         classname = grammar.metas_dict.get("class")

@@ -15,6 +15,32 @@ class Grammar:
         self.metas = metas
         self.metas_dict = dict(metas)
 
+    def __repr__(self):
+        lines = ["Grammar(["]
+        for rule in self.rules:
+            lines.append(f"    {rule!r},")
+        if self.metas:
+            lines.append("], [")
+            for meta in self.metas:
+                lines.append(f"    {meta!r}",)
+            lines.append("])")
+        else:
+            lines.append("], [])")
+        return "\n".join(lines)
+
+    def __str__(self):
+        lines = []
+        for key, value in self.metas:
+            if value is None:
+                lines.append(f"@{key}")
+            elif value.isalnum():
+                lines.append(f"@{key} {value}")
+            else:
+                lines.append(f"@{key} {value!r}")
+        for rule in self.rules:
+            lines.append(f"{rule}")
+        return "\n".join(lines)
+
 
 class Rule:
 
@@ -24,6 +50,12 @@ class Rule:
 
     def __repr__(self):
         return f"Rule({self.name!r}, {self.alts})"
+
+    def __str__(self):
+        lines = [f"{self.name}:"]
+        for alt in self.alts:
+            lines.append(f"    | {alt}")
+        return "\n".join(lines)
 
     def __eq__(self, other):
         if not isinstance(other, Rule):
