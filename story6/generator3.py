@@ -48,7 +48,10 @@ class Generator:
         # grammar bug -- don't do this!  (A full implementation is in
         # the ../pegen/parser_generator.py module.)
         for alt in rule.alts:
-            if alt.items[0] == rule.name:
+            item = alt.items[0]
+            if isinstance(item, NamedItem):
+                item = item.item
+            if item == rule.name:
                 return True
         return False
 
