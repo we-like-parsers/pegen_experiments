@@ -15,6 +15,10 @@ from story6.parser import Parser
 """
 
 
+def flatten(items):
+    return [str(it.item) if isinstance(it, NamedItem) else str(it) for it in items]
+
+
 class Generator:
 
     def __init__(self, stream=None):
@@ -57,7 +61,7 @@ class Generator:
             leftrec = ""
         self.put(f"def {rule.name}(self):")
         with self.indent():
-            alts = [alt.items for alt in rule.alts]
+            alts = [flatten(alt.items) for alt in rule.alts]
             self.put(f"self.show_rule({leftrec}{rule.name!r}, {alts!r})")
             self.put(f"pos = self.mark()")
             for i, alt in enumerate(rule.alts):
