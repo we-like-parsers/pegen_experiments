@@ -33,17 +33,23 @@ def main():
         vis = None
         if args.visualize:
             vis = Visualizer()
-        tok = Tokenizer(tokengen, vis)
-        p = GrammarParser(tok)
         try:
+            tok = Tokenizer(tokengen, vis)
+            p = GrammarParser(tok)
             grammar = p.grammar()
             if vis:
                 vis.done()
         finally:
             if vis:
                 vis.close()
+
     if not grammar:
-        sys.exit("Fail")
+        if tok.tokens:
+            last = tok.tokens[-1]
+            print(f"Line {last.start[0]}:")
+            print(last.line)
+            print(" "*last.start[1] + "^")
+        sys.exit("SyntaxError")
     print("[ # Rules")
     for rule in grammar.rules:
         print(f"  {rule},")
