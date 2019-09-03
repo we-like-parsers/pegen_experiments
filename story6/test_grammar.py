@@ -14,7 +14,7 @@ def test_grammar():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules)
+    rules = list(p.start().rules)
     assert rules == [Rule('stmt', [Alt(['asmt']), Alt(['expr'])]),
                      Rule('asmt', [Alt(['NAME', "'='", 'expr'])]),
                      Rule('expr', [Alt(['NAME'])])]
@@ -27,7 +27,7 @@ def test_failure():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    grammar = p.grammar()
+    grammar = p.start()
     assert grammar is None
 
 def test_action():
@@ -36,7 +36,7 @@ def test_action():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules)
+    rules = list(p.start().rules)
     assert rules == [Rule("start", [Alt(["NAME"], "foo + bar"),
                                     Alt(["NUMBER"], "- baz")])]
     assert rules != [Rule("start", [Alt(["NAME"], "foo + bar"),
@@ -59,7 +59,7 @@ def test_indents():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules)
+    rules = list(p.start().rules)
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -75,7 +75,7 @@ def test_indents2():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules)
+    rules = list(p.start().rules)
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -91,7 +91,7 @@ def test_meta():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    grammar = p.grammar()
+    grammar = p.start()
     assert grammar
     assert grammar.rules == [Rule('stmt', [Alt(["foo"])])]
     assert grammar.metas == [('start', 'start'),
