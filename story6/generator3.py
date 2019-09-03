@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 
-from story6.grammar import Rule
+from story6.grammar import Grammar, Rule, Alt, NamedItem
 
 HEADER = """\
 # This is @generated code; do not edit!
@@ -85,17 +85,22 @@ class Generator:
 
     def gen_item(self, item, items, alt_index, item_index):
         self.put(f"and self.show_index({alt_index}, {item_index})")
-        if item[0] in ('"', "'"):
-            self.put(f"and self.expect({item})")
+        if isinstance(item, NamedItem):
+            var, item = item.name, item.item
         else:
-            var = item.lower()
+            var = None
+        if not var and item[0] in ('"', "'"):
+            self.put(f"and self.expect({item}) is not None")
+        else:
+            if var is None:
+                var = item.lower()
             if var in items:
                 var += str(len(items))
             items.append(var)
-            if item.isupper():
-                self.put(f"and ({var} := self.expect({item}))")
+            if item[0] in ('"', "'") or item.isupper():
+                self.put(f"and ({var} := self.expect({item})) is not None")
             else:
-                self.put(f"and ({var} := self.{item}())")
+                self.put(f"and ({var} := self.{item}()) is not None")
 
 
 def generate(grammar, classname, stream=None):

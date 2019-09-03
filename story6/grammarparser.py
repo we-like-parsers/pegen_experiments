@@ -20,9 +20,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (grammar := self.grammar())
+            and (grammar := self.grammar()) is not None
             and self.show_index(0, 1)
-            and (endmarker := self.expect(ENDMARKER))
+            and (endmarker := self.expect(ENDMARKER)) is not None
         ):
             self.show_index(0, 0, 2)
             retval = grammar
@@ -38,9 +38,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (metas := self.metas())
+            and (metas := self.metas()) is not None
             and self.show_index(0, 1)
-            and (rules := self.rules())
+            and (rules := self.rules()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = Grammar ( rules , metas )
@@ -49,7 +49,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (rules := self.rules())
+            and (rules := self.rules()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = Grammar ( rules , [ ] )
@@ -65,9 +65,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (meta := self.meta())
+            and (meta := self.meta()) is not None
             and self.show_index(0, 1)
-            and (metas := self.metas())
+            and (metas := self.metas()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = [ meta ] + metas
@@ -76,7 +76,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (meta := self.meta())
+            and (meta := self.meta()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = [ meta ]
@@ -85,9 +85,9 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (blank := self.blank())
+            and (blank := self.blank()) is not None
             and self.show_index(2, 1)
-            and (metas := self.metas())
+            and (metas := self.metas()) is not None
         ):
             self.show_index(2, 0, 2)
             retval = metas
@@ -96,7 +96,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(3, 0)
-            and (blank := self.blank())
+            and (blank := self.blank()) is not None
         ):
             self.show_index(3, 0, 1)
             retval = [ ]
@@ -112,11 +112,11 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and self.expect("@")
+            and self.expect("@") is not None
             and self.show_index(0, 1)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(0, 2)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(0, 0, 3)
             retval = ( name . string , None )
@@ -125,13 +125,13 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and self.expect("@")
+            and self.expect("@") is not None
             and self.show_index(1, 1)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(1, 2)
-            and (name1 := self.expect(NAME))
+            and (name1 := self.expect(NAME)) is not None
             and self.show_index(1, 3)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(1, 0, 4)
             retval = ( name . string , name1 . string )
@@ -140,13 +140,13 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and self.expect("@")
+            and self.expect("@") is not None
             and self.show_index(2, 1)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(2, 2)
-            and (string := self.expect(STRING))
+            and (string := self.expect(STRING)) is not None
             and self.show_index(2, 3)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(2, 0, 4)
             retval = ( name . string , literal_eval ( string . string ) )
@@ -162,9 +162,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (rule := self.rule())
+            and (rule := self.rule()) is not None
             and self.show_index(0, 1)
-            and (rules := self.rules())
+            and (rules := self.rules()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = [ rule ] + rules
@@ -173,7 +173,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (rule := self.rule())
+            and (rule := self.rule()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = [ rule ]
@@ -182,9 +182,9 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (blank := self.blank())
+            and (blank := self.blank()) is not None
             and self.show_index(2, 1)
-            and (rules := self.rules())
+            and (rules := self.rules()) is not None
         ):
             self.show_index(2, 0, 2)
             retval = rules
@@ -193,7 +193,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(3, 0)
-            and (blank := self.blank())
+            and (blank := self.blank()) is not None
         ):
             self.show_index(3, 0, 1)
             retval = [ ]
@@ -209,19 +209,19 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(0, 1)
-            and self.expect(":")
+            and self.expect(":") is not None
             and self.show_index(0, 2)
-            and (alts := self.alts())
+            and (alts := self.alts()) is not None
             and self.show_index(0, 3)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
             and self.show_index(0, 4)
-            and (indent := self.expect(INDENT))
+            and (indent := self.expect(INDENT)) is not None
             and self.show_index(0, 5)
-            and (more_alts := self.more_alts())
+            and (more_alts := self.more_alts()) is not None
             and self.show_index(0, 6)
-            and (dedent := self.expect(DEDENT))
+            and (dedent := self.expect(DEDENT)) is not None
         ):
             self.show_index(0, 0, 7)
             retval = Rule ( name . string , alts + more_alts )
@@ -230,17 +230,17 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(1, 1)
-            and self.expect(":")
+            and self.expect(":") is not None
             and self.show_index(1, 2)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
             and self.show_index(1, 3)
-            and (indent := self.expect(INDENT))
+            and (indent := self.expect(INDENT)) is not None
             and self.show_index(1, 4)
-            and (more_alts := self.more_alts())
+            and (more_alts := self.more_alts()) is not None
             and self.show_index(1, 5)
-            and (dedent := self.expect(DEDENT))
+            and (dedent := self.expect(DEDENT)) is not None
         ):
             self.show_index(1, 0, 6)
             retval = Rule ( name . string , more_alts )
@@ -249,13 +249,13 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
             and self.show_index(2, 1)
-            and self.expect(":")
+            and self.expect(":") is not None
             and self.show_index(2, 2)
-            and (alts := self.alts())
+            and (alts := self.alts()) is not None
             and self.show_index(2, 3)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(2, 0, 4)
             retval = Rule ( name . string , alts )
@@ -267,17 +267,17 @@ class GrammarParser(Parser):
 
     @memoize
     def more_alts(self):
-        self.show_rule('more_alts', [['"|"', 'alts', 'NEWLINE', 'more_alts'], ['"|"', 'alts', 'NEWLINE']])
+        self.show_rule('more_alts', [['"|"', 'alts', 'NEWLINE', 'more_alts'], ['"|"', 'alts', 'NEWLINE'], ['blank', 'more_alts'], ['blank']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and self.expect("|")
+            and self.expect("|") is not None
             and self.show_index(0, 1)
-            and (alts := self.alts())
+            and (alts := self.alts()) is not None
             and self.show_index(0, 2)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
             and self.show_index(0, 3)
-            and (more_alts := self.more_alts())
+            and (more_alts := self.more_alts()) is not None
         ):
             self.show_index(0, 0, 4)
             retval = alts + more_alts
@@ -286,14 +286,34 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and self.expect("|")
+            and self.expect("|") is not None
             and self.show_index(1, 1)
-            and (alts := self.alts())
+            and (alts := self.alts()) is not None
             and self.show_index(1, 2)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(1, 0, 3)
             retval = alts
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(2, 0)
+            and (blank := self.blank()) is not None
+            and self.show_index(2, 1)
+            and (more_alts := self.more_alts()) is not None
+        ):
+            self.show_index(2, 0, 2)
+            retval = more_alts
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(3, 0)
+            and (blank := self.blank()) is not None
+        ):
+            self.show_index(3, 0, 1)
+            retval = [ ]
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -306,11 +326,11 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (alt := self.alt())
+            and (alt := self.alt()) is not None
             and self.show_index(0, 1)
-            and self.expect("|")
+            and self.expect("|") is not None
             and self.show_index(0, 2)
-            and (alts := self.alts())
+            and (alts := self.alts()) is not None
         ):
             self.show_index(0, 0, 3)
             retval = [ alt ] + alts
@@ -319,7 +339,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (alt := self.alt())
+            and (alt := self.alt()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = [ alt ]
@@ -335,9 +355,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (items := self.items())
+            and (items := self.items()) is not None
             and self.show_index(0, 1)
-            and (action := self.action())
+            and (action := self.action()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = Alt ( items , action [ 1 : - 1 ] . strip ( ) )
@@ -346,7 +366,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (items := self.items())
+            and (items := self.items()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = Alt ( items , None )
@@ -362,9 +382,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (item := self.item())
+            and (item := self.item()) is not None
             and self.show_index(0, 1)
-            and (items := self.items())
+            and (items := self.items()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = [ item ] + items
@@ -373,7 +393,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (item := self.item())
+            and (item := self.item()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = [ item ]
@@ -385,11 +405,40 @@ class GrammarParser(Parser):
 
     @memoize
     def item(self):
-        self.show_rule('item', [['NAME'], ['STRING']])
+        self.show_rule('item', [['NAME', "'='", 'atom'], ['atom']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
+            and self.show_index(0, 1)
+            and self.expect('=') is not None
+            and self.show_index(0, 2)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(0, 0, 3)
+            retval = NamedItem ( name . string , atom )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(1, 0)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(1, 0, 1)
+            retval = atom
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        self.show_index(0, 0, 0)
+        return None
+
+    @memoize
+    def atom(self):
+        self.show_rule('atom', [['NAME'], ['STRING']])
+        pos = self.mark()
+        if (True
+            and self.show_index(0, 0)
+            and (name := self.expect(NAME)) is not None
         ):
             self.show_index(0, 0, 1)
             retval = name . string
@@ -398,7 +447,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (string := self.expect(STRING))
+            and (string := self.expect(STRING)) is not None
         ):
             self.show_index(1, 0, 1)
             retval = string . string
@@ -414,11 +463,11 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and self.expect("{")
+            and self.expect("{") is not None
             and self.show_index(0, 1)
-            and (stuffs := self.stuffs())
+            and (stuffs := self.stuffs()) is not None
             and self.show_index(0, 2)
-            and self.expect("}")
+            and self.expect("}") is not None
         ):
             self.show_index(0, 0, 3)
             retval = "{" + stuffs + "}"
@@ -434,9 +483,9 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (stuff := self.stuff())
+            and (stuff := self.stuff()) is not None
             and self.show_index(0, 1)
-            and (stuffs := self.stuffs())
+            and (stuffs := self.stuffs()) is not None
         ):
             self.show_index(0, 0, 2)
             retval = stuff + " " + stuffs
@@ -445,7 +494,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (stuff := self.stuff())
+            and (stuff := self.stuff()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = stuff
@@ -461,7 +510,7 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (action := self.action())
+            and (action := self.action()) is not None
         ):
             self.show_index(0, 0, 1)
             retval = action
@@ -470,7 +519,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
         ):
             self.show_index(1, 0, 1)
             retval = name . string
@@ -479,7 +528,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (number := self.expect(NUMBER))
+            and (number := self.expect(NUMBER)) is not None
         ):
             self.show_index(2, 0, 1)
             retval = number . string
@@ -488,7 +537,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(3, 0)
-            and (string := self.expect(STRING))
+            and (string := self.expect(STRING)) is not None
         ):
             self.show_index(3, 0, 1)
             retval = string . string
@@ -497,7 +546,7 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(4, 0)
-            and (op := self.expect(OP))
+            and (op := self.expect(OP)) is not None
         ):
             self.show_index(4, 0, 1)
             retval = op . string if op . string not in ( "{" , "}" ) else None
@@ -513,14 +562,14 @@ class GrammarParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (nl := self.expect(NL))
+            and (nl := self.expect(NL)) is not None
         ):
             self.show_index(0, 0, 1)
             return Node('blank', [nl])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (comment := self.expect(COMMENT))
+            and (comment := self.expect(COMMENT)) is not None
         ):
             self.show_index(1, 0, 1)
             return Node('blank', [comment])

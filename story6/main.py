@@ -5,7 +5,6 @@ import os
 import sys
 from tokenize import generate_tokens
 
-from story6.grammarparser import GrammarParser
 from story6.tokenizer import Tokenizer
 from story6.generator3 import generate
 from story6.visualizer import Visualizer
@@ -15,6 +14,7 @@ argparser.add_argument("grammar", nargs="?", default="story6/toy.gram", help="Gr
 argparser.add_argument("-o", "--output", help="Output file (toy.py)")
 argparser.add_argument("-c", "--classname", help="Output class name (ToyParser)")
 argparser.add_argument("-v", "--visualize", action="store_true", help="Use visualizer")
+argparser.add_argument("-b", "--backup", action="store_true", help="Use old grammar parser")
 
 
 def main():
@@ -27,6 +27,11 @@ def main():
         outfile = os.path.join(head, base + ".py")
     classname = args.classname
 
+    if args.backup:
+        from story6.grammar import GrammarParser
+    else:
+        from story6.grammarparser import GrammarParser
+
     print("Reading", file)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
@@ -36,7 +41,7 @@ def main():
         try:
             tok = Tokenizer(tokengen, vis)
             p = GrammarParser(tok)
-            grammar = p.grammar()
+            grammar = p.start()
             if vis:
                 vis.done()
         finally:
@@ -49,6 +54,7 @@ def main():
             print(f"Line {last.start[0]}:")
             print(last.line)
             print(" "*last.start[1] + "^")
+            breakpoint()
         sys.exit("SyntaxError")
 
     print(repr(grammar))

@@ -88,7 +88,32 @@ class Alt:
         return self.items == other.items and self.action == other.action
 
 
+class NamedItem:
+
+    def __init__(self, name, item):
+        self.name = name
+        self.item = item
+
+    def __repr__(self):
+        return f"NamedItem({self.name!r}, {self.item!r})"
+
+    def __str__(self):
+        return f"{self.name}={self.item}"
+
+    def __eq__(self, other):
+        if not isinstance(other, NamedItem):
+            return NotImplemented
+        return self.name == other.name and self.item == other.item
+
+
 class GrammarParser(Parser):
+
+    def start(self):
+        pos = self.mark()
+        if (grammar := self.grammar()) and self.expect(ENDMARKER):
+            return grammar
+        self.reset(pos)
+        return None
 
     def grammar(self):
         rules = []
@@ -101,10 +126,8 @@ class GrammarParser(Parser):
                 metas.append(meta)
             elif self.expect(NL) or self.expect(COMMENT):
                 continue
-            elif self.expect(ENDMARKER):
-                return Grammar(rules, metas)
             else:
-                break
+                return Grammar(rules, metas)
         self.reset(pos)
         return None
 

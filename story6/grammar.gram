@@ -38,6 +38,8 @@ rule:
 more_alts:
     | "|" alts NEWLINE more_alts { alts + more_alts }
     | "|" alts NEWLINE { alts }
+    | blank more_alts { more_alts }
+    | blank { [] }
 
 alts:
     | alt "|" alts { [alt] + alts }
@@ -52,6 +54,10 @@ items:
     | item { [item] }
 
 item:
+    | NAME '=' atom { NamedItem(name.string, atom) }
+    | atom { atom }
+
+atom:
     | NAME { name.string }
     | STRING {string.string }
 
