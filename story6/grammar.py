@@ -76,7 +76,7 @@ class Alt:
             return f"Alt({self.items!r})"
 
     def __str__(self):
-        items = " ".join(self.items)
+        items = " ".join(str(item) for item in self.items)
         if self.action:
             return f"{items} {{ {self.action} }}"
         else:
