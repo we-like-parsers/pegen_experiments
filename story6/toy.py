@@ -1,6 +1,6 @@
 # This is @generated code; do not edit!
 
-from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
+from token import ENDMARKER, NAME, NEWLINE, NUMBER, STRING
 
 from story6.memo import memoize, memoize_left_rec
 from story6.node import Node

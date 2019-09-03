@@ -7,7 +7,7 @@ from story6.grammar import Rule
 HEADER = """\
 # This is @generated code; do not edit!
 
-from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
+from token import ENDMARKER, NAME, NEWLINE, NUMBER, STRING
 
 from story6.memo import memoize, memoize_left_rec
 from story6.node import Node
@@ -75,7 +75,10 @@ class Generator:
         with self.indent():
             self.put(f"self.show_index({alt_index}, 0, {len(alt.items)})")
             if alt.action:
-                self.put(f"return {alt.action}")
+                self.put(f"retval = {alt.action}")
+                self.put(f"if retval is not None:")
+                with self.indent():
+                    self.put(f"return retval")
             else:
                 self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
