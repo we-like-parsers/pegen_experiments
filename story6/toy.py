@@ -16,9 +16,9 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (statements := self.statements())
+            and (statements := self.statements()) is not None
             and self.show_index(0, 1)
-            and (endmarker := self.expect(ENDMARKER))
+            and (endmarker := self.expect(ENDMARKER)) is not None
         ):
             self.show_index(0, 0, 2)
             return Node('start', [statements, endmarker])
@@ -32,20 +32,20 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (statement := self.statement())
+            and (statement := self.statement()) is not None
             and self.show_index(0, 1)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
             and self.show_index(0, 2)
-            and (statements := self.statements())
+            and (statements := self.statements()) is not None
         ):
             self.show_index(0, 0, 3)
             return Node('statements', [statement, newline, statements])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (statement := self.statement())
+            and (statement := self.statement()) is not None
             and self.show_index(1, 1)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(1, 0, 2)
             return Node('statements', [statement, newline])
@@ -59,21 +59,21 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (if_statement := self.if_statement())
+            and (if_statement := self.if_statement()) is not None
         ):
             self.show_index(0, 0, 1)
             return Node('statement', [if_statement])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (assignment := self.assignment())
+            and (assignment := self.assignment()) is not None
         ):
             self.show_index(1, 0, 1)
             return Node('statement', [assignment])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
         ):
             self.show_index(2, 0, 1)
             return Node('statement', [expr])
@@ -87,29 +87,29 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(0, 1)
-            and self.expect('+')
+            and self.expect('+') is not None
             and self.show_index(0, 2)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(0, 0, 3)
             return Node('expr', [expr, term])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(1, 1)
-            and self.expect('-')
+            and self.expect('-') is not None
             and self.show_index(1, 2)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(1, 0, 3)
             return Node('expr', [expr, term])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(2, 0, 1)
             return Node('expr', [term])
@@ -123,29 +123,29 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
             and self.show_index(0, 1)
-            and self.expect('*')
+            and self.expect('*') is not None
             and self.show_index(0, 2)
-            and (atom := self.atom())
+            and (atom := self.atom()) is not None
         ):
             self.show_index(0, 0, 3)
             return Node('term', [term, atom])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
             and self.show_index(1, 1)
-            and self.expect('/')
+            and self.expect('/') is not None
             and self.show_index(1, 2)
-            and (atom := self.atom())
+            and (atom := self.atom()) is not None
         ):
             self.show_index(1, 0, 3)
             return Node('term', [term, atom])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (atom := self.atom())
+            and (atom := self.atom()) is not None
         ):
             self.show_index(2, 0, 1)
             return Node('term', [atom])
@@ -159,25 +159,25 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
         ):
             self.show_index(0, 0, 1)
             return Node('atom', [name])
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (number := self.expect(NUMBER))
+            and (number := self.expect(NUMBER)) is not None
         ):
             self.show_index(1, 0, 1)
             return Node('atom', [number])
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and self.expect('(')
+            and self.expect('(') is not None
             and self.show_index(2, 1)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(2, 2)
-            and self.expect(')')
+            and self.expect(')') is not None
         ):
             self.show_index(2, 0, 3)
             return Node('atom', [expr])
@@ -191,11 +191,11 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (target := self.target())
+            and (target := self.target()) is not None
             and self.show_index(0, 1)
-            and self.expect('=')
+            and self.expect('=') is not None
             and self.show_index(0, 2)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
         ):
             self.show_index(0, 0, 3)
             return Node('assignment', [target, expr])
@@ -209,7 +209,7 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (name := self.expect(NAME))
+            and (name := self.expect(NAME)) is not None
         ):
             self.show_index(0, 0, 1)
             return Node('target', [name])
@@ -223,13 +223,13 @@ class ToyParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and self.expect('if')
+            and self.expect('if') is not None
             and self.show_index(0, 1)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(0, 2)
-            and self.expect(':')
+            and self.expect(':') is not None
             and self.show_index(0, 3)
-            and (statement := self.statement())
+            and (statement := self.statement()) is not None
         ):
             self.show_index(0, 0, 4)
             return Node('if_statement', [expr, statement])
