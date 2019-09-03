@@ -1,6 +1,6 @@
 # This is @generated code; do not edit!
 
-from token import NAME, NUMBER, STRING, NEWLINE, ENDMARKER
+from token import ENDMARKER, NAME, NEWLINE, NUMBER, STRING
 
 from story6.memo import memoize, memoize_left_rec
 from story6.node import Node
@@ -19,7 +19,9 @@ class CalcParser(Parser):
             and (newline := self.expect(NEWLINE))
         ):
             self.show_index(0, 0, 2)
-            return expr
+            retval = expr
+            if retval is not None:
+                return retval
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None
@@ -37,7 +39,9 @@ class CalcParser(Parser):
             and (term := self.term())
         ):
             self.show_index(0, 0, 3)
-            return expr + term
+            retval = expr + term
+            if retval is not None:
+                return retval
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
@@ -48,14 +52,18 @@ class CalcParser(Parser):
             and (term := self.term())
         ):
             self.show_index(1, 0, 3)
-            return expr - term
+            retval = expr - term
+            if retval is not None:
+                return retval
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
             and (term := self.term())
         ):
             self.show_index(2, 0, 1)
-            return term
+            retval = term
+            if retval is not None:
+                return retval
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None
@@ -69,7 +77,9 @@ class CalcParser(Parser):
             and (number := self.expect(NUMBER))
         ):
             self.show_index(0, 0, 1)
-            return float ( number . string )
+            retval = float ( number . string )
+            if retval is not None:
+                return retval
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None

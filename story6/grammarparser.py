@@ -340,7 +340,7 @@ class GrammarParser(Parser):
             and (action := self.action())
         ):
             self.show_index(0, 0, 2)
-            retval = Alt ( items , action )
+            retval = Alt ( items , action [ 1 : - 1 ] . strip ( ) )
             if retval is not None:
                 return retval
         self.reset(pos)

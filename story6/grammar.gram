@@ -44,7 +44,7 @@ alts:
     | alt { [alt] }
 
 alt:
-    | items action { Alt(items, action) }
+    | items action { Alt(items, action[1:-1].strip()) }
     | items { Alt(items, None) }
 
 items:

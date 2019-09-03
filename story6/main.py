@@ -5,7 +5,7 @@ import os
 import sys
 from tokenize import generate_tokens
 
-from story6.grammar import GrammarParser
+from story6.grammarparser import GrammarParser
 from story6.tokenizer import Tokenizer
 from story6.generator3 import generate
 from story6.visualizer import Visualizer
