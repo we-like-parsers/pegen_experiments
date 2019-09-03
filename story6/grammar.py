@@ -57,15 +57,14 @@ class Alt:
 class GrammarParser(Parser):
 
     def grammar(self):
-        rules = {}
-        metas = {}
+        rules = []
+        metas = []
         pos = self.mark()
         while True:
             if rule := self.rule():
-                rules[rule.name] = rule
+                rules.append(rule)
             elif meta := self.meta():
-                key, value = meta
-                metas[key] = value
+                metas.append(meta)
             elif self.expect(ENDMARKER):
                 break
             elif self.expect(NL) or self.expect(NEWLINE):

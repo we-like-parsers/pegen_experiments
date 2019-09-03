@@ -48,17 +48,17 @@ def main():
                 vis.close()
     if not grammar:
         sys.exit("Fail")
-    print("[")
+    print("[ # Rules")
     for rule in grammar.rules:
         print(f"  {rule},")
     print("]")
     if grammar.metas:
-        print("{")
-        for key, value in grammar.metas.items():
-            print(f"  {key!r}: {value!r}")
-        print("}")
-    for name, rule in grammar.rules.items():
-        print(name, end=": ", file=sys.stderr)
+        print("[ # Metas")
+        for meta in grammar.metas:
+            print(f"  {meta!r}")
+        print("]")
+    for rule in grammar.rules:
+        print(rule.name, end=": ", file=sys.stderr)
         print(*rule.alts, sep=" | ", file=sys.stderr)
 
     print("writing class", classname, "to", outfile, file=sys.stderr)

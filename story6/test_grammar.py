@@ -14,7 +14,7 @@ def test_grammar():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules.values())
+    rules = list(p.grammar().rules)
     assert rules == [Rule('stmt', [Alt(['asmt']), Alt(['expr'])]),
                      Rule('asmt', [Alt(['NAME', "'='", 'expr'])]),
                      Rule('expr', [Alt(['NAME'])])]
@@ -36,7 +36,7 @@ def test_action():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules.values())
+    rules = list(p.grammar().rules)
     assert rules == [Rule("start", [Alt(["NAME"], "foo + bar"),
                                     Alt(["NUMBER"], "- baz")])]
     assert rules != [Rule("start", [Alt(["NAME"], "foo + bar"),
@@ -59,7 +59,7 @@ def test_indents():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules.values())
+    rules = list(p.grammar().rules)
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -75,7 +75,7 @@ def test_indents2():
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = list(p.grammar().rules.values())
+    rules = list(p.grammar().rules)
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -93,7 +93,7 @@ def test_meta():
     p = GrammarParser(tok)
     grammar = p.grammar()
     assert grammar
-    assert grammar.rules == {'stmt': Rule('stmt', [Alt(["foo"])])}
-    assert grammar.metas == {'start': 'start',
-                             'foo': 'bar',
-                             'bar': None}
+    assert grammar.rules == [Rule('stmt', [Alt(["foo"])])]
+    assert grammar.metas == [('start', 'start'),
+                             ('foo', 'bar'),
+                             ('bar', None)]

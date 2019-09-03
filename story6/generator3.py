@@ -99,7 +99,7 @@ def generate(grammar, classname, stream=None):
     gen = Generator(stream)
     gen.put(HEADER)
     gen.put(f"class {classname}(Parser):")
-    for rule in grammar.rules.values():
+    for rule in grammar.rules:
         gen.put()
         with gen.indent():
             gen.gen_rule(rule)
