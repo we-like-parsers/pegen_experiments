@@ -6,7 +6,7 @@ import sys
 from tokenize import generate_tokens
 
 from story6.tokenizer import Tokenizer
-from story6.generator3 import generate
+from story6.generator3 import check, generate
 from story6.visualizer import Visualizer
 
 argparser = argparse.ArgumentParser()
@@ -32,7 +32,7 @@ def main():
     else:
         from story6.grammarparser import GrammarParser
 
-    print("Reading", file)
+    print("Reading", file, file=sys.stderr)
     with open(file) as f:
         tokengen = generate_tokens(f.readline)
         vis = None
@@ -54,7 +54,6 @@ def main():
             print(f"Line {last.start[0]}:")
             print(last.line)
             print(" "*last.start[1] + "^")
-            breakpoint()
         sys.exit("SyntaxError")
 
     print(repr(grammar))
@@ -67,8 +66,11 @@ def main():
             base, ext = os.path.splitext(tail)
             classname = base.title() + "Parser"
 
+    errors = check(grammar)
+    if errors:
+        sys.exit(f"Detected {errors} errors")
 
-    print("writing class", classname, "to", outfile, file=sys.stderr)
+    print("Writing class", classname, "to", outfile, file=sys.stderr)
     with open(outfile, "w") as stream:
         generate(grammar, classname, stream)
 

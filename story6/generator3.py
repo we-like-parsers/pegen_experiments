@@ -1,6 +1,8 @@
 """Simple code generator."""
 
 from contextlib import contextmanager
+import token
+import sys
 
 from story6.grammar import Grammar, Rule, Alt, NamedItem
 
@@ -108,6 +110,28 @@ class Generator:
                 self.put(f"and ({var} := self.expect({item})) is not None")
             else:
                 self.put(f"and ({var} := self.{item}()) is not None")
+
+
+def check(grammar):
+    errors = 0
+    for rule in grammar.rules:
+        for alt in rule.alts:
+            for item in alt.items:
+                if isinstance(item, NamedItem):
+                    item = item.item
+                if item.isupper():
+                    ival = getattr(token, item, None)
+                    if not isinstance(ival, int) or not 0 <= ival < token.N_TOKENS:
+                        print(f"Error: Uppercase item {item} occurring in rule {rule.name} is not a valid token",
+                              file=sys.stderr)
+                        errors += 1
+                elif item[0] in ('"', "'"):
+                    pass
+                elif item not in grammar.rules_dict:
+                    print(f"Error: Item {item} occurring in rule {rule.name} does not refer to a valid rule",
+                          file=sys.stderr)
+                    errors += 1
+    return errors
 
 
 def generate(grammar, classname, stream=None):
