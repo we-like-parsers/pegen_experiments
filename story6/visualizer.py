@@ -38,6 +38,7 @@ class Visualizer:
         while True:
             key = self.w.getch()
             if key == ord('q'):
+                self.close()
                 sys.exit(0)
             if key == ord('b') or key == curses.KEY_BACKSPACE or key == 127 or key == curses.KEY_DC or key == curses.KEY_LEFT:
                 if self.past:
