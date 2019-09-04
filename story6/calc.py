@@ -12,16 +12,14 @@ class CalcParser(Parser):
 
     @memoize
     def start(self):
-        self.show_rule('start', [['expr', 'NEWLINE']])
+        self.show_rule('start', [['_gen_rule_0']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (e := self.expr()) is not None
-            and self.show_index(0, 1)
-            and (newline := self.expect(NEWLINE)) is not None
+            and (ee := self._gen_rule_0()) is not None
         ):
-            self.show_index(0, 0, 2)
-            retval = e
+            self.show_index(0, 0, 1)
+            retval = ee
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -80,6 +78,24 @@ class CalcParser(Parser):
         ):
             self.show_index(0, 0, 1)
             retval = literal_eval ( number . string )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        self.show_index(0, 0, 0)
+        return None
+
+    @memoize
+    def _gen_rule_0(self):
+        self.show_rule('_gen_rule_0', [['expr', 'NEWLINE']])
+        pos = self.mark()
+        if (True
+            and self.show_index(0, 0)
+            and (e := self.expr()) is not None
+            and self.show_index(0, 1)
+            and (newline := self.expect(NEWLINE)) is not None
+        ):
+            self.show_index(0, 0, 2)
+            retval = e
             if retval is not None:
                 return retval
         self.reset(pos)

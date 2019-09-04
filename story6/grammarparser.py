@@ -12,6 +12,20 @@ from token import COMMENT, DEDENT, INDENT, NL, OP
 
 from story6.grammar import Grammar, Rule, Alt, NamedItem
 
+BaseParser = Parser
+
+class Parser(BaseParser):
+
+    def __init__(self, tokenizer):
+        super().__init__(tokenizer)
+        self.extra_rules = []
+
+    def gen_rule(self, alts):
+        name = f"_gen_rule_{len(self.extra_rules)}"
+        rule = Rule(name, alts)
+        self.extra_rules.append(rule)
+        return rule
+
 class GrammarParser(Parser):
 
     @memoize
@@ -43,7 +57,7 @@ class GrammarParser(Parser):
             and (rules := self.rules()) is not None
         ):
             self.show_index(0, 0, 2)
-            retval = Grammar ( rules , metas )
+            retval = Grammar ( rules + self . extra_rules , metas )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -52,7 +66,7 @@ class GrammarParser(Parser):
             and (rules := self.rules()) is not None
         ):
             self.show_index(1, 0, 1)
-            retval = Grammar ( rules , [ ] )
+            retval = Grammar ( rules + self . extra_rules , [ ] )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -434,7 +448,7 @@ class GrammarParser(Parser):
 
     @memoize
     def atom(self):
-        self.show_rule('atom', [['NAME'], ['STRING']])
+        self.show_rule('atom', [['NAME'], ['STRING'], ['"("', 'alts', '")"']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -451,6 +465,19 @@ class GrammarParser(Parser):
         ):
             self.show_index(1, 0, 1)
             retval = string . string
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(2, 0)
+            and self.expect("(") is not None
+            and self.show_index(2, 1)
+            and (alts := self.alts()) is not None
+            and self.show_index(2, 2)
+            and self.expect(")") is not None
+        ):
+            self.show_index(2, 0, 3)
+            retval = self . gen_rule ( alts ) . name
             if retval is not None:
                 return retval
         self.reset(pos)

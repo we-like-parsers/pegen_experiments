@@ -5,13 +5,27 @@ from ast import literal_eval
 from token import COMMENT, DEDENT, INDENT, NL, OP
 
 from story6.grammar import Grammar, Rule, Alt, NamedItem
+
+BaseParser = Parser
+
+class Parser(BaseParser):
+
+    def __init__(self, tokenizer):
+        super().__init__(tokenizer)
+        self.extra_rules = []
+
+    def gen_rule(self, alts):
+        name = f"_gen_rule_{len(self.extra_rules)}"
+        rule = Rule(name, alts)
+        self.extra_rules.append(rule)
+        return rule
 """
 
 start: grammar ENDMARKER { grammar }
 
 grammar:
-    | metas rules { Grammar(rules, metas) }
-    | rules { Grammar(rules, []) }
+    | metas rules { Grammar(rules + self.extra_rules, metas) }
+    | rules { Grammar(rules + self.extra_rules, []) }
 
 metas:
     | meta metas { [meta] + metas }
@@ -60,6 +74,7 @@ item:
 atom:
     | NAME { name.string }
     | STRING {string.string }
+    | "(" alts ")" { self.gen_rule(alts).name }
 
 action: "{" stuffs "}" { "{" + stuffs + "}" }
 
