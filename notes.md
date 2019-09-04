@@ -1,3 +1,86 @@
+PLan of attack for the rest
+===========================
+
+Introduce various PEG/EBNF features gradually:
+
+- [x] Make the grammar parser "self-hosted".
+- [x] Named items
+- [x] Groups containing alternatives (with actions)
+- [ ] Optional
+- [ ] Repetition (0+, 1+)
+- [ ] Lookahead (positive, negative)
+- [ ] Cut
+- [ ] Fix left-recursion detection (including nullable)
+
+Of these:
+
+1. Named items: this just replaces the default name.  Syntax:
+   `NAME '=' item`.  Representation: NamedItem(name, item).  [Done]
+
+2. Groups: these are given a unique generated name and implemented as
+   if they were a separate rule.  Exceptions: a group at the very top
+   level of a rule melds away; a group with only one alternative gets
+   inlined.  [Done]
+
+3. Optional: either `[alts]` or `atom?`.  Must be named to use.  To
+   represent in the parser generator use `Maybe(atom)`).  To implement
+   them in the generated parser, ignore the result.  To represent them
+   in the parse tree, use the value or `None`.  In the parser ths
+   basically cannot fail, and we can write `and ((foo := self.foo())
+   or True)`.  This means that in the parse tree it'll be represented
+   as `None`.  Examples:
+   ```
+   expr: ['+'] term { term }
+   ```
+   This translates to
+   ```
+   if (True
+       and (self.expect('+') or True)
+       and (term := self.term())
+   ):
+       return term
+   ```
+   Also
+   ```
+   expr: t1=term t2=['+' term { term }] { t1 + t2 if t2 is not None else t1 }
+   ```
+   translates to
+   ```
+   if (True
+       and (t1 := self.term()) is not None
+       and ((t2 := self._gen_rule_1()) is not None or True)
+   ):
+       return t1 + t2 if t2 is not None else t1
+   ```
+
+4. Repetition: either `atom*` or `atom+`.  Representation in the
+   parser generator: `Repeat0(atom)` or `Repeat1(atom)`.  In the
+   parser we can use a helper, like `self.repeat0(self.expr)` or
+   `self.repeat1(self.term)`; these return a list on success (which
+   may be empty for `repeat0`) or `None` for failure.  Must be named
+   to usefully refer to the list.
+
+5. Lookahead: either `&atom` or `!atom`; these cannot be named.
+   In the generator: `PosLookahead(atom)` or `NegLookahead(atom)`.
+   In the parser: `self.pos_lookahead(self.expr)` or
+   `self.neg_lookahead(self.expr)`.  Not in the parse tree.
+
+6. Cut: `~`; cannot be named.  This disrupts the flow of the current
+   choice, if the current alternative does not succeed, the whole
+   choice fails (either a rule or a group).  Implementation as I did
+   for the original pegen.  In the generator, `Cut()`; in the parser,
+   `and (cut := True)`, and then the idiom changes from
+   ```
+   self.reset(pos)
+   ```
+   to
+   ```
+   self.reset(pos)
+   if cut:
+       retutn None
+   ```
+
+
 Revised visualizer design
 =========================
 
