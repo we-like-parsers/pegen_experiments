@@ -106,6 +106,22 @@ class NamedItem:
         return self.name == other.name and self.item == other.item
 
 
+class Maybe:
+    def __init__(self, item):
+        self.item = item
+
+    def __repr__(self):
+        return f"Maybe({self.item!r}"
+
+    def __str__(self):
+        return f"[{self.item}]"
+
+    def __eq__(self, other):
+        if not isinstance(other, Maybe):
+            return NotImplemented
+        return self.item == other.item
+
+
 class GrammarParser(Parser):
 
     def start(self):

@@ -121,3 +121,37 @@ def test_group():
     assert rules == [Rule('start', [Alt(['_gen_rule_0'])]),
                      Rule('foo', [Alt(['NAME'])]),
                      Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
+
+def test_maybe_1():
+    program = ("start: foo?\n"
+               "foo: NAME\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.start().rules
+    assert rules == [Rule('start', [Alt([Maybe('foo')])]),
+                     Rule('foo', [Alt(['NAME'])])]
+
+def test_maybe_2():
+    program = ("start: [foo]\n"
+               "foo: NAME\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.start().rules
+    assert rules == [Rule('start', [Alt([Maybe('foo')])]),
+                     Rule('foo', [Alt(['NAME'])])]
+
+def test_maybe_3():
+    program = ("start: [foo foo | foo]\n"
+               "foo: NAME\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.start().rules
+    assert rules == [Rule('start', [Alt([Maybe('_gen_rule_0')])]),
+                     Rule('foo', [Alt(['NAME'])]),
+                     Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]

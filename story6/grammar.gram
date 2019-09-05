@@ -4,7 +4,7 @@
 from ast import literal_eval
 from token import COMMENT, DEDENT, INDENT, NL, OP
 
-from story6.grammar import Grammar, Rule, Alt, NamedItem
+from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
 
 BaseParser = Parser
 
@@ -69,12 +69,15 @@ items:
 
 item:
     | NAME '=' atom { NamedItem(name.string, atom) }
+    | atom "?" { Maybe(atom) }
     | atom { atom }
 
 atom:
     | NAME { name.string }
     | STRING {string.string }
     | "(" alts ")" { self.gen_rule(alts).name }
+    | "[" atom "]" { Maybe(atom) }
+    | "[" alts "]" { Maybe(self.gen_rule(alts).name) }
 
 action: "{" stuffs "}" { "{" + stuffs + "}" }
 

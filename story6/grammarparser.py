@@ -10,7 +10,7 @@ from story6.parser import Parser
 from ast import literal_eval
 from token import COMMENT, DEDENT, INDENT, NL, OP
 
-from story6.grammar import Grammar, Rule, Alt, NamedItem
+from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
 
 BaseParser = Parser
 
@@ -419,7 +419,7 @@ class GrammarParser(Parser):
 
     @memoize
     def item(self):
-        self.show_rule('item', [['NAME', "'='", 'atom'], ['atom']])
+        self.show_rule('item', [['NAME', "'='", 'atom'], ['atom', '"?"'], ['atom']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -437,8 +437,19 @@ class GrammarParser(Parser):
         if (True
             and self.show_index(1, 0)
             and (atom := self.atom()) is not None
+            and self.show_index(1, 1)
+            and self.expect("?") is not None
         ):
-            self.show_index(1, 0, 1)
+            self.show_index(1, 0, 2)
+            retval = Maybe ( atom )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(2, 0)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(2, 0, 1)
             retval = atom
             if retval is not None:
                 return retval
@@ -448,7 +459,7 @@ class GrammarParser(Parser):
 
     @memoize
     def atom(self):
-        self.show_rule('atom', [['NAME'], ['STRING'], ['"("', 'alts', '")"']])
+        self.show_rule('atom', [['NAME'], ['STRING'], ['"("', 'alts', '")"'], ['"["', 'atom', '"]"'], ['"["', 'alts', '"]"']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -478,6 +489,32 @@ class GrammarParser(Parser):
         ):
             self.show_index(2, 0, 3)
             retval = self . gen_rule ( alts ) . name
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(3, 0)
+            and self.expect("[") is not None
+            and self.show_index(3, 1)
+            and (atom := self.atom()) is not None
+            and self.show_index(3, 2)
+            and self.expect("]") is not None
+        ):
+            self.show_index(3, 0, 3)
+            retval = Maybe ( atom )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(4, 0)
+            and self.expect("[") is not None
+            and self.show_index(4, 1)
+            and (alts := self.alts()) is not None
+            and self.show_index(4, 2)
+            and self.expect("]") is not None
+        ):
+            self.show_index(4, 0, 3)
+            retval = Maybe ( self . gen_rule ( alts ) . name )
             if retval is not None:
                 return retval
         self.reset(pos)
