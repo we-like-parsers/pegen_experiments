@@ -4,7 +4,7 @@ from tokenize import generate_tokens
 
 from story6.tokenizer import Tokenizer
 from story6.parser import Parser
-from story6.grammar import Alt, NamedItem, Rule
+from story6.grammar import Alt, NamedItem, Rule, Maybe
 from story6.grammarparser import GrammarParser
 
 def test_grammar():
@@ -109,3 +109,15 @@ def test_named_item():
     rules = p.start().rules
     assert rules == [Rule('start', [Alt([NamedItem('f', 'foo')])]),
                      Rule('foo', [Alt([NamedItem('n', 'NAME')])])]
+
+def test_group():
+    program = ("start: (foo foo | foo)\n"
+               "foo: NAME\n")
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = GrammarParser(tok)
+    rules = p.start().rules
+    assert rules == [Rule('start', [Alt(['_gen_rule_0'])]),
+                     Rule('foo', [Alt(['NAME'])]),
+                     Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
