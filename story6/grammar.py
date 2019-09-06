@@ -107,6 +107,7 @@ class NamedItem:
 
 
 class Maybe:
+
     def __init__(self, item):
         self.item = item
 
@@ -120,6 +121,71 @@ class Maybe:
         if not isinstance(other, Maybe):
             return NotImplemented
         return self.item == other.item
+
+
+class Loop:
+
+    def __init__(self, item, nonempty=False):
+        self.item = item
+        self.nonempty = nonempty
+
+    def __repr__(self):
+        if self.nonempty:
+            return f"Loop({self.item!r}, True)"
+        else:
+            return f"Loop({self.item!r})"
+
+    def __str__(self):
+        if self.nonempty:
+            return f"{self.item}+"
+        else:
+            return f"{self.item}*"
+
+    def __eq__(self, other):
+        if not isinstance(other, Loop):
+            return NotImplemented
+        return self.item == other.item and self.nonempty == other.nonempty
+
+
+class Lookahead:
+
+    def __init__(self, item, negative=False):
+        self.item = item
+        self.negative = negative
+
+    def __repr__(self):
+        if self.negative:
+            return f"Lookahead({self.item!r}, True)"
+        else:
+            return f"Lookahead({self.item!r})"
+
+    def __str__(self):
+        if self.negative:
+            return f"!{self.item}"
+        else:
+            return f"&{self.item}"
+
+    def __eq__(self, other):
+        if not isinstance(other, Lookahead):
+            return NotImplemented
+        return self.item == other.item and self.negative == other.negative
+
+
+class Cut:
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return f"Cut()"
+
+    def __str__(self):
+        return f"~"
+
+    def __eq__(self, other):
+        if not isinstance(other, Cut):
+            return NotImplemented
+        return True
 
 
 # This class is no longer used (except as a backup).

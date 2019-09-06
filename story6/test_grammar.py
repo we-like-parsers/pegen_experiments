@@ -4,7 +4,7 @@ from tokenize import generate_tokens
 
 from story6.tokenizer import Tokenizer
 from story6.parser import Parser
-from story6.grammar import Alt, NamedItem, Rule, Maybe
+from story6.grammar import Rule, Alt, NamedItem, Maybe, Loop, Lookahead, Cut
 from story6.grammarparser import GrammarParser
 
 def start(program):
@@ -122,3 +122,28 @@ def test_maybe_3():
     assert rules == [Rule('start', [Alt([Maybe('_gen_rule_0')])]),
                      Rule('foo', [Alt(['NAME'])]),
                      Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
+
+def test_star():
+    program = "start: NAME*\n"
+    rules = start(program).rules
+    assert rules == [Rule('start', [Alt([Loop('NAME')])])]
+
+def test_plus():
+    program = "start: NAME+\n"
+    rules = start(program).rules
+    assert rules == [Rule('start', [Alt([Loop('NAME', True)])])]
+
+def test_lookahead():
+    program = "start: &NUMBER NAME\n"
+    rules = start(program).rules
+    assert rules == [Rule('start', [Alt([Lookahead('NUMBER'), 'NAME'])])]
+
+def test_lookahead_negative():
+    program = "start: !NUMBER NAME\n"
+    rules = start(program).rules
+    assert rules == [Rule('start', [Alt([Lookahead('NUMBER', True), 'NAME'])])]
+
+def test_cut():
+    program = "start: NAME ~ NAME\n"
+    rules = start(program).rules
+    assert rules == [Rule('start', [Alt(['NAME', Cut(), 'NAME'])])]

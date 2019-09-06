@@ -10,7 +10,7 @@ from story6.parser import Parser
 from ast import literal_eval
 from token import COMMENT, DEDENT, INDENT, NL, OP
 
-from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
+from story6.grammar import Grammar, Rule, Alt, NamedItem, Lookahead, Maybe, Loop, Cut
 
 BaseParser = Parser
 
@@ -419,7 +419,7 @@ class GrammarParser(Parser):
 
     @memoize
     def item(self):
-        self.show_rule('item', [['NAME', "'='", 'atom'], ['atom', '"?"'], ['atom']])
+        self.show_rule('item', [['NAME', "'='", 'molecule'], ['"&"', 'atom'], ['"!"', 'atom'], ['"~"'], ['molecule']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -427,10 +427,68 @@ class GrammarParser(Parser):
             and self.show_index(0, 1)
             and self.expect('=') is not None
             and self.show_index(0, 2)
-            and (atom := self.atom()) is not None
+            and (molecule := self.molecule()) is not None
         ):
             self.show_index(0, 0, 3)
-            retval = NamedItem ( name . string , atom )
+            retval = NamedItem ( name . string , molecule )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(1, 0)
+            and self.expect("&") is not None
+            and self.show_index(1, 1)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(1, 0, 2)
+            retval = Lookahead ( atom )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(2, 0)
+            and self.expect("!") is not None
+            and self.show_index(2, 1)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(2, 0, 2)
+            retval = Lookahead ( atom , True )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(3, 0)
+            and self.expect("~") is not None
+        ):
+            self.show_index(3, 0, 1)
+            retval = Cut ( )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(4, 0)
+            and (molecule := self.molecule()) is not None
+        ):
+            self.show_index(4, 0, 1)
+            retval = molecule
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        self.show_index(0, 0, 0)
+        return None
+
+    @memoize
+    def molecule(self):
+        self.show_rule('molecule', [['atom', '"?"'], ['atom', '"*"'], ['atom', '"+"'], ['atom']])
+        pos = self.mark()
+        if (True
+            and self.show_index(0, 0)
+            and (atom := self.atom()) is not None
+            and self.show_index(0, 1)
+            and self.expect("?") is not None
+        ):
+            self.show_index(0, 0, 2)
+            retval = Maybe ( atom )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -438,18 +496,29 @@ class GrammarParser(Parser):
             and self.show_index(1, 0)
             and (atom := self.atom()) is not None
             and self.show_index(1, 1)
-            and self.expect("?") is not None
+            and self.expect("*") is not None
         ):
             self.show_index(1, 0, 2)
-            retval = Maybe ( atom )
+            retval = Loop ( atom )
             if retval is not None:
                 return retval
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
             and (atom := self.atom()) is not None
+            and self.show_index(2, 1)
+            and self.expect("+") is not None
         ):
-            self.show_index(2, 0, 1)
+            self.show_index(2, 0, 2)
+            retval = Loop ( atom , True )
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(3, 0)
+            and (atom := self.atom()) is not None
+        ):
+            self.show_index(3, 0, 1)
             retval = atom
             if retval is not None:
                 return retval

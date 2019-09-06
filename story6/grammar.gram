@@ -4,7 +4,7 @@
 from ast import literal_eval
 from token import COMMENT, DEDENT, INDENT, NL, OP
 
-from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
+from story6.grammar import Grammar, Rule, Alt, NamedItem, Lookahead, Maybe, Loop, Cut
 
 BaseParser = Parser
 
@@ -68,8 +68,16 @@ items:
     | item { [item] }
 
 item:
-    | NAME '=' atom { NamedItem(name.string, atom) }
+    | NAME '=' molecule { NamedItem(name.string, molecule) }
+    | "&" atom { Lookahead(atom) }
+    | "!" atom { Lookahead(atom, True) }
+    | "~" { Cut() }
+    | molecule { molecule }
+
+molecule:
     | atom "?" { Maybe(atom) }
+    | atom "*" { Loop(atom) }
+    | atom "+" { Loop(atom, True) }
     | atom { atom }
 
 atom:
