@@ -16,12 +16,12 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr_stmt := self.loop(lambda: self.expr_stmt(), False))
+            and (expr_stmt := self.loop(False, self.expr_stmt)) is not None
             and self.show_index(0, 1)
-            and (endmarker := self.expect(ENDMARKER))
+            and (endmarker := self.expect(ENDMARKER)) is not None
         ):
             self.show_index(0, 0, 2)
-            return Node('start', [])
+            return Node('start', [expr_stmt, endmarker])
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None
@@ -32,9 +32,9 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(0, 1)
-            and (newline := self.expect(NEWLINE))
+            and (newline := self.expect(NEWLINE)) is not None
         ):
             self.show_index(0, 0, 2)
             retval = print ( expr ) or True
@@ -50,13 +50,13 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(0, 1)
-            and self.expect('+')
+            and self.expect('+') is not None
             and self.show_index(0, 2)
             and True
             and self.show_index(0, 3)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(0, 0, 4)
             retval = expr + term
@@ -65,13 +65,13 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(1, 1)
-            and self.expect('-')
+            and self.expect('-') is not None
             and self.show_index(1, 2)
             and True
             and self.show_index(1, 3)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(1, 0, 4)
             retval = expr - term
@@ -80,7 +80,7 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(2, 0, 1)
             retval = term
@@ -96,11 +96,11 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and self.expect('-')
+            and self.expect('-') is not None
             and self.show_index(0, 1)
             and True
             and self.show_index(0, 2)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(0, 0, 3)
             retval = - term
@@ -109,11 +109,11 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and self.expect('+')
+            and self.expect('+') is not None
             and self.show_index(1, 1)
             and True
             and self.show_index(1, 2)
-            and (term := self.term())
+            and (term := self.term()) is not None
         ):
             self.show_index(1, 0, 3)
             retval = + term
@@ -122,13 +122,13 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
             and self.show_index(2, 1)
-            and self.expect('*')
+            and self.expect('*') is not None
             and self.show_index(2, 2)
             and True
             and self.show_index(2, 3)
-            and (factor := self.factor())
+            and (factor := self.factor()) is not None
         ):
             self.show_index(2, 0, 4)
             retval = term * factor
@@ -137,13 +137,13 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(3, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
             and self.show_index(3, 1)
-            and self.expect('/')
+            and self.expect('/') is not None
             and self.show_index(3, 2)
             and True
             and self.show_index(3, 3)
-            and (factor := self.factor())
+            and (factor := self.factor()) is not None
         ):
             self.show_index(3, 0, 4)
             retval = term / factor
@@ -152,13 +152,13 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(4, 0)
-            and (term := self.term())
+            and (term := self.term()) is not None
             and self.show_index(4, 1)
-            and self.expect('//')
+            and self.expect('//') is not None
             and self.show_index(4, 2)
             and True
             and self.show_index(4, 3)
-            and (factor := self.factor())
+            and (factor := self.factor()) is not None
         ):
             self.show_index(4, 0, 4)
             retval = term // factor
@@ -167,7 +167,7 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(5, 0)
-            and (factor := self.factor())
+            and (factor := self.factor()) is not None
         ):
             self.show_index(5, 0, 1)
             retval = factor
@@ -183,13 +183,13 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (atom := self.atom())
+            and (atom := self.atom()) is not None
             and self.show_index(0, 1)
-            and self.expect('**')
+            and self.expect('**') is not None
             and self.show_index(0, 2)
             and True
             and self.show_index(0, 3)
-            and (factor := self.factor())
+            and (factor := self.factor()) is not None
         ):
             self.show_index(0, 0, 4)
             retval = atom ** factor
@@ -198,7 +198,7 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (atom := self.atom())
+            and (atom := self.atom()) is not None
         ):
             self.show_index(1, 0, 1)
             retval = atom
@@ -214,7 +214,7 @@ class CalcParser(Parser):
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (string := self.expect(STRING))
+            and (string := self.expect(STRING)) is not None
         ):
             self.show_index(0, 0, 1)
             retval = literal_eval ( string . string )
@@ -223,7 +223,7 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(1, 0)
-            and (number := self.expect(NUMBER))
+            and (number := self.expect(NUMBER)) is not None
         ):
             self.show_index(1, 0, 1)
             retval = literal_eval ( number . string )
@@ -232,13 +232,13 @@ class CalcParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(2, 0)
-            and self.expect('(')
+            and self.expect('(') is not None
             and self.show_index(2, 1)
             and True
             and self.show_index(2, 2)
-            and (expr := self.expr())
+            and (expr := self.expr()) is not None
             and self.show_index(2, 3)
-            and self.expect(')')
+            and self.expect(')') is not None
         ):
             self.show_index(2, 0, 4)
             retval = expr

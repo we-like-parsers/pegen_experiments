@@ -31,18 +31,18 @@ class Parser:
             return self.tokenizer.get_token()
         return None
 
-    def loop(self, func, nonempty):
+    def loop(self, nonempty, func, *args):
         mark = self.mark()
         nodes = []
-        while node := func() is not None:
+        while node := func(*args) is not None:
             nodes.append(node)
         if len(nodes) >= nonempty:
             return nodes
         self.reset(mark)
         return None
 
-    def lookahead(self, func, negative):
+    def lookahead(self, negative, func, *args):
         mark = self.mark()
-        ok = func() is not None
+        ok = func(*args) is not None
         self.reset(mark)
         return ok != negative

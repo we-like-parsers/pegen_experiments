@@ -111,12 +111,20 @@ class Generator:
             assert isinstance(item, str), repr(item)
 
             if item[0] in ('"', "'") or item.isupper():
-                phrase = f"self.expect({item})"
+                func = "self.expect"
+                arg = item
             else:
-                phrase = f"self.{item}()"
+                func = f"self.{item}"
+                arg = ""
+
+            if arg:
+                comma_arg = f", {arg}"
+            else:
+                comma_arg = ""
+
             if isinstance(orig, Lookahead):
                 var = None
-                phrase = f"self.lookahead(lambda: {phrase}, {orig.negative})"
+                phrase = f"self.lookahead({orig.negative}, {func}{comma_arg})"
             else:
                 if var is None and item[0] not in ('"', "'"):
                     if item.isupper():
@@ -126,14 +134,19 @@ class Generator:
                     if var in items:
                         var += str(len(items))
 
-            if isinstance(orig, Loop):
-                phrase = f"self.loop(lambda: {phrase}, {orig.nonempty})"
+                if isinstance(orig, Loop):
+                    phrase = f"self.loop({orig.nonempty}, {func}{comma_arg})"
+                else:
+                    phrase = f"{func}({arg})"
 
-            if var is not None:
-                phrase = f"({var} := {phrase})"
+                if var is not None:
+                    phrase = f"({var} := {phrase})"
+                    items.append(var)
 
-            if isinstance(orig, Maybe):
-                phrase = f"({phrase} or True)"
+                phrase = f"{phrase} is not None"
+
+                if isinstance(orig, Maybe):
+                    phrase = f"({phrase} or True)"
 
         self.put(f"and {phrase}")
 
