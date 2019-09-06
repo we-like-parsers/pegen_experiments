@@ -10,7 +10,8 @@ from story6.generator3 import check, generate
 from story6.visualizer import Visualizer
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument("grammar", nargs="?", default="story6/toy.gram", help="Grammar file (toy.gram)")
+argparser.add_argument("grammar", nargs="?", help="Grammar file (toy.gram)")
+argparser.add_argument("-r", "--regen", action="store_true", help="Regenerate grammar")
 argparser.add_argument("-o", "--output", help="Output file (toy.py)")
 argparser.add_argument("-c", "--classname", help="Output class name (ToyParser)")
 argparser.add_argument("-v", "--visualize", action="store_true", help="Use visualizer")
@@ -20,10 +21,17 @@ argparser.add_argument("-b", "--backup", action="store_true", help="Use old gram
 def main():
     args = argparser.parse_args()
     file = args.grammar
+    if not file:
+        if args.regen:
+            file = "story6/grammar.gram"
+        else:
+            file = "story6/toy.gram"
     outfile = args.output
     if not outfile:
         head, tail = os.path.split(file)
         base, ext = os.path.splitext(tail)
+        if base == "grammar":
+            base += "parser"
         outfile = os.path.join(head, base + ".py")
     classname = args.classname
 
