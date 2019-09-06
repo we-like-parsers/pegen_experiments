@@ -75,7 +75,7 @@ class GrammarParser(Parser):
 
     @memoize
     def metas(self):
-        self.show_rule('metas', [['meta', 'metas'], ['meta'], ['blank', 'metas'], ['blank']])
+        self.show_rule('metas', [['meta', 'metas'], ['meta']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -94,26 +94,6 @@ class GrammarParser(Parser):
         ):
             self.show_index(1, 0, 1)
             retval = [ meta ]
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(2, 0)
-            and (blank := self.blank()) is not None
-            and self.show_index(2, 1)
-            and (metas := self.metas()) is not None
-        ):
-            self.show_index(2, 0, 2)
-            retval = metas
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(3, 0)
-            and (blank := self.blank()) is not None
-        ):
-            self.show_index(3, 0, 1)
-            retval = [ ]
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -172,7 +152,7 @@ class GrammarParser(Parser):
 
     @memoize
     def rules(self):
-        self.show_rule('rules', [['rule', 'rules'], ['rule'], ['blank', 'rules'], ['blank']])
+        self.show_rule('rules', [['rule', 'rules'], ['rule']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -191,26 +171,6 @@ class GrammarParser(Parser):
         ):
             self.show_index(1, 0, 1)
             retval = [ rule ]
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(2, 0)
-            and (blank := self.blank()) is not None
-            and self.show_index(2, 1)
-            and (rules := self.rules()) is not None
-        ):
-            self.show_index(2, 0, 2)
-            retval = rules
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(3, 0)
-            and (blank := self.blank()) is not None
-        ):
-            self.show_index(3, 0, 1)
-            retval = [ ]
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -281,7 +241,7 @@ class GrammarParser(Parser):
 
     @memoize
     def more_alts(self):
-        self.show_rule('more_alts', [['"|"', 'alts', 'NEWLINE', 'more_alts'], ['"|"', 'alts', 'NEWLINE'], ['blank', 'more_alts'], ['blank']])
+        self.show_rule('more_alts', [['"|"', 'alts', 'NEWLINE', 'more_alts'], ['"|"', 'alts', 'NEWLINE']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -308,26 +268,6 @@ class GrammarParser(Parser):
         ):
             self.show_index(1, 0, 3)
             retval = alts
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(2, 0)
-            and (blank := self.blank()) is not None
-            and self.show_index(2, 1)
-            and (more_alts := self.more_alts()) is not None
-        ):
-            self.show_index(2, 0, 2)
-            retval = more_alts
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(3, 0)
-            and (blank := self.blank()) is not None
-        ):
-            self.show_index(3, 0, 1)
-            retval = [ ]
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -685,27 +625,6 @@ class GrammarParser(Parser):
             retval = op . string if op . string not in ( "{" , "}" ) else None
             if retval is not None:
                 return retval
-        self.reset(pos)
-        self.show_index(0, 0, 0)
-        return None
-
-    @memoize
-    def blank(self):
-        self.show_rule('blank', [['NL'], ['COMMENT']])
-        pos = self.mark()
-        if (True
-            and self.show_index(0, 0)
-            and (nl := self.expect(NL)) is not None
-        ):
-            self.show_index(0, 0, 1)
-            return Node('blank', [nl])
-        self.reset(pos)
-        if (True
-            and self.show_index(1, 0)
-            and (comment := self.expect(COMMENT)) is not None
-        ):
-            self.show_index(1, 0, 1)
-            return Node('blank', [comment])
         self.reset(pos)
         self.show_index(0, 0, 0)
         return None

@@ -30,8 +30,6 @@ grammar:
 metas:
     | meta metas { [meta] + metas }
     | meta { [meta] }
-    | blank metas { metas }
-    | blank { [] }
 
 meta:
     | "@" NAME NEWLINE { (name.string, None) }
@@ -41,8 +39,6 @@ meta:
 rules:
     | rule rules { [rule] + rules }
     | rule { [rule] }
-    | blank rules { rules }
-    | blank { [] }
 
 rule:
     | NAME ":" alts NEWLINE INDENT more_alts DEDENT { Rule(name.string, alts + more_alts) }
@@ -52,8 +48,6 @@ rule:
 more_alts:
     | "|" alts NEWLINE more_alts { alts + more_alts }
     | "|" alts NEWLINE { alts }
-    | blank more_alts { more_alts }
-    | blank { [] }
 
 alts:
     | alt "|" alts { [alt] + alts }
@@ -99,5 +93,3 @@ stuff:
     | NUMBER { number.string }
     | STRING { string.string }
     | OP { op.string if op.string not in ("{", "}") else None }
-
-blank: NL | COMMENT
