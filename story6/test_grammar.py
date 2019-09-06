@@ -7,15 +7,18 @@ from story6.parser import Parser
 from story6.grammar import Alt, NamedItem, Rule, Maybe
 from story6.grammarparser import GrammarParser
 
-def test_grammar():
-    program = ("stmt: asmt | expr\n"
-               "asmt: NAME '=' expr\n"
-               "expr: NAME\n")
+def start(program):
     file = StringIO(program)
     tokengen = generate_tokens(file.readline)
     tok = Tokenizer(tokengen)
     p = GrammarParser(tok)
-    rules = p.start().rules
+    return p.start()
+
+def test_grammar():
+    program = ("stmt: asmt | expr\n"
+               "asmt: NAME '=' expr\n"
+               "expr: NAME\n")
+    rules = start(program).rules
     assert rules == [Rule('stmt', [Alt(['asmt']), Alt(['expr'])]),
                      Rule('asmt', [Alt(['NAME', "'='", 'expr'])]),
                      Rule('expr', [Alt(['NAME'])])]
@@ -24,20 +27,12 @@ def test_failure():
     program = ("stmt: asmt | expr\n"
                "asmt: NAME '=' expr 42\n"
                "expr: NAME\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    grammar = p.start()
+    grammar = start(program)
     assert grammar is None
 
 def test_action():
     program = "start: NAME { foo + bar } | NUMBER { -baz }\n"
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule("start", [Alt(["NAME"], "foo + bar"),
                                     Alt(["NUMBER"], "- baz")])]
     assert rules != [Rule("start", [Alt(["NAME"], "foo + bar"),
@@ -56,11 +51,7 @@ def test_indents():
     program = ("stmt: foo | bar\n"
                "    | baz\n"
                "    | booh | bah\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -72,11 +63,7 @@ def test_indents2():
                "    | baz\n"
                "    | booh | bah\n"
                "foo: bar\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('stmt',
                           [Alt(['foo']), Alt(['bar']),
                            Alt(['baz']),
@@ -88,11 +75,7 @@ def test_meta():
                "@foo bar\n"
                "@bar\n"
                "stmt: foo\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    grammar = p.start()
+    grammar = start(program)
     assert grammar
     assert grammar.rules == [Rule('stmt', [Alt(["foo"])])]
     assert grammar.metas == [('start', 'start'),
@@ -113,11 +96,7 @@ def test_named_item():
 def test_group():
     program = ("start: (foo foo | foo)\n"
                "foo: NAME\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('start', [Alt(['_gen_rule_0'])]),
                      Rule('foo', [Alt(['NAME'])]),
                      Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
@@ -125,33 +104,21 @@ def test_group():
 def test_maybe_1():
     program = ("start: foo?\n"
                "foo: NAME\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('start', [Alt([Maybe('foo')])]),
                      Rule('foo', [Alt(['NAME'])])]
 
 def test_maybe_2():
     program = ("start: [foo]\n"
                "foo: NAME\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('start', [Alt([Maybe('foo')])]),
                      Rule('foo', [Alt(['NAME'])])]
 
 def test_maybe_3():
     program = ("start: [foo foo | foo]\n"
                "foo: NAME\n")
-    file = StringIO(program)
-    tokengen = generate_tokens(file.readline)
-    tok = Tokenizer(tokengen)
-    p = GrammarParser(tok)
-    rules = p.start().rules
+    rules = start(program).rules
     assert rules == [Rule('start', [Alt([Maybe('_gen_rule_0')])]),
                      Rule('foo', [Alt(['NAME'])]),
                      Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
