@@ -1,3 +1,6 @@
+from tokenize import ERRORTOKEN, NL, COMMENT
+
+
 class Tokenizer:
 
     def __init__(self, tokengen, vis=None):
@@ -24,8 +27,16 @@ class Tokenizer:
 
     def peek_token(self):
         if self.pos == len(self.tokens):
-            self.tokens.append(next(self.tokengen))
+            while True:
+                token = next(self.tokengen)
+                if token.type == ERRORTOKEN and token.string.isspace():
+                    continue
+                if token.type in (NL, COMMENT):
+                    continue
+                break
+            self.tokens.append(token)
             self.report()
+            print(self.tokens[-1])
         return self.tokens[self.pos]
 
     def report(self):
