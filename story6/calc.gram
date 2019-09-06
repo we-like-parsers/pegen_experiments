@@ -1,4 +1,4 @@
 @subheader "from ast import literal_eval\n"
 start: ee=(e=expr NEWLINE { e }) { ee }
 expr: e1=expr '+' e2=term { e1 + e2 } | e1=expr '-' e2=term { e1 - e2 } | e=term { e }
-term: a=['+'] NUMBER { literal_eval(number.string) }
+term: a=['+' { "" } | '-' { "-" }] NUMBER { literal_eval((a or "") + number.string) }

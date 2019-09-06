@@ -70,16 +70,16 @@ class CalcParser(Parser):
 
     @memoize
     def term(self):
-        self.show_rule('term', [["['+']", 'NUMBER']])
+        self.show_rule('term', [['[_gen_rule_1]', 'NUMBER']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and ((a := self.expect('+')) or True)
+            and ((a := self._gen_rule_1()) or True)
             and self.show_index(0, 1)
             and (number := self.expect(NUMBER)) is not None
         ):
             self.show_index(0, 0, 2)
-            retval = literal_eval ( number . string )
+            retval = literal_eval ( ( a or "" ) + number . string )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -98,6 +98,31 @@ class CalcParser(Parser):
         ):
             self.show_index(0, 0, 2)
             retval = e
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        self.show_index(0, 0, 0)
+        return None
+
+    @memoize
+    def _gen_rule_1(self):
+        self.show_rule('_gen_rule_1', [["'+'"], ["'-'"]])
+        pos = self.mark()
+        if (True
+            and self.show_index(0, 0)
+            and self.expect('+') is not None
+        ):
+            self.show_index(0, 0, 1)
+            retval = ""
+            if retval is not None:
+                return retval
+        self.reset(pos)
+        if (True
+            and self.show_index(1, 0)
+            and self.expect('-') is not None
+        ):
+            self.show_index(1, 0, 1)
+            retval = "-"
             if retval is not None:
                 return retval
         self.reset(pos)
