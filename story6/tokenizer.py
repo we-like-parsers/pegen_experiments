@@ -36,7 +36,6 @@ class Tokenizer:
                 break
             self.tokens.append(token)
             self.report()
-            print(self.tokens[-1])
         return self.tokens[self.pos]
 
     def report(self):
