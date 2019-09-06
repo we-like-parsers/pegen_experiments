@@ -21,6 +21,10 @@ def flatten(items):
     return [str(it.item) if isinstance(it, NamedItem) else str(it) for it in items]
 
 
+def has_cut(alt):
+    return any(isinstance(item, Cut) for item in alt.items)
+
+
 class Generator:
 
     def __init__(self, stream=None):
@@ -69,6 +73,8 @@ class Generator:
             alts = [flatten(alt.items) for alt in rule.alts]
             self.put(f"self.show_rule({leftrec}{rule.name!r}, {alts!r})")
             self.put(f"pos = self.mark()")
+            if any(has_cut(alt) for alt in rule.alts):
+                self.put(f"cut = False")
             for i, alt in enumerate(rule.alts):
                 self.gen_alt(alt, rule, i)
             self.put(f"self.show_index(0, 0, 0)")
@@ -91,6 +97,11 @@ class Generator:
             else:
                 self.put(f"return Node({rule.name!r}, [{', '.join(items)}])")
         self.put(f"self.reset(pos)")
+        if has_cut(alt):
+            self.put(f"if cut:")
+            with self.indent():
+                self.put(f"self.show_index(0, 0, 0)")
+                self.put(f"return None")
 
     def gen_item(self, item, items, alt_index, item_index):
         self.put(f"and self.show_index({alt_index}, {item_index})")

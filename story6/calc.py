@@ -48,6 +48,7 @@ class CalcParser(Parser):
     def expr(self):
         self.show_rule('*' + 'expr', [['expr', "'+'", '~', 'term'], ['expr', "'-'", '~', 'term'], ['term']])
         pos = self.mark()
+        cut = False
         if (True
             and self.show_index(0, 0)
             and (expr := self.expr()) is not None
@@ -63,6 +64,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(1, 0)
             and (expr := self.expr()) is not None
@@ -78,6 +82,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(2, 0)
             and (term := self.term()) is not None
@@ -94,6 +101,7 @@ class CalcParser(Parser):
     def term(self):
         self.show_rule('*' + 'term', [["'-'", '~', 'term'], ["'+'", '~', 'term'], ['term', "'*'", '~', 'factor'], ['term', "'/'", '~', 'factor'], ['term', "'//'", '~', 'factor'], ['factor']])
         pos = self.mark()
+        cut = False
         if (True
             and self.show_index(0, 0)
             and self.expect('-') is not None
@@ -107,6 +115,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(1, 0)
             and self.expect('+') is not None
@@ -120,6 +131,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(2, 0)
             and (term := self.term()) is not None
@@ -135,6 +149,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(3, 0)
             and (term := self.term()) is not None
@@ -150,6 +167,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(4, 0)
             and (term := self.term()) is not None
@@ -165,6 +185,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(5, 0)
             and (factor := self.factor()) is not None
@@ -181,6 +204,7 @@ class CalcParser(Parser):
     def factor(self):
         self.show_rule('factor', [['atom', "'**'", '~', 'factor'], ['atom']])
         pos = self.mark()
+        cut = False
         if (True
             and self.show_index(0, 0)
             and (atom := self.atom()) is not None
@@ -196,6 +220,9 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         if (True
             and self.show_index(1, 0)
             and (atom := self.atom()) is not None
@@ -212,6 +239,7 @@ class CalcParser(Parser):
     def atom(self):
         self.show_rule('atom', [['STRING'], ['NUMBER'], ["'('", '~', 'expr', "')'"]])
         pos = self.mark()
+        cut = False
         if (True
             and self.show_index(0, 0)
             and (string := self.expect(STRING)) is not None
@@ -245,5 +273,8 @@ class CalcParser(Parser):
             if retval is not None:
                 return retval
         self.reset(pos)
+        if cut:
+            self.show_index(0, 0, 0)
+            return None
         self.show_index(0, 0, 0)
         return None

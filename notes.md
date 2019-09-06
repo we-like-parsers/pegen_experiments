@@ -7,9 +7,9 @@ Introduce various PEG/EBNF features gradually:
 - [x] Named items
 - [x] Groups containing alternatives (with actions)
 - [x] Optional
-- [ ] Repetition (0+, 1+)
-- [ ] Lookahead (positive, negative)
-- [ ] Cut
+- [x] Repetition (0+, 1+)
+- [x] Lookahead (positive, negative)
+- [x] Cut
 - [ ] Fix left-recursion detection (including nullable)
 
 Of these:
