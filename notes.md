@@ -1,4 +1,4 @@
-PLan of attack for the rest
+Plan of attack for the rest
 ===========================
 
 Introduce various PEG/EBNF features gradually:
@@ -6,7 +6,7 @@ Introduce various PEG/EBNF features gradually:
 - [x] Make the grammar parser "self-hosted".
 - [x] Named items
 - [x] Groups containing alternatives (with actions)
-- [ ] Optional
+- [x] Optional
 - [ ] Repetition (0+, 1+)
 - [ ] Lookahead (positive, negative)
 - [ ] Cut
@@ -77,7 +77,7 @@ Of these:
    ```
    self.reset(pos)
    if cut:
-       retutn None
+       return None
    ```
 
 

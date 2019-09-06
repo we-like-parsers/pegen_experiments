@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import token
 import sys
 
-from story6.grammar import Grammar, Rule, Alt, NamedItem
+from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
 
 HEADER = """\
 # This is @generated code; do not edit!
@@ -98,8 +98,10 @@ class Generator:
             var, item = item.name, item.item
         else:
             var = None
+        if mebbe := isinstance(item, Maybe):
+            item = item.item
         if not var and item[0] in ('"', "'"):
-            self.put(f"and self.expect({item}) is not None")
+            phrase = f"self.expect({item})"
         else:
             if var is None:
                 var = item.lower()
@@ -107,9 +109,13 @@ class Generator:
                 var += str(len(items))
             items.append(var)
             if item[0] in ('"', "'") or item.isupper():
-                self.put(f"and ({var} := self.expect({item})) is not None")
+                phrase = f"({var} := self.expect({item}))"
             else:
-                self.put(f"and ({var} := self.{item}()) is not None")
+                phrase = f"({var} := self.{item}())"
+        if mebbe:
+            self.put(f"and ({phrase} or True)")
+        else:
+            self.put(f"and {phrase} is not None")
 
 
 def check(grammar):
@@ -118,6 +124,8 @@ def check(grammar):
         for alt in rule.alts:
             for item in alt.items:
                 if isinstance(item, NamedItem):
+                    item = item.item
+                if isinstance(item, Maybe):
                     item = item.item
                 if item.isupper():
                     ival = getattr(token, item, None)

@@ -70,13 +70,15 @@ class CalcParser(Parser):
 
     @memoize
     def term(self):
-        self.show_rule('term', [['NUMBER']])
+        self.show_rule('term', [["['+']", 'NUMBER']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
+            and ((a := self.expect('+')) or True)
+            and self.show_index(0, 1)
             and (number := self.expect(NUMBER)) is not None
         ):
-            self.show_index(0, 0, 1)
+            self.show_index(0, 0, 2)
             retval = literal_eval ( number . string )
             if retval is not None:
                 return retval

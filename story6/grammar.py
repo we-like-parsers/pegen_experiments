@@ -122,6 +122,8 @@ class Maybe:
         return self.item == other.item
 
 
+# This class is no longer used (except as a backup).
+# The new grammar parser is in grammarparser.py.
 class GrammarParser(Parser):
 
     def start(self):
