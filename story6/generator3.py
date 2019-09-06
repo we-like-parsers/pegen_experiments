@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import token
 import sys
 
-from story6.grammar import Grammar, Rule, Alt, Maybe, NamedItem
+from story6.grammar import Grammar, Rule, Alt, NamedItem, Lookahead, Cut, Maybe, Loop
 
 HEADER = """\
 # This is @generated code; do not edit!
@@ -94,28 +94,48 @@ class Generator:
 
     def gen_item(self, item, items, alt_index, item_index):
         self.put(f"and self.show_index({alt_index}, {item_index})")
-        if isinstance(item, NamedItem):
-            var, item = item.name, item.item
+
+        if isinstance(item, Cut):
+            var = "cut"
+            phrase = "True"
         else:
+            # This is messy, because it depends on properties of the grammar,
+            # e.g. a lookahead or cut cannot be named.
             var = None
-        if mebbe := isinstance(item, Maybe):
-            item = item.item
-        if not var and item[0] in ('"', "'"):
-            phrase = f"self.expect({item})"
-        else:
-            if var is None:
-                var = item.lower()
-            if var in items:
-                var += str(len(items))
-            items.append(var)
+            if isinstance(item, NamedItem):
+                var, item = item.name, item.item
+
+            orig = item
+            if isinstance(item, (Lookahead, Loop, Maybe)):
+                item = item.item
+            assert isinstance(item, str), repr(item)
+
             if item[0] in ('"', "'") or item.isupper():
-                phrase = f"({var} := self.expect({item}))"
+                phrase = f"self.expect({item})"
             else:
-                phrase = f"({var} := self.{item}())"
-        if mebbe:
-            self.put(f"and ({phrase} or True)")
-        else:
-            self.put(f"and {phrase} is not None")
+                phrase = f"self.{item}()"
+            if isinstance(orig, Lookahead):
+                var = None
+                phrase = f"self.lookahead(lambda: {phrase}, {orig.negative})"
+            else:
+                if var is None and item[0] not in ('"', "'"):
+                    if item.isupper():
+                        var = item.lower()
+                    else:
+                        var = item
+                    if var in items:
+                        var += str(len(items))
+
+            if isinstance(orig, Loop):
+                phrase = f"self.loop(lambda: {phrase}, {orig.nonempty})"
+
+            if var is not None:
+                phrase = f"({var} := {phrase})"
+
+            if isinstance(orig, Maybe):
+                phrase = f"({phrase} or True)"
+
+        self.put(f"and {phrase}")
 
 
 def check(grammar):
@@ -125,7 +145,13 @@ def check(grammar):
             for item in alt.items:
                 if isinstance(item, NamedItem):
                     item = item.item
+                elif isinstance(item, Lookahead):
+                    item = item.item
+                elif isinstance(item, Cut):
+                    continue
                 if isinstance(item, Maybe):
+                    item = item.item
+                elif isinstance(item, Loop):
                     item = item.item
                 if item.isupper():
                     ival = getattr(token, item, None)
