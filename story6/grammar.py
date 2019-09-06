@@ -149,26 +149,26 @@ class Loop:
 
 class Lookahead:
 
-    def __init__(self, item, negative=False):
+    def __init__(self, item, positive=True):
         self.item = item
-        self.negative = negative
+        self.positive = positive
 
     def __repr__(self):
-        if self.negative:
-            return f"Lookahead({self.item!r}, True)"
-        else:
+        if self.positive:
             return f"Lookahead({self.item!r})"
+        else:
+            return f"Lookahead({self.item!r}, False)"
 
     def __str__(self):
-        if self.negative:
-            return f"!{self.item}"
-        else:
+        if self.positive:
             return f"&{self.item}"
+        else:
+            return f"!{self.item}"
 
     def __eq__(self, other):
         if not isinstance(other, Lookahead):
             return NotImplemented
-        return self.item == other.item and self.negative == other.negative
+        return self.item == other.item and self.positive == other.positive
 
 
 class Cut:

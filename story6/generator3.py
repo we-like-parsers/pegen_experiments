@@ -124,7 +124,7 @@ class Generator:
 
             if isinstance(orig, Lookahead):
                 var = None
-                phrase = f"self.lookahead({orig.negative}, {func}{comma_arg})"
+                phrase = f"self.lookahead({orig.positive}, {func}{comma_arg})"
             else:
                 if var is None and item[0] not in ('"', "'"):
                     if item.isupper():

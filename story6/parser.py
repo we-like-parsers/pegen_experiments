@@ -41,8 +41,8 @@ class Parser:
         self.reset(mark)
         return None
 
-    def lookahead(self, negative, func, *args):
+    def lookahead(self, positive, func, *args):
         mark = self.mark()
         ok = func(*args) is not None
         self.reset(mark)
-        return ok != negative
+        return ok == positive

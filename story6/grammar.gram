@@ -70,7 +70,7 @@ items:
 item:
     | NAME '=' molecule { NamedItem(name.string, molecule) }
     | "&" atom { Lookahead(atom) }
-    | "!" atom { Lookahead(atom, True) }
+    | "!" atom { Lookahead(atom, False) }
     | "~" { Cut() }
     | molecule { molecule }
 

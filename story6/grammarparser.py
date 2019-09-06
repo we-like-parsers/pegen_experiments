@@ -452,7 +452,7 @@ class GrammarParser(Parser):
             and (atom := self.atom()) is not None
         ):
             self.show_index(2, 0, 2)
-            retval = Lookahead ( atom , True )
+            retval = Lookahead ( atom , False )
             if retval is not None:
                 return retval
         self.reset(pos)

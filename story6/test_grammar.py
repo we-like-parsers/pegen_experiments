@@ -141,7 +141,7 @@ def test_lookahead():
 def test_lookahead_negative():
     program = "start: !NUMBER NAME\n"
     rules = start(program).rules
-    assert rules == [Rule('start', [Alt([Lookahead('NUMBER', True), 'NAME'])])]
+    assert rules == [Rule('start', [Alt([Lookahead('NUMBER', False), 'NAME'])])]
 
 def test_cut():
     program = "start: NAME ~ NAME\n"
