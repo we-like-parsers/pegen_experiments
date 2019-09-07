@@ -46,19 +46,22 @@ class Generator:
             self.indentation = save
 
     def is_left_rec(self, rule):
-        # TODO: Indirect left recursion (hidden behind possibly-empty
-        # items) and mutual left recursion (recursion involving
-        # multiple rules).  Indirect recursion only becomes important
-        # once we support PEG features like optional or repeated
-        # items.  Mutual left recursion is currently an undetected
-        # grammar bug -- don't do this!  (A full implementation is in
+        # TODO: Implement this correctly.  (Full implementation is in
         # the ../pegen/parser_generator.py module.)
         for alt in rule.alts:
-            item = alt.items[0]
-            if isinstance(item, NamedItem):
-                item = item.item
-            if item == rule.name:
-                return True
+            for item in alt.items:
+                if isinstance(item, NamedItem):
+                    item = item.item
+                orig = item
+                if isinstance(item, (Maybe, Loop, Lookahead)):
+                    item = item.item
+                if item == rule.name:
+                    return True
+                if isinstance(orig, (Maybe, Lookahead)):
+                    continue
+                if isinstance(orig, Loop) and not orig.nonempty:
+                    continue
+                break
         return False
 
     def gen_rule(self, rule):
