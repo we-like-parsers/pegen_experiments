@@ -54,7 +54,7 @@ alts:
     | alt { [alt] }
 
 alt:
-    | items action { Alt(items, action[1:-1].strip()) }
+    | items action { Alt(items, action) }
     | items { Alt(items, None) }
 
 items:
@@ -81,15 +81,15 @@ atom:
     | "[" atom "]" { Maybe(atom) }
     | "[" alts "]" { Maybe(self.gen_rule(alts).name) }
 
-action: "{" stuffs "}" { "{" + stuffs + "}" }
+action: "{" stuffs "}" { stuffs }
 
 stuffs:
     | stuff stuffs { stuff + " " + stuffs }
     | stuff { stuff }
 
 stuff:
-    | action { action }
+    | "{" stuffs "}" { "{" + stuffs + "}" } 
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }
-    | OP { op.string if op.string not in ("{", "}") else None }
+    | OP { None if op.string in ("{", "}") else op.string }

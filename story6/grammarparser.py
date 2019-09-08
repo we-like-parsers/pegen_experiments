@@ -314,7 +314,7 @@ class GrammarParser(Parser):
             and (action := self.action()) is not None
         ):
             self.show_index(0, 0, 2)
-            retval = Alt ( items , action [ 1 : - 1 ] . strip ( ) )
+            retval = Alt ( items , action )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -543,7 +543,7 @@ class GrammarParser(Parser):
             and self.expect("}") is not None
         ):
             self.show_index(0, 0, 3)
-            retval = "{" + stuffs + "}"
+            retval = stuffs
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -579,14 +579,18 @@ class GrammarParser(Parser):
 
     @memoize
     def stuff(self):
-        self.show_rule('stuff', [['action'], ['NAME'], ['NUMBER'], ['STRING'], ['OP']])
+        self.show_rule('stuff', [['"{"', 'stuffs', '"}"'], ['NAME'], ['NUMBER'], ['STRING'], ['OP']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
-            and (action := self.action()) is not None
+            and self.expect("{") is not None
+            and self.show_index(0, 1)
+            and (stuffs := self.stuffs()) is not None
+            and self.show_index(0, 2)
+            and self.expect("}") is not None
         ):
-            self.show_index(0, 0, 1)
-            retval = action
+            self.show_index(0, 0, 3)
+            retval = "{" + stuffs + "}"
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -622,7 +626,7 @@ class GrammarParser(Parser):
             and (op := self.expect(OP)) is not None
         ):
             self.show_index(4, 0, 1)
-            retval = op . string if op . string not in ( "{" , "}" ) else None
+            retval = None if op . string in ( "{" , "}" ) else op . string
             if retval is not None:
                 return retval
         self.reset(pos)
