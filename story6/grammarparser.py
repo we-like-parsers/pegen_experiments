@@ -8,7 +8,7 @@ from story6.parser import Parser
 
 
 from ast import literal_eval
-from token import COMMENT, DEDENT, INDENT, NL, OP
+from token import DEDENT, INDENT, OP
 
 from story6.grammar import Grammar, Rule, Alt, NamedItem, Lookahead, Maybe, Loop, Cut
 
