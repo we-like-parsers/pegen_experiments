@@ -97,9 +97,9 @@ def test_group():
     program = ("start: (foo foo | foo)\n"
                "foo: NAME\n")
     rules = start(program).rules
-    assert rules == [Rule('start', [Alt(['_gen_rule_0'])]),
+    assert rules == [Rule('start', [Alt(['_synthetic_rule_0'])]),
                      Rule('foo', [Alt(['NAME'])]),
-                     Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
+                     Rule('_synthetic_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
 
 def test_maybe_1():
     program = ("start: foo?\n"
@@ -119,9 +119,9 @@ def test_maybe_3():
     program = ("start: [foo foo | foo]\n"
                "foo: NAME\n")
     rules = start(program).rules
-    assert rules == [Rule('start', [Alt([Maybe('_gen_rule_0')])]),
+    assert rules == [Rule('start', [Alt([Maybe('_synthetic_rule_0')])]),
                      Rule('foo', [Alt(['NAME'])]),
-                     Rule('_gen_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
+                     Rule('_synthetic_rule_0', [Alt(['foo', 'foo']), Alt(['foo'])])]
 
 def test_star():
     program = "start: NAME*\n"
