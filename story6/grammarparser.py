@@ -523,7 +523,7 @@ class GrammarParser(Parser):
             and self.expect("]") is not None
         ):
             self.show_index(4, 0, 3)
-            retval = Maybe ( self . synthetic_rule < ( alts ) . name )
+            retval = Maybe ( self . synthetic_rule ( alts ) . name )
             if retval is not None:
                 return retval
         self.reset(pos)
