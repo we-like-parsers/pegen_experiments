@@ -18,7 +18,7 @@ class Parser(BaseParser):
         name = f"_synthetic_rule_{len(self.extra_rules)}"
         rule = Rule(name, alts)
         self.extra_rules.append(rule)
-        return rule
+        return rule.name
 """
 
 start: grammar ENDMARKER { grammar }
@@ -74,12 +74,12 @@ molecule:
     | atom "+" { Loop(atom, True) }
     | atom { atom }
     | "[" atom "]" { Maybe(atom) }
-    | "[" alts "]" { Maybe(self.synthetic_rule(alts).name) }
+    | "[" alts "]" { Maybe(self.synthetic_rule(alts)) }
 
 atom:
     | NAME { name.string }
     | STRING {string.string }
-    | "(" alts ")" { self.synthetic_rule(alts).name }
+    | "(" alts ")" { self.synthetic_rule(alts) }
 
 action: "{" stuffs "}" { stuffs }
 

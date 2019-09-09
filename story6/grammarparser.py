@@ -24,7 +24,7 @@ class Parser(BaseParser):
         name = f"_synthetic_rule_{len(self.extra_rules)}"
         rule = Rule(name, alts)
         self.extra_rules.append(rule)
-        return rule
+        return rule.name
 
 class GrammarParser(Parser):
 
@@ -485,7 +485,7 @@ class GrammarParser(Parser):
             and self.expect("]") is not None
         ):
             self.show_index(5, 0, 3)
-            retval = Maybe ( self . synthetic_rule ( alts ) . name )
+            retval = Maybe ( self . synthetic_rule ( alts ) )
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -523,7 +523,7 @@ class GrammarParser(Parser):
             and self.expect(")") is not None
         ):
             self.show_index(2, 0, 3)
-            retval = self . synthetic_rule ( alts ) . name
+            retval = self . synthetic_rule ( alts )
             if retval is not None:
                 return retval
         self.reset(pos)
