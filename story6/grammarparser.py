@@ -20,8 +20,8 @@ class Parser(BaseParser):
         super().__init__(tokenizer)
         self.extra_rules = []
 
-    def gen_rule(self, alts):
-        name = f"_gen_rule_{len(self.extra_rules)}"
+    def synthetic_rule(self, alts):
+        name = f"_synthetic_rule_{len(self.extra_rules)}"
         rule = Rule(name, alts)
         self.extra_rules.append(rule)
         return rule
@@ -497,7 +497,7 @@ class GrammarParser(Parser):
             and self.expect(")") is not None
         ):
             self.show_index(2, 0, 3)
-            retval = self . gen_rule ( alts ) . name
+            retval = self . synthetic_rule ( alts ) . name
             if retval is not None:
                 return retval
         self.reset(pos)
@@ -523,7 +523,7 @@ class GrammarParser(Parser):
             and self.expect("]") is not None
         ):
             self.show_index(4, 0, 3)
-            retval = Maybe ( self . gen_rule ( alts ) . name )
+            retval = Maybe ( self . synthetic_rule < ( alts ) . name )
             if retval is not None:
                 return retval
         self.reset(pos)

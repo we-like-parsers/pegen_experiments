@@ -14,8 +14,8 @@ class Parser(BaseParser):
         super().__init__(tokenizer)
         self.extra_rules = []
 
-    def gen_rule(self, alts):
-        name = f"_gen_rule_{len(self.extra_rules)}"
+    def synthetic_rule(self, alts):
+        name = f"_synthetic_rule_{len(self.extra_rules)}"
         rule = Rule(name, alts)
         self.extra_rules.append(rule)
         return rule
@@ -77,9 +77,9 @@ molecule:
 atom:
     | NAME { name.string }
     | STRING {string.string }
-    | "(" alts ")" { self.gen_rule(alts).name }
+    | "(" alts ")" { self.synthetic_rule(alts).name }
     | "[" atom "]" { Maybe(atom) }
-    | "[" alts "]" { Maybe(self.gen_rule(alts).name) }
+    | "[" alts "]" { Maybe(self.synthetic_rule<(alts).name) }
 
 action: "{" stuffs "}" { stuffs }
 
