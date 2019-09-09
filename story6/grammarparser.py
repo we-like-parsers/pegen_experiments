@@ -21,6 +21,8 @@ class Parser(BaseParser):
         self.extra_rules = []
 
     def synthetic_rule(self, alts):
+        if len(alts) == 1 and len(alts[0].items) == 1:
+            return alts[0].items[0]
         name = f"_synthetic_rule_{len(self.extra_rules)}"
         rule = Rule(name, alts)
         self.extra_rules.append(rule)
@@ -419,7 +421,7 @@ class GrammarParser(Parser):
 
     @memoize
     def molecule(self):
-        self.show_rule('molecule', [['atom', '"?"'], ['atom', '"*"'], ['atom', '"+"'], ['atom'], ['"["', 'atom', '"]"'], ['"["', 'alts', '"]"']])
+        self.show_rule('molecule', [['atom', '"?"'], ['atom', '"*"'], ['atom', '"+"'], ['atom'], ['"["', 'alts', '"]"']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -467,24 +469,11 @@ class GrammarParser(Parser):
             and self.show_index(4, 0)
             and self.expect("[") is not None
             and self.show_index(4, 1)
-            and (atom := self.atom()) is not None
+            and (alts := self.alts()) is not None
             and self.show_index(4, 2)
             and self.expect("]") is not None
         ):
             self.show_index(4, 0, 3)
-            retval = Maybe ( atom )
-            if retval is not None:
-                return retval
-        self.reset(pos)
-        if (True
-            and self.show_index(5, 0)
-            and self.expect("[") is not None
-            and self.show_index(5, 1)
-            and (alts := self.alts()) is not None
-            and self.show_index(5, 2)
-            and self.expect("]") is not None
-        ):
-            self.show_index(5, 0, 3)
             retval = Maybe ( self . synthetic_rule ( alts ) )
             if retval is not None:
                 return retval
