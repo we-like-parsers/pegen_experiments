@@ -73,13 +73,13 @@ molecule:
     | atom "*" { Loop(atom) }
     | atom "+" { Loop(atom, True) }
     | atom { atom }
+    | "[" atom "]" { Maybe(atom) }
+    | "[" alts "]" { Maybe(self.synthetic_rule(alts).name) }
 
 atom:
     | NAME { name.string }
     | STRING {string.string }
     | "(" alts ")" { self.synthetic_rule(alts).name }
-    | "[" atom "]" { Maybe(atom) }
-    | "[" alts "]" { Maybe(self.synthetic_rule(alts).name) }
 
 action: "{" stuffs "}" { stuffs }
 
