@@ -11,7 +11,7 @@ compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
 
 assignment: target '=' expression
 
-import_stmt: 'import' names | 'from' NAME 'import' ('*' | names)
+import_stmt: 'import' names | 'from' NAME ('.' NAME)* 'import' ('*' | names)
 names: NAME ',' names | NAME
 
 if_stmt: 'if' full_expression ':' block elif_block* [else_block]
@@ -40,7 +40,7 @@ full_expression: NAME ':=' disjunction | disjunction
 disjunction: conjunction ('or' conjunction)*
 conjunction: comparison ('and' comparison)*
 comparison: 'not'* bitwise_or (compare_op bitwise_or)*
-compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in'
+compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not' 'in'
 
 bitwise_or: bitwise_and ('|' bitwise_and)*
 bitwise_and: expression ('&' expression)*
