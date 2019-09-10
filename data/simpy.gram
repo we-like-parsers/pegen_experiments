@@ -7,9 +7,10 @@ statements: statement+
 statement: simple_stmt | compound_stmt
 simple_stmt: small_stmt (';' small_stmt)* NEWLINE
 small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
-compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
+compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target '=' expression
+assignment: target ':' expression ['=' expression] | targets '=' full_expressions | target iop expression
+iop: '+=' | '-='  # etc.
 
 import_stmt: 'import' names | 'from' NAME ('.' NAME)* 'import' ('*' | names)
 names: NAME ',' names | NAME
@@ -20,11 +21,18 @@ else_block: 'else' ':' block
 
 while_stmt: 'while' full_expression ':' block [else_block]
 
+for_stmt: 'for' targets 'in' expressions ':' block [else_block]
+
 with_stmt: 'with' expression ['as' target] ':' block
+
+try_stmt: try_block except_block* finally_block | try_block except_block
+try_block: 'try' ':' block
+except_block: 'except' [expression ['as' target]] ':' block
+finally_block: 'finally' ':' block
 
 return_stmt: 'return' [expressions]
 
-function_def: [decorators] 'def' NAME '(' [parameters] ')' ':' block
+function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
 parameters: kwparams | param [',' [parameters]]
 kwparams: kwparam [',' [kwparams]]
 kwparam: NAME '=' expression | '**' NAME
@@ -47,15 +55,23 @@ bitwise_and: expression ('&' expression)*
 
 expressions: expression (',' expression)* [',']
 expression: term (('+' term | '-' term))*
-term: factor (('*' factor | '/' factor))*
-factor: primary ('.' NAME | '[' expression ']' | '(' [arguments [',']] ')')*
-primary: list | tuple | group | NAME | STRING | NUMBER
+term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
+factor: ('+' | '-' | '~') factor | power
+power: primary '**' factor | primary
+primary: atom ('.' NAME | '[' expression ']' | '(' [arguments [',']] ')')*
+atom: list | tuple | group | set | dict | NAME | STRING | NUMBER
 list: '[' [full_expressions] ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
 group: '(' full_expression ')'
+set: '{' expressions '}'
+dict: '{' [kvpairs] '}'
+kvpairs: kvpair (',' kvpair)* [',']
+kvpair: expression ':' expression
+
 arguments: kwargs | posarg [',' arguments]  # Weird to make it work
 kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' disjunction
 kwarg: NAME '=' disjunction | '**' disjunction
 
-target: NAME  # TODO: foo.bar, foo[bar], foo(bar)
+targets: target (',' target)* [',']
+target: atom '.' NAME | atom '[' expression ']' | NAME  # TODO: it's more complicated
