@@ -6,11 +6,13 @@ statements: statement+
 # NOTE: assignment MUST precede expression, else the parser will get stuck
 statement: simple_stmt | compound_stmt
 simple_stmt: small_stmt (';' small_stmt)* NEWLINE
-small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
+small_stmt: return_stmt | import_stmt | 'pass' | yield_stmt | assignment | expression
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target ':' expression ['=' expression] | targets '=' full_expressions | target iop expression
+assignment: target ':' expression ['=' expression] | targets '=' expressions | target iop expression
 iop: '+=' | '-='  # etc.
+
+yield_stmt: yield_expr
 
 import_stmt: import_name | import_from
 import_name: 'import' dotted_as_names
@@ -71,7 +73,7 @@ atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
-group: '(' full_expression ')'
+group: '(' full_expression | yield_expr ')'
 genexp: '(' expression for_if_clauses ')'
 set: '{' expressions '}'
 setcomp: '{' expression for_if_clauses '}'
@@ -80,6 +82,8 @@ dictcomp: '{' kvpair for_if_clauses '}'
 kvpairs: kvpair (',' kvpair)* [',']
 kvpair: expression ':' expression
 for_if_clauses: ('for' targets 'in' expression ('if' expression)*)+
+
+yield_expr: 'yield' 'from' expression | 'yield' [expression]
 
 arguments: expression for_if_clauses | kwargs | posarg [',' arguments]  # Weird to make it work
 kwargs: kwarg (',' kwarg)*
