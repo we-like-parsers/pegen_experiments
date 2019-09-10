@@ -101,7 +101,8 @@ kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' expression
 kwarg: NAME '=' expression | '**' expression
 
-targets: target (',' target)* [',']
+targets: star_target (',' star_target)* [',']
+star_target: '*' target | target
 target: target '.' NAME | target '[' slices ']' | atomic_target
 atomic_target: NAME | '[' targets ']' | '(' targets ')' | '(' target ')'
 # TODO: target: primary '.' NAME | primary '[' slices ']'
