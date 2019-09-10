@@ -46,7 +46,7 @@ return_stmt: 'return' [expressions]
 raise_stmt: 'raise' [expression ['from' expression]]
 
 function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
-parameters: kwparams | param [',' [parameters]]
+parameters: kwparams | param [',' [parameters]] | '*' ',' kwparams  # TODO: allow bare name after *
 kwparams: kwparam [',' [kwparams]]
 kwparam: NAME [':' expression] '=' expression | '**' NAME [':' expression]
 param: NAME [':' expression] | '*' NAME [':' expression]
