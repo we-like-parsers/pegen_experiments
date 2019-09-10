@@ -59,7 +59,6 @@ def main():
 
             try:
                 t = parse.parse_file(file_path)
-                exec(compile(t, "", "exec"))
                 report_status(succeeded=True, file=file_path, verbose=verbose)
             except Exception as error:
                 report_status(
