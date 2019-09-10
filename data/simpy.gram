@@ -67,16 +67,21 @@ term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
 primary: atom ('.' NAME | '[' expression ']' | '(' [arguments [',']] ')')*
-atom: list | tuple | group | set | dict | NAME | STRING | NUMBER
+atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER
 list: '[' [full_expressions] ']'
+listcomp: '[' expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
 group: '(' full_expression ')'
+genexp: '(' expression for_if_clauses ')'
 set: '{' expressions '}'
+setcomp: '{' expression for_if_clauses '}'
 dict: '{' [kvpairs] '}'
+dictcomp: '{' kvpair for_if_clauses '}'
 kvpairs: kvpair (',' kvpair)* [',']
 kvpair: expression ':' expression
+for_if_clauses: ('for' targets 'in' expression ('if' expression)*)+
 
-arguments: kwargs | posarg [',' arguments]  # Weird to make it work
+arguments: expression for_if_clauses | kwargs | posarg [',' arguments]  # Weird to make it work
 kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' disjunction
 kwarg: NAME '=' disjunction | '**' disjunction
