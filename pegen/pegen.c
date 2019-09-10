@@ -193,7 +193,10 @@ number_token(Parser *p)
     // TODO: Check for float, complex.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
     if (c == NULL) {
-        return NULL;
+	PyErr_Clear();
+	c = PyFloat_FromString(t->bytes);
+	if (c == NULL)
+	    return NULL;
     }
     if (PyArena_AddPyObject(p->arena, c) < 0) {
         Py_DECREF(c);
