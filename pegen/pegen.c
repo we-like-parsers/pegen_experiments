@@ -121,6 +121,33 @@ is_memoized(Parser *p, int type, void *pres)
     return 0;
 }
 
+int
+lookahead_with_string(int positive, void *(func)(Parser *, const char *), Parser *p, const char *arg)
+{
+    int mark = p->mark;
+    void *res = func(p, arg);
+    p->mark = mark;
+    return (res != NULL) == positive;
+}
+
+int
+lookahead_with_int(int positive, void *(func)(Parser *, int), Parser *p, int arg)
+{
+    int mark = p->mark;
+    void *res = func(p, arg);
+    p->mark = mark;
+    return (res != NULL) == positive;
+}
+
+int
+lookahead(int positive, void *(func)(Parser *), Parser *p)
+{
+    int mark = p->mark;
+    void *res = func(p);
+    p->mark = mark;
+    return (res != NULL) == positive;
+}
+
 Token *
 expect_token(Parser *p, int type)
 {

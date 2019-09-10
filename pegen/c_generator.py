@@ -104,20 +104,23 @@ class CCallMakerVisitor(GrammarVisitor):
             name = node.name
         return name, call
 
-    def lookahead_call_helper(self, node):
+    def lookahead_call_helper(self, node, positive):
         name, call = self.visit(node.node)
-        head, tail = call.split('(', 1)
-        assert tail[-1] == ')'
-        tail = tail[:-1]
-        return head, tail
+        func, args = call.split('(', 1)
+        assert args[-1] == ')'
+        args = args[:-1]
+        if not args.startswith("p,"):
+            return None, f"lookahead({positive}, {func}, {args})"
+        elif args[2:].strip().isalnum():
+            return None, f"lookahead_with_int({positive}, {func}, {args})"
+        else:
+            return None, f"lookahead_with_string({positive}, {func}, {args})"
 
     def visit_PositiveLookahead(self, node):
-        head, tail = self.lookahead_call_helper(node)
-        return None, f"positive_lookahead({head}, {tail})"
+        return self.lookahead_call_helper(node, 1)
 
     def visit_NegativeLookahead(self, node):
-        head, tail = self.lookahead_call_helper(node)
-        return None, f"negative_lookahead({head}, {tail})"
+        return self.lookahead_call_helper(node, 0)
 
     def visit_Opt(self, node):
         name, call = self.visit(node.node)
@@ -308,7 +311,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         vars = {}
         for alt in node.alts:
             vars.update(self.collect_vars(alt))
-        for v, type in sorted(vars.items()):
+        for v, type in sorted(item for item in vars.items() if item[0] is not None):
             if not type:
                 type = 'void *'
             else:
@@ -371,7 +374,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         call: str
         name, call = self.callmakervisitor.visit(node.item)
         type = None
-        if name != 'cut':
+        if name and name != 'cut':
             if name.endswith('_var'):
                 rulename = name[:-4]
                 rule = self.rules.get(rulename)

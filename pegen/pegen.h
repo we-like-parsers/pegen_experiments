@@ -30,6 +30,10 @@ int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
 
+int lookahead_with_string(int, void *(func)(Parser *, const char *), Parser *, const char *);
+int lookahead_with_int(int, void *(func)(Parser *, int), Parser *, int);
+int lookahead(int, void *(func)(Parser *), Parser *);
+
 Token *expect_token(Parser *p, int type);
 
 void *endmarker_token(Parser *p);
