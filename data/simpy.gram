@@ -68,7 +68,7 @@ varargslist: NAME (',' NAME)* [',']  # TODO: defaults, *args, **kwds
 disjunction: conjunction ('or' conjunction)*
 conjunction: comparison ('and' comparison)*
 comparison: 'not'* bitwise_or (compare_op bitwise_or)*
-compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not' 'in' | 'is'
+compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | ['not'] 'in' | 'is' ['not']
 
 bitwise_or: bitwise_and ('|' bitwise_and)*
 bitwise_and: sum ('&' sum)*
@@ -81,7 +81,7 @@ primary: atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] | expression
-atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER
+atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER | '...'
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
