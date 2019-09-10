@@ -71,14 +71,18 @@ def main() -> None:
         else:
             output_file = "parse.py"
 
-    rules, parser, tokenizer, gen = build_parser(
-        args.filename,
-        output_file,
-        args.compile_extension,
-        verbose_tokenizer,
-        verbose_parser,
-        args.verbose,
-    )
+    try:
+        rules, parser, tokenizer, gen = build_parser(
+            args.filename,
+            output_file,
+            args.compile_extension,
+            verbose_tokenizer,
+            verbose_parser,
+            args.verbose,
+        )
+    except Exception as err:
+        traceback.print_exception(err.__class__, err, None)
+        sys.exit(1)
 
     if not args.quiet:
         if args.verbose:
