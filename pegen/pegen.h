@@ -36,6 +36,8 @@ int lookahead(int, void *(func)(Parser *), Parser *);
 
 Token *expect_token(Parser *p, int type);
 
+void *async_token(Parser *p);
+void *await_token(Parser *p);
 void *endmarker_token(Parser *p);
 expr_ty name_token(Parser *p);
 void *newline_token(Parser *p);

@@ -167,6 +167,18 @@ expect_token(Parser *p, int type)
 }
 
 void *
+async_token(Parser *p)
+{
+    return expect_token(p, ASYNC);
+}
+
+void *
+await_token(Parser *p)
+{
+    return expect_token(p, AWAIT);
+}
+
+void *
 endmarker_token(Parser *p)
 {
     return expect_token(p, ENDMARKER);

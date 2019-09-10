@@ -74,7 +74,7 @@ class CCallMakerVisitor(GrammarVisitor):
         if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER', 'ASYNC', 'AWAIT'):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
         return f"{name}_var", f"{name}_rule(p)"
