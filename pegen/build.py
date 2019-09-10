@@ -90,13 +90,13 @@ def build_parser(
         gen: ParserGenerator
         if output_file.endswith(".c"):
             gen = CParserGenerator(rules.rules, file)
+
+            if compile_extension:
+                compile_c_extension(output_file, verbose=verbose_c_extension)
         elif output_file.endswith(".py"):
             gen = PythonParserGenerator(rules.rules, file)
         else:
             raise Exception("Your output file must either be a .c or .py file")
         gen.generate(grammar_file)
-
-    if compile_extension:
-        compile_c_extension(output_file, verbose=verbose_c_extension)
 
     return rules, parser, tokenizer, gen
