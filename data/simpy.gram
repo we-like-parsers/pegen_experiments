@@ -10,7 +10,7 @@ simple_stmt: small_stmt (';' small_stmt)* NEWLINE
 small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | assignment | expression
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target ':' expression ['=' expression] | (targets '=')+ expressions | target augassign expression
+assignment: target ':' expression ['=' expression] | (star_targets '=')+ expressions | target augassign expression
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 yield_stmt: yield_expr
@@ -36,7 +36,7 @@ else_block: 'else' ':' block
 
 while_stmt: 'while' full_expression ':' block [else_block]
 
-for_stmt: 'for' targets 'in' expressions ':' block [else_block]
+for_stmt: 'for' star_targets 'in' expressions ':' block [else_block]
 
 with_stmt: 'with' expression ['as' target] ':' block
 
@@ -95,7 +95,7 @@ dict: '{' [kvpairs] '}'
 dictcomp: '{' kvpair for_if_clauses '}'
 kvpairs: kvpair (',' kvpair)* [',']
 kvpair: expression ':' expression
-for_if_clauses: ('for' targets 'in' expression ('if' expression)*)+
+for_if_clauses: ('for' star_targets 'in' expression ('if' expression)*)+
 
 yield_expr: 'yield' 'from' expression | 'yield' [expression]
 
@@ -105,7 +105,9 @@ kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' expression
 kwarg: NAME '=' expression | '**' expression
 
-targets: star_target (',' star_target)* [',']
+star_targets: star_target (',' star_target)* [',']
+targets: target (',' target)* [',']  # TODO: recursively disallow *target
+
 star_target: '*' target | target
 target: target '.' NAME | target '[' slices ']' | atomic_target
 atomic_target: NAME | '[' targets ']' | '(' targets ')' | '(' target ')'
