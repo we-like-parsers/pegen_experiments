@@ -61,19 +61,20 @@ def build_parser(
     verbose_parser=False,
     verbose_c_extension=False,
 ):
-    """[summary]
+   """Generate rules, parser, tokenizer, parser generator for a given grammar
 
-    Args:
-        grammar_file ([type]): [description]
-        output_file ([type]): [description]
-        compile_extension (bool, optional): [description]. Defaults to False.
-
-    Raises:
-        parser.make_syntax_error: [description]
-
-    Returns:
-        [type]: [description]
-    """
+   Args:
+       grammar_file (string): Path for the grammar file
+       output_file (string): Path for the output file
+       compile_extension (bool, optional): Whether to compile the C extension.
+         Defaults to False.
+       verbose_tokenizer (bool, optional): Whether to display additional output
+         when generating the tokenizer. Defaults to False.
+       verbose_parser (bool, optional): Whether to display additional output
+         when generating the parser. Defaults to False.
+       verbose_c_extension (bool, optional): Whether to display additional
+         output when compiling the C extension . Defaults to False.
+   """
     with open(grammar_file) as file:
         tokenizer = Tokenizer(
             grammar_tokenizer(tokenize.generate_tokens(file.readline)),
