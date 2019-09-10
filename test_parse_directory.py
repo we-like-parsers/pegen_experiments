@@ -25,10 +25,10 @@ argparser.add_argument(
 
 def report_status(succeeded, file, verbose, error=None):
     if succeeded is True:
-        status = "Passed"
+        status = "OK"
         COLOR = SUCCESS
     else:
-        status = "Failed"
+        status = "Fail"
         COLOR = FAIL
 
     print(f"{COLOR}{file:50} {status}{ENDC}")
