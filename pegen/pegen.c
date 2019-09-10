@@ -274,6 +274,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         }
         else {
             Token *t = p->tokens + p->fill - 1;
+	    // TODO: comvert from bytes offset to character offset
+	    // TODO: set correct attributes on SyntaxError object
             PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
                          t->line, t->col, token_name(t->type));
         }
