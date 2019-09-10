@@ -7,11 +7,11 @@ statement:  compound_stmt | simple_stmt
 simple_stmt: small_stmt (';' small_stmt)* NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt: return_stmt | import_stmt | 'pass' | yield_stmt | assignment | disjunction
+small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assignment | disjunction
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target ':' disjunction ['=' disjunction] | targets '=' disjunctions | target iop disjunction
-iop: '+=' | '-='  # etc.
+assignment: target ':' disjunction ['=' disjunction] | (targets '=')+ disjunctions | target augassign disjunction
+augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 yield_stmt: yield_expr
 
@@ -43,6 +43,8 @@ finally_block: 'finally' ':' block
 
 return_stmt: 'return' [expressions]
 
+raise_stmt: 'raise' [disjunction ['from' disjunction]]
+
 function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
 parameters: kwparams | param [',' [parameters]]
 kwparams: kwparam [',' [kwparams]]
@@ -71,7 +73,10 @@ expression: term (('+' term | '-' term))*
 term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
-primary: atom ('.' NAME | '[' expressions ']' | '(' [arguments] ')')*
+primary: atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
+
+slices: slice (',' slice)* [',']
+slice: [disjunction] ':' [disjunction] | disjunction
 atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
@@ -95,4 +100,6 @@ posarg: full_expression | '*' disjunction
 kwarg: NAME '=' disjunction | '**' disjunction
 
 targets: target (',' target)* [',']
-target: atom '.' NAME | atom '[' expression ']' | NAME  # TODO: it's more complicated
+target: target '.' NAME | target '[' slices ']' | atomic_target
+atomic_target: NAME | '[' targets ']' | '(' targets ')' | '(' target ')'
+# TODO: target: primary '.' NAME | primary '[' slices ']'
