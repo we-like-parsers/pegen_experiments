@@ -83,7 +83,7 @@ primary: atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] | expression
-atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER | '...'
+atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING+ | NUMBER | '...'
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
