@@ -60,7 +60,7 @@ argparser.add_argument('-v', '--verbose', action='count', default=0,
 argparser.add_argument('-c', '--cpython', action='store_true', help="Generate C code for inclusion into CPython")
 argparser.add_argument('--compile-extension', action='store_true', help="Compile generated C code into an extension module")
 argparser.add_argument('-o', '--output', metavar='OUT',
-                       help="Where to write the generated parser (default parse.py)")
+                       help="Where to write the generated parser (default parse.py or parse.c)")
 argparser.add_argument('filename', help="Grammar description")
 
 
