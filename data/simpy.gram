@@ -36,9 +36,9 @@ else_block: 'else' ':' block
 
 while_stmt: 'while' full_expression ':' block [else_block]
 
-for_stmt: 'for' star_targets 'in' expressions ':' block [else_block]
+for_stmt: [ASYNC] 'for' star_targets 'in' expressions ':' block [else_block]
 
-with_stmt: 'with' expression ['as' target] ':' block
+with_stmt: [ASYNC] 'with' expression ['as' target] ':' block
 
 try_stmt: try_block except_block* finally_block | try_block except_block
 try_block: 'try' ':' block
@@ -49,7 +49,7 @@ return_stmt: 'return' [expressions]
 
 raise_stmt: 'raise' [expression ['from' expression]]
 
-function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
+function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
 parameters: kwparams | param [',' [parameters]] | '*' ',' kwparams  # TODO: allow bare name after *
 kwparams: kwparam [',' [kwparams]]
 kwparam: NAME [':' expression] '=' expression | '**' NAME [':' expression]
@@ -79,7 +79,7 @@ sum: term (('+' term | '-' term))*
 term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
-primary: atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
+primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] | expression
