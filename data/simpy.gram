@@ -45,8 +45,8 @@ return_stmt: 'return' [expressions]
 function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
 parameters: kwparams | param [',' [parameters]]
 kwparams: kwparam [',' [kwparams]]
-kwparam: NAME '=' expression | '**' NAME
-param: NAME | '*' NAME
+kwparam: NAME [':' expression] '=' expression | '**' NAME [':' expression]
+param: NAME [':' expression] | '*' NAME [':' expression]
 decorators: ('@' factor NEWLINE)+
 
 class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
