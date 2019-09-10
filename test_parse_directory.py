@@ -71,7 +71,7 @@ def main():
         from pegen import parse
     except:
         print(
-            f"An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag."
+            "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag."
         )
         sys.exit(1)
 
