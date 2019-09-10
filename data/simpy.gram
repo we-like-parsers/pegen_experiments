@@ -7,10 +7,10 @@ statement:  compound_stmt | simple_stmt
 simple_stmt: small_stmt (';' small_stmt)* NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assignment | disjunction
+small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assignment | expression
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target ':' disjunction ['=' disjunction] | (targets '=')+ disjunctions | target augassign disjunction
+assignment: target ':' expression ['=' expression] | (targets '=')+ expressions | target augassign expression
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 yield_stmt: yield_expr
@@ -43,13 +43,13 @@ finally_block: 'finally' ':' block
 
 return_stmt: 'return' [expressions]
 
-raise_stmt: 'raise' [disjunction ['from' disjunction]]
+raise_stmt: 'raise' [expression ['from' expression]]
 
 function_def: [decorators] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
 parameters: kwparams | param [',' [parameters]]
 kwparams: kwparam [',' [kwparams]]
-kwparam: NAME [':' disjunction] '=' disjunction | '**' NAME [':' expression]
-param: NAME [':' disjunction] | '*' NAME [':' disjunction]
+kwparam: NAME [':' expression] '=' expression | '**' NAME [':' expression]
+param: NAME [':' expression] | '*' NAME [':' expression]
 decorators: ('@' factor NEWLINE)+
 
 class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
@@ -57,26 +57,28 @@ class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
 block: simple_stmt | NEWLINE INDENT statements DEDENT
 
 full_expressions: full_expression (',' full_expression)* [',']
-disjunctions: disjunction (',' disjunction)* [',']
 expressions: expression (',' expression)* [',']
 
-full_expression: NAME ':=' disjunction | disjunction
+full_expression: NAME ':=' expression | expression
+expression: disjunction ['if' disjunction 'else' disjunction] | lambdef
+lambdef: 'lambda' [varargslist] ':' expression
+varargslist: NAME (',' NAME)* [',']  # TODO: defaults, *args, **kwds
 disjunction: conjunction ('or' conjunction)*
 conjunction: comparison ('and' comparison)*
 comparison: 'not'* bitwise_or (compare_op bitwise_or)*
 compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not' 'in' | 'is'
 
 bitwise_or: bitwise_and ('|' bitwise_and)*
-bitwise_and: expression ('&' expression)*
+bitwise_and: sum ('&' sum)*
 
-expression: term (('+' term | '-' term))*
+sum: term (('+' term | '-' term))*
 term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
 primary: atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
-slice: [disjunction] ':' [disjunction] | disjunction
+slice: [expression] ':' [expression] | expression
 atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING | NUMBER
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
@@ -96,8 +98,8 @@ yield_expr: 'yield' 'from' expression | 'yield' [expression]
 arguments: expression for_if_clauses | args [',']
 args: kwargs | posarg [',' args]  # Weird to make it work
 kwargs: kwarg (',' kwarg)*
-posarg: full_expression | '*' disjunction
-kwarg: NAME '=' disjunction | '**' disjunction
+posarg: full_expression | '*' expression
+kwarg: NAME '=' expression | '**' expression
 
 targets: target (',' target)* [',']
 target: target '.' NAME | target '[' slices ']' | atomic_target
