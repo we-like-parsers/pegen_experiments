@@ -77,6 +77,7 @@ def main() -> None:
         args.compile_extension,
         verbose_tokenizer,
         verbose_parser,
+        args.verbose,
     )
 
     if not args.quiet:

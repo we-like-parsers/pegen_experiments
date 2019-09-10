@@ -59,6 +59,7 @@ def build_parser(
     compile_extension=False,
     verbose_tokenizer=False,
     verbose_parser=False,
+    verbose_c_extension=False,
 ):
     """[summary]
 
@@ -95,6 +96,6 @@ def build_parser(
         gen.generate(grammar_file)
 
     if compile_extension:
-        compile_c_extension(output_file)
+        compile_c_extension(output_file, verbose=verbose_c_extension)
 
     return rules, parser, tokenizer, gen
