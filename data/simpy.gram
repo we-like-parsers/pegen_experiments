@@ -1,6 +1,6 @@
 # Simplified grammar for Python
 
-start: statements ENDMARKER
+start: [statements] ENDMARKER
 statements: statement+
 
 # NOTE: assignment MUST precede expression, else the parser will get stuck
