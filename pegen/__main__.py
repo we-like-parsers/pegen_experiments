@@ -11,18 +11,11 @@ import argparse
 import sys
 import time
 import token
-import tokenize
-import traceback
 
 from typing import Final
 
-from pegen.build import compile_c_extension
-from pegen.parser_generator import ParserGenerator
-from pegen.python_generator import PythonParserGenerator
-from pegen.c_generator import CParserGenerator
-from pegen.tokenizer import Tokenizer
-from pegen.tokenizer import grammar_tokenizer
-from pegen.grammar import GrammarParser
+from pegen.build import build_parser
+
 
 def print_memstats() -> bool:
     MiB: Final = 2 ** 20
@@ -71,16 +64,20 @@ def main() -> None:
     verbose_parser = verbose == 2 or verbose >= 4
     t0 = time.time()
 
-    with open(args.filename) as file:
-        tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)),
-                              verbose=verbose_tokenizer)
-        parser = GrammarParser(tokenizer, verbose=verbose_parser)
-        rules = parser.start()
-        if not rules:
-            err = parser.make_syntax_error(args.filename)
-            traceback.print_exception(err.__class__, err, None)
-            sys.exit(1)
-        endpos = file.tell()
+    output_file = args.output
+    if not output_file:
+        if args.cpython:
+            output_file = "parse.c"
+        else:
+            output_file = "parse.py"
+
+    rules, parser, tokenizer, gen = build_parser(
+        args.filename,
+        output_file,
+        args.compile_extension,
+        verbose_tokenizer,
+        verbose_parser,
+    )
 
     if not args.quiet:
         if args.verbose:
@@ -90,23 +87,6 @@ def main() -> None:
         print("Clean Grammar:")
         for rule in rules.rules.values():
             print(" ", rule)
-
-    output = args.output
-    if not output:
-        if args.cpython:
-            output = "parse.c"
-        else:
-            output = "parse.py"
-    with open(output, 'w') as file:
-        gen: ParserGenerator
-        if args.cpython:
-            gen = CParserGenerator(rules.rules, file)
-        else:
-            gen = PythonParserGenerator(rules.rules, file)
-        gen.generate(args.filename)
-
-    if args.cpython and args.compile_extension:
-        compile_c_extension(output, verbose=args.verbose)
 
     if args.verbose:
         print("First Graph:")
@@ -133,8 +113,6 @@ def main() -> None:
         if diag.type == token.ENDMARKER:
             nlines -= 1
         print(f"Total time: {dt:.3f} sec; {nlines} lines", end="")
-        if endpos:
-            print(f" ({endpos} bytes)", end="")
         if dt:
             print(f"; {nlines / dt:.0f} lines/sec")
         else:

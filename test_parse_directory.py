@@ -1,14 +1,9 @@
 import argparse
 import os
 import sys
-import tokenize
 import traceback
 
-from pegen.build import compile_c_extension
-from pegen.c_generator import CParserGenerator
-from pegen.tokenizer import Tokenizer
-from pegen.tokenizer import grammar_tokenizer
-from pegen.grammar import GrammarParser
+from pegen.build import build_parser
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -45,31 +40,6 @@ def report_status(succeeded, file, verbose, error=None):
         print(f"  {str(error.__class__.__name__)}: {error}")
 
 
-def generate_parser(grammar_file):
-    with open(grammar_file) as file:
-        tokenizer = Tokenizer(
-            grammar_tokenizer(tokenize.generate_tokens(file.readline))
-        )
-        parser = GrammarParser(tokenizer)
-        rules = parser.start()
-
-        if not rules:
-            err = parser.make_syntax_error(grammar_file)
-
-            print(
-                f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}"
-            )
-            traceback.print_exception(err.__class__, err, None)
-
-            sys.exit(1)
-
-    with open("pegen/parse.c", "w") as file:
-        gen = CParserGenerator(rules.rules, file)
-        gen.generate(grammar_file)
-
-    compile_c_extension("pegen/parse.c")
-
-
 def main():
     args = argparser.parse_args()
     directory = args.directory
@@ -84,7 +54,16 @@ def main():
             print(f"The specified grammar file, {grammar_file}, does not exist.")
             sys.exit(1)
 
-        generate_parser(grammar_file)
+        try:
+            build_parser(grammar_file, "pegen/parse.c", True)
+        except Exception as err:
+            print(
+                f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}"
+            )
+            traceback.print_exception(err.__class__, err, None)
+
+            sys.exit(1)
+
     else:
         print("A grammar file was not provided - attempting to use existing file...\n")
 
@@ -107,7 +86,7 @@ def main():
             file_path = os.path.join(root, file)
 
             try:
-                t = parse.parse_file(file_path)
+                parse.parse_file(file_path)
                 report_status(succeeded=True, file=file_path, verbose=verbose)
             except Exception as error:
                 report_status(
