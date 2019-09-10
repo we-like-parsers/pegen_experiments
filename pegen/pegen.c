@@ -269,7 +269,14 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
-        PyErr_Format(PyExc_SyntaxError, "error at mark %d, fill %d, size %d", p->mark, p->fill, p->size);
+        if (p->fill == 0) {
+            PyErr_Format(PyExc_SyntaxError, "error at start before reading any input");
+        }
+        else {
+            Token *t = p->tokens + p->fill - 1;
+            PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
+                         t->line, t->col, token_name(t->type));
+        }
         goto exit;
     }
 
