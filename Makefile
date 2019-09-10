@@ -22,6 +22,9 @@ dump: pegen/parse.c
 test: pegen/parse.c
 	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
 
+compile: pegen/parse.c
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)')"
+
 time: pegen/parse.c
 	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)')"
 
