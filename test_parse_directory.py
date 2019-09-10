@@ -55,6 +55,10 @@ def main():
     # - Output success/failure for each file
     for root, dirs, files in os.walk(directory):
         for file in files:
+            # Only attempt to parse Python files
+            if not file.endswith(".py"):
+                continue
+
             file_path = os.path.join(root, file)
 
             try:
