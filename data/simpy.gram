@@ -12,8 +12,16 @@ compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function
 assignment: target ':' expression ['=' expression] | targets '=' full_expressions | target iop expression
 iop: '+=' | '-='  # etc.
 
-import_stmt: 'import' names | 'from' NAME ('.' NAME)* 'import' ('*' | names)
-names: NAME ',' names | NAME
+import_stmt: import_name | import_from
+import_name: 'import' dotted_as_names
+# note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
+import_from: ('from' (('.' | '...')* dotted_name | ('.' | '...')+)
+              'import' ('*' | '(' import_as_names ')' | import_as_names))
+import_as_name: NAME ['as' NAME]
+dotted_as_name: dotted_name ['as' NAME]
+import_as_names: import_as_name (',' import_as_name)* [',']
+dotted_as_names: dotted_as_name (',' dotted_as_name)*
+dotted_name: NAME ('.' NAME)*
 
 if_stmt: 'if' full_expression ':' block elif_block* [else_block]
 elif_block: 'elif' full_expression ':' block
