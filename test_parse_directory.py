@@ -1,7 +1,14 @@
 import argparse
 import os
-import pegen
 import sys
+import tokenize
+import traceback
+
+from pegen.build import compile_c_extension
+from pegen.c_generator import CParserGenerator
+from pegen.tokenizer import Tokenizer
+from pegen.tokenizer import grammar_tokenizer
+from pegen.grammar import GrammarParser
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -14,6 +21,7 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument(
     "-d", "--directory", help="Directory path containing files to test"
 )
+argparser.add_argument("-g", "--grammar-file", help="Grammar file path")
 argparser.add_argument(
     "-v",
     "--verbose",
@@ -37,19 +45,56 @@ def report_status(succeeded, file, verbose, error=None):
         print(f"  {str(error.__class__.__name__)}: {error}")
 
 
+def generate_parser(grammar_file):
+    with open(grammar_file) as file:
+        tokenizer = Tokenizer(
+            grammar_tokenizer(tokenize.generate_tokens(file.readline))
+        )
+        parser = GrammarParser(tokenizer)
+        rules = parser.start()
+
+        if not rules:
+            err = parser.make_syntax_error(grammar_file)
+
+            print(
+                f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}"
+            )
+            traceback.print_exception(err.__class__, err, None)
+
+            sys.exit(1)
+
+    with open("pegen/parse.c", "w") as file:
+        gen = CParserGenerator(rules.rules, file)
+        gen.generate(grammar_file)
+
+    compile_c_extension("pegen/parse.c")
+
+
 def main():
     args = argparser.parse_args()
     directory = args.directory
+    grammar_file = args.grammar_file
     verbose = args.verbose
 
     if not directory:
         print("You must specify a directory of files to test.")
 
+    if grammar_file:
+        if not os.path.exists(grammar_file):
+            print(f"The specified grammar file, {grammar_file}, does not exist.")
+            sys.exit(1)
+
+        generate_parser(grammar_file)
+    else:
+        print("A grammar file was not provided - attempting to use existing file...\n")
+
     try:
         from pegen import parse
     except:
-        print(f"An existing parser was not found. Please run `make`.")
-        sys.exit()
+        print(
+            f"An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag."
+        )
+        sys.exit(1)
 
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
