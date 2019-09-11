@@ -131,7 +131,7 @@ lookahead_with_string(int positive, void *(func)(Parser *, const char *), Parser
 }
 
 int
-lookahead_with_int(int positive, void *(func)(Parser *, int), Parser *p, int arg)
+lookahead_with_int(int positive, Token *(func)(Parser *, int), Parser *p, int arg)
 {
     int mark = p->mark;
     void *res = func(p, arg);
