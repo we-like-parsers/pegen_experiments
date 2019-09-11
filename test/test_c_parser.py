@@ -114,12 +114,11 @@ def test_advanced_left_recursive(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
-@pytest.mark.xfail(reason="Mutually left recursion may be failing in the c generator")
 def test_mutually_left_recursive(tmp_path):
     grammar = """
     start: foo 'E'
     foo: bar 'A' | 'B'
     bar: foo 'C' | 'D'
     """
-    valid_cases = ["D A C A E"]
+    valid_cases = ["B E", "D A C A E"]
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
