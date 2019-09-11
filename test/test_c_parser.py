@@ -93,3 +93,33 @@ def test_cut(tmp_path):
     valid_cases = ["x y z"]
     invalid_cases = ["x q s"]
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
+
+
+def test_left_recursion(tmp_path):
+    grammar = """
+    start: expr NEWLINE
+    expr: ('-' term | expr '+' term | term)
+    term: NUMBER
+    """
+    valid_cases = ["-34", "34", "34 + 12", "1 + 1 + 2 + 3"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
+
+
+def test_advanced_left_recursive(tmp_path):
+    grammar = """
+    start: NUMBER | sign start
+    sign: ['-']
+    """
+    valid_cases = ["23", "-34"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
+
+
+@pytest.mark.xfail(reason="Mutually left recursion may be failing in the c generator")
+def test_mutually_left_recursive(tmp_path):
+    grammar = """
+    start: foo 'E'
+    foo: bar 'A' | 'B'
+    bar: foo 'C' | 'D'
+    """
+    valid_cases = ["D A C A E"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
