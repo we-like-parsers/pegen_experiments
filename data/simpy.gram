@@ -7,11 +7,16 @@ statement:  compound_stmt | simple_stmt
 simple_stmt: small_stmt (';' small_stmt)* NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | assignment | expression
+small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
+            | assignment | expression
+            )
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 assignment: target ':' expression ['=' expression] | (star_targets '=')+ expressions | target augassign expression
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
+
+global_stmt: 'global' NAME (',' NAME)*
+nonlocal_stmt: 'nonlocal' NAME (',' NAME)*
 
 yield_stmt: yield_expr
 
