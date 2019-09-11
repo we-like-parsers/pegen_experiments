@@ -15,7 +15,7 @@ import traceback
 
 from typing import Final
 
-from pegen.build import build_parser
+from pegen.build import build_parser_and_generator
 
 
 def print_memstats() -> bool:
@@ -73,7 +73,7 @@ def main() -> None:
             output_file = "parse.py"
 
     try:
-        rules, parser, tokenizer, gen = build_parser(
+        rules, parser, tokenizer, gen = build_parser_and_generator(
             args.filename,
             output_file,
             args.compile_extension,

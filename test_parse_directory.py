@@ -3,7 +3,7 @@ import os
 import sys
 import traceback
 
-from pegen.build import build_parser
+from pegen.build import build_parser_and_generator
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -55,7 +55,7 @@ def main():
             sys.exit(1)
 
         try:
-            build_parser(grammar_file, "pegen/parse.c", True)
+            build_parser_and_generator(grammar_file, "pegen/parse.c", True)
         except Exception as err:
             print(
                 f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}"
