@@ -12,7 +12,8 @@ small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | asse
             )
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
-assignment: target ':' expression ['=' expression] | (star_targets '=')+ expressions | target augassign expression
+# NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
+assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign yield_expression
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 global_stmt: 'global' NAME (',' NAME)*
@@ -84,6 +85,7 @@ full_expressions: full_expression (',' full_expression)* [',']
 expressions: expression (',' expression)* [',']
 
 full_expression: NAME ':=' expression | expression
+yield_expression: yield_expr | expression
 expression: lambdef | disjunction ['if' disjunction 'else' disjunction]
 lambdef: 'lambda' [varargslist] ':' expression
 varargslist: NAME (',' NAME)* [',']  # TODO: defaults, *args, **kwds
@@ -92,8 +94,10 @@ conjunction: comparison ('and' comparison)*
 comparison: 'not'* bitwise_or (compare_op bitwise_or)*
 compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | ['not'] 'in' | 'is' ['not']
 
-bitwise_or: bitwise_and ('|' bitwise_and)*
-bitwise_and: sum ('&' sum)*
+bitwise_or: bitwise_xor ('|' bitwise_xor)*
+bitwise_xor: bitwise_and ('^' bitwise_and)*
+bitwise_and: shift_expr ('&' shift_expr)*
+shift_expr: sum (('<<'|'>>') sum)*
 
 sum: term (('+' term | '-' term))*
 term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
@@ -107,7 +111,7 @@ atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
-group: '(' (full_expression | yield_expr) ')'
+group: '(' (yield_expr | full_expression) ')'
 genexp: '(' expression for_if_clauses ')'
 set: '{' expressions '}'
 setcomp: '{' expression for_if_clauses '}'
