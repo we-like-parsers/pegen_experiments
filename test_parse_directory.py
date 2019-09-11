@@ -1,7 +1,9 @@
 import argparse
 import os
-import pegen
 import sys
+import traceback
+
+from pegen.build import build_parser
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -14,6 +16,7 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument(
     "-d", "--directory", help="Directory path containing files to test"
 )
+argparser.add_argument("-g", "--grammar-file", help="Grammar file path")
 argparser.add_argument(
     "-v",
     "--verbose",
@@ -40,16 +43,37 @@ def report_status(succeeded, file, verbose, error=None):
 def main():
     args = argparser.parse_args()
     directory = args.directory
+    grammar_file = args.grammar_file
     verbose = args.verbose
 
     if not directory:
         print("You must specify a directory of files to test.")
 
+    if grammar_file:
+        if not os.path.exists(grammar_file):
+            print(f"The specified grammar file, {grammar_file}, does not exist.")
+            sys.exit(1)
+
+        try:
+            build_parser(grammar_file, "pegen/parse.c", True)
+        except Exception as err:
+            print(
+                f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}"
+            )
+            traceback.print_exception(err.__class__, err, None)
+
+            sys.exit(1)
+
+    else:
+        print("A grammar file was not provided - attempting to use existing file...\n")
+
     try:
         from pegen import parse
     except:
-        print(f"An existing parser was not found. Please run `make`.")
-        sys.exit()
+        print(
+            "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag."
+        )
+        sys.exit(1)
 
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
@@ -62,7 +86,7 @@ def main():
             file_path = os.path.join(root, file)
 
             try:
-                t = parse.parse_file(file_path)
+                parse.parse_file(file_path)
                 report_status(succeeded=True, file=file_path, verbose=verbose)
             except Exception as error:
                 report_status(

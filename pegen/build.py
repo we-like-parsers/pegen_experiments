@@ -1,10 +1,16 @@
 import pathlib
 import shutil
+import tokenize
 
 import distutils.log
 from distutils.core import Distribution, Extension
 from distutils.command.clean import clean  # type: ignore
 from distutils.command.build_ext import build_ext  # type: ignore
+
+from pegen.c_generator import CParserGenerator
+from pegen.tokenizer import Tokenizer
+from pegen.tokenizer import grammar_tokenizer
+from pegen.grammar import GrammarParser
 
 MOD_DIR = pathlib.Path(__file__)
 
@@ -45,3 +51,52 @@ def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
     cmd.run()
 
     return extension_path
+
+
+def build_parser(
+    grammar_file,
+    output_file,
+    compile_extension=False,
+    verbose_tokenizer=False,
+    verbose_parser=False,
+    verbose_c_extension=False,
+):
+    """Generate rules, parser, tokenizer, parser generator for a given grammar
+
+    Args:
+        grammar_file (string): Path for the grammar file
+        output_file (string): Path for the output file
+        compile_extension (bool, optional): Whether to compile the C extension.
+          Defaults to False.
+        verbose_tokenizer (bool, optional): Whether to display additional output
+          when generating the tokenizer. Defaults to False.
+        verbose_parser (bool, optional): Whether to display additional output
+          when generating the parser. Defaults to False.
+        verbose_c_extension (bool, optional): Whether to display additional
+          output when compiling the C extension . Defaults to False.
+    """
+    with open(grammar_file) as file:
+        tokenizer = Tokenizer(
+            grammar_tokenizer(tokenize.generate_tokens(file.readline)),
+            verbose=verbose_tokenizer,
+        )
+        parser = GrammarParser(tokenizer, verbose=verbose_parser)
+        rules = parser.start()
+
+        if not rules:
+            raise parser.make_syntax_error(grammar_file)
+
+    with open(output_file, "w") as file:
+        gen: ParserGenerator
+        if output_file.endswith(".c"):
+            gen = CParserGenerator(rules.rules, file)
+        elif output_file.endswith(".py"):
+            gen = PythonParserGenerator(rules.rules, file)
+        else:
+            raise Exception("Your output file must either be a .c or .py file")
+        gen.generate(grammar_file)
+
+    if compile_extension and output_file.endswith(".c"):
+        compile_c_extension(output_file, verbose=verbose_c_extension)
+
+    return rules, parser, tokenizer, gen
