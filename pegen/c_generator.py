@@ -360,6 +360,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print(f"goto done;")
         self.print("}")
         self.print("p->mark = mark;")
+        if "cut_var" in names:
+            self.print("if (cut_var) return NULL;")
 
     def collect_vars(self, node) -> Dict[str, Optional[str]]:
         names: List[str] = []
@@ -374,18 +376,21 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         call: str
         name, call = self.callmakervisitor.visit(node.item)
         type = None
-        if name and name != 'cut':
-            if name.endswith('_var'):
-                rulename = name[:-4]
-                rule = self.rules.get(rulename)
-                if rule is not None:
-                    if rule.is_loop():
-                        type = 'asdl_seq *'
-                    else:
-                        type = rule.type
-                elif name.startswith('_loop'):
+        if not name:
+            return name, type
+        if name.startswith('cut'):
+            return name, 'int'
+        if name.endswith('_var'):
+            rulename = name[:-4]
+            rule = self.rules.get(rulename)
+            if rule is not None:
+                if rule.is_loop():
                     type = 'asdl_seq *'
-            if node.name:
-                name = node.name
-            name = dedupe(name, names)
+                else:
+                    type = rule.type
+            elif name.startswith('_loop'):
+                type = 'asdl_seq *'
+        if node.name:
+            name = node.name
+        name = dedupe(name, names)
         return name, type
