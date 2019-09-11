@@ -7,6 +7,7 @@ from distutils.core import Distribution, Extension
 from distutils.command.clean import clean  # type: ignore
 from distutils.command.build_ext import build_ext  # type: ignore
 
+from pegen.python_generator import PythonParserGenerator
 from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
