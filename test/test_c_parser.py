@@ -5,6 +5,18 @@ from pegen.grammar import GrammarParser
 from test.util import parse_string, import_file, generate_parser_c_extension
 
 
+def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=[], invalid_cases=[]):
+    rules = parse_string(grammar, GrammarParser).rules
+    extension = generate_parser_c_extension(rules, tmp_path)
+
+    for case in valid_cases:
+        extension.parse_string(case)
+
+    for case in invalid_cases:
+        with pytest.raises(SyntaxError):
+            extension.parse_string(case)
+
+
 def test_c_parser(tmp_path):
     grammar = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
@@ -52,14 +64,9 @@ def test_lookahead(tmp_path):
     start: NAME &NAME expr NEWLINE? ENDMARKER
     expr: NAME | NUMBER
     """
-
-    rules = parse_string(grammar, GrammarParser).rules
-    extension = generate_parser_c_extension(rules, tmp_path)
-
-    extension.parse_string("foo bar")
-
-    with pytest.raises(SyntaxError):
-        extension.parse_string("foo 34")
+    valid_cases = ["foo bar"]
+    invalid_cases = ["foo 34"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
 
 
 def test_negative_lookahead(tmp_path):
@@ -67,11 +74,6 @@ def test_negative_lookahead(tmp_path):
     start: NAME !NAME expr NEWLINE? ENDMARKER
     expr: NAME | NUMBER
     """
-
-    rules = parse_string(grammar, GrammarParser).rules
-    extension = generate_parser_c_extension(rules, tmp_path)
-
-    extension.parse_string("foo 34")
-
-    with pytest.raises(SyntaxError):
-        extension.parse_string("foo bar")
+    valid_cases = ["foo 34"]
+    invalid_cases = ["foo bar"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
