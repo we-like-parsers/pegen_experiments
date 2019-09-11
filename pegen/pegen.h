@@ -35,6 +35,7 @@ int lookahead_with_int(int, void *(func)(Parser *, int), Parser *, int);
 int lookahead(int, void *(func)(Parser *), Parser *);
 
 Token *expect_token(Parser *p, int type);
+int cut_token(Parser *p);
 
 void *async_token(Parser *p);
 void *await_token(Parser *p);
