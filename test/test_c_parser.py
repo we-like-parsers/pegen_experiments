@@ -92,5 +92,3 @@ def test_cut(tmp_path):
     valid_cases = ["x y z"]
     invalid_cases = ["x q s"]
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
-
-
