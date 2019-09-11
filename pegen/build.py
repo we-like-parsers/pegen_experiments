@@ -67,7 +67,7 @@ def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
         if not rules:
             raise parser.make_syntax_error(grammar_file)
 
-    return parser, rules, tokenizer
+    return rules, parser, tokenizer
 
 
 def build_generator(
@@ -116,7 +116,7 @@ def build_parser_and_generator(
         verbose_c_extension (bool, optional): Whether to display additional
           output when compiling the C extension . Defaults to False.
     """
-    parser, rules, tokenizer = build_parser(
+    rules, parser, tokenizer = build_parser(
         grammar_file, verbose_tokenizer, verbose_parser
     )
     gen = build_generator(

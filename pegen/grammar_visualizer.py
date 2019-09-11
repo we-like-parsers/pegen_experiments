@@ -47,7 +47,7 @@ def main() -> None:
     args = argparser.parse_args()
 
     try:
-        parser, rules, tokenizer = build_parser(args.filename)
+        rules, parser, tokenizer = build_parser(args.filename)
     except Exception as err:
         print("ERROR: Failed to parse grammar file", file=sys.stderr)
         sys.exit(1)
