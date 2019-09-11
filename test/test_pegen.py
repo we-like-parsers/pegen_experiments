@@ -1,8 +1,5 @@
-import ast
-import importlib.util
 import io
 import textwrap
-import tokenize
 
 from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
@@ -11,110 +8,8 @@ import pytest
 from pegen.grammar import GrammarParser, GrammarVisitor
 from pegen.grammar_visualizer import ASTGrammarPrinter
 from pegen.python_generator import PythonParserGenerator
-from pegen.c_generator import CParserGenerator
-from pegen.build import compile_c_extension
-from pegen.tokenizer import grammar_tokenizer, Tokenizer
 
-
-def generate_parser(rules):
-    # Generate a parser.
-    out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
-    genr.generate("<string>")
-
-    # Load the generated parser class.
-    ns = {}
-    exec(out.getvalue(), ns)
-    return ns['GeneratedParser']
-
-
-def run_parser(file, parser_class, *, verbose=False):
-    # Run a parser on a file (stream).
-    # Note that this always recognizes {...} as CURLY_STUFF.
-    tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
-    parser = parser_class(tokenizer, verbose=verbose)
-    result = parser.start()
-    if result is None:
-        raise parser.make_syntax_error()
-    return result
-
-
-def parse_string(source, parser_class, *, dedent=True, verbose=False):
-    # Run the parser on a string.
-    if dedent:
-        source = textwrap.dedent(source)
-    file = io.StringIO(source)
-    return run_parser(file, parser_class, verbose=verbose)
-
-
-def make_parser(source):
-    # Combine parse_string() and generate_parser().
-    rules = parse_string(source, GrammarParser).rules
-    return generate_parser(rules)
-
-
-def import_file(full_name, path):
-    """Import a python module from a path"""
-
-    spec = importlib.util.spec_from_file_location(full_name, path)
-    mod = importlib.util.module_from_spec(spec)
-
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def generate_parser_c_extension(rules, path):
-    """Generate a parser c extension for the given rules in the given path"""
-    source = path / "parse.c"
-    with open(source, "w") as file:
-        genr = CParserGenerator(rules, file)
-        genr.generate("parse.c")
-    extension_path = compile_c_extension(str(source),
-                                         build_dir=str(path / "build"))
-    extension = import_file("parse", extension_path)
-    return extension
-
-
-def test_c_parser(tmp_path):
-    grammar = """
-    start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
-    stmt[stmt_ty]: a=expr_stmt { a }
-    expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
-    expr[expr_ty]: ( l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
-                   | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
-                   | t=term
-                   )
-    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
-                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
-                   | f=factor { f }
-                   )
-    factor[expr_ty]: ('(' e=expr ')' { e }
-                     | a=atom { a }
-                     )
-    atom[expr_ty]: ( n=NAME { n }
-                   | n=NUMBER { n }
-                   | s=STRING { s }
-                   )
-    """
-    rules = parse_string(grammar, GrammarParser).rules
-    extension = generate_parser_c_extension(rules, tmp_path)
-
-    expressions = [
-        "4+5",
-        "4-5",
-        "4*5",
-        "1+4*5",
-        "1+4/5",
-        "(1+1) + (1+1)",
-        "(1+1) - (1+1)",
-        "(1+1) * (1+1)",
-        "(1+1) / (1+1)",
-    ]
-
-    for expr in expressions:
-        the_ast = extension.parse_string(expr)
-        expected_ast = ast.parse(expr)
-        assert ast.dump(the_ast) == ast.dump(expected_ast)
+from test.util import generate_parser, parse_string, make_parser
 
 
 def test_parse_grammar():
@@ -128,6 +23,7 @@ def test_parse_grammar():
     assert str(rules['start']) == "start: sum NEWLINE"
     assert str(rules['sum']) == "sum: t1=term '+' t2=term { action } | term"
     assert repr(rules['term']) == "Rule('term', None, Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
+
 
 def test_typed_rules():
     grammar = """
