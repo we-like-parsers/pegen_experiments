@@ -93,4 +93,4 @@ stuff:
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }
-    | OP { None if op.string in ("{", "}") else op.string }
+    | !"}" OP { op.string }

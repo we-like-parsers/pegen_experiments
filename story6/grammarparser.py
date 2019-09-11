@@ -568,7 +568,7 @@ class GrammarParser(Parser):
 
     @memoize
     def stuff(self):
-        self.show_rule('stuff', [['"{"', 'stuffs', '"}"'], ['NAME'], ['NUMBER'], ['STRING'], ['OP']])
+        self.show_rule('stuff', [['"{"', 'stuffs', '"}"'], ['NAME'], ['NUMBER'], ['STRING'], ['!"}"', 'OP']])
         pos = self.mark()
         if (True
             and self.show_index(0, 0)
@@ -612,10 +612,12 @@ class GrammarParser(Parser):
         self.reset(pos)
         if (True
             and self.show_index(4, 0)
+            and self.lookahead(False, self.expect, "}")
+            and self.show_index(4, 1)
             and (op := self.expect(OP)) is not None
         ):
-            self.show_index(4, 0, 1)
-            retval = None if op . string in ( "{" , "}" ) else op . string
+            self.show_index(4, 0, 2)
+            retval = op . string
             if retval is not None:
                 return retval
         self.reset(pos)
