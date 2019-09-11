@@ -48,3 +48,32 @@ def test_c_parser(tmp_path):
         expected_ast = ast.parse(expr)
         assert ast.dump(the_ast) == ast.dump(expected_ast)
 
+
+def test_lookahead(tmp_path):
+    grammar = """
+    start: NAME &NAME expr NEWLINE? ENDMARKER
+    expr: NAME | NUMBER
+    """
+
+    rules = parse_string(grammar, GrammarParser).rules
+    extension = generate_parser_c_extension(rules, tmp_path)
+
+    extension.parse_string("foo bar")
+
+    with pytest.raises(SyntaxError):
+        extension.parse_string("foo 34")
+
+
+def test_negative_lookahead(tmp_path):
+    grammar = """
+    start: NAME !NAME expr NEWLINE? ENDMARKER
+    expr: NAME | NUMBER
+    """
+
+    rules = parse_string(grammar, GrammarParser).rules
+    extension = generate_parser_c_extension(rules, tmp_path)
+
+    extension.parse_string("foo 34")
+
+    with pytest.raises(SyntaxError):
+        extension.parse_string("foo bar")
