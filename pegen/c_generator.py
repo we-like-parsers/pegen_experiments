@@ -212,7 +212,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     def visit_Rule(self, node):
         is_loop = node.is_loop()
         is_repeat1 = node.name.startswith('_loop1')
-        memoize = not node.leader
+        memoize = not node.left_recursive
         rhs = node.flatten()
         if is_loop:
             type = 'asdl_seq *'
@@ -222,13 +222,13 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             type = 'void *'
 
         self.print(f"// {node}")
-        if node.left_recursive:
+        if node.left_recursive and node.leader:
             self.print(f"static {type} {node.name}_raw(Parser *);")
 
         self.print(f"static {type}")
         self.print(f"{node.name}_rule(Parser *p)")
 
-        if node.left_recursive:
+        if node.left_recursive and node.leader:
             self.print("{")
             with self.indent():
                 self.print(f"{type} res = NULL;")
