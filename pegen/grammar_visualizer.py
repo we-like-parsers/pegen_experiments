@@ -1,17 +1,13 @@
 import argparse
 import sys
-import tokenize
 
-from pegen.tokenizer import Tokenizer
-from pegen.tokenizer import grammar_tokenizer
-from pegen.grammar import GrammarParser
+from pegen.build import build_parser
 
 argparser = argparse.ArgumentParser(prog='pegen', description="Pretty print the AST for a given PEG grammar")
 argparser.add_argument('filename', help="Grammar description")
 
 
 class ASTGrammarPrinter:
-
     def children(self, node):
         for value in node:
             if isinstance(value, list):
@@ -49,12 +45,10 @@ class ASTGrammarPrinter:
 
 def main() -> None:
     args = argparser.parse_args()
-    with open(args.filename) as file:
-        tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
-        parser = GrammarParser(tokenizer)
-        rules = parser.start()
 
-    if rules is None:
+    try:
+        parser, rules, tokenizer = build_parser(args.filename)
+    except Exception as err:
         print("ERROR: Failed to parse grammar file", file=sys.stderr)
         sys.exit(1)
 
