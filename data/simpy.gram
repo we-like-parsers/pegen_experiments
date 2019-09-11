@@ -79,7 +79,7 @@ full_expressions: full_expression (',' full_expression)* [',']
 expressions: expression (',' expression)* [',']
 
 full_expression: NAME ':=' expression | expression
-expression: disjunction ['if' disjunction 'else' disjunction] | lambdef
+expression: lambdef | disjunction ['if' disjunction 'else' disjunction]
 lambdef: 'lambda' [varargslist] ':' expression
 varargslist: NAME (',' NAME)* [',']  # TODO: defaults, *args, **kwds
 disjunction: conjunction ('or' conjunction)*

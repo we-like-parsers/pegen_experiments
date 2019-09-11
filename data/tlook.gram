@@ -1,0 +1,18 @@
+start: NAME &NAME expr NEWLINE ENDMARKER
+expr: NAME | NUMBER
+
+
+----
+
+foo bar
+
+----
+
+foo 42
+
+
+
+======
+
+start: NAME !NUMBER expr NEWLINE ENDMARKER
+expr: NAME | NUMBER

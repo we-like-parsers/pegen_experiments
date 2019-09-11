@@ -4,6 +4,7 @@ PYTHON ?= $(TOP)/bin/python3.8
 GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
+TESTDIR = .
 
 pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
@@ -30,6 +31,9 @@ time: pegen/parse.c
 
 time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
+
+simpy:
+	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR)
 
 tags: TAGS
 

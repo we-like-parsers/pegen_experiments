@@ -31,3 +31,4 @@ matrix:
       script:
           - make dump
           - make test
+	  - make simpy
