@@ -1,5 +1,4 @@
 import ast
-
 import pytest
 
 from pegen.grammar import GrammarParser
