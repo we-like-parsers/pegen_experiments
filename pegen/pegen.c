@@ -350,13 +350,18 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
         return NULL;
     }
 
+    PyObject *result = NULL;
     struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
 
     if (tok == NULL)
-        return NULL;
+        goto error;
 
-    PyObject* result = run_parser(tok, start_rule_func, mode);
+    result = run_parser(tok, start_rule_func, mode);
+
     PyTokenizer_Free(tok);
+
+ error:
+    fclose(fp);
     return result;
 }
 
