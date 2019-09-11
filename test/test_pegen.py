@@ -9,7 +9,7 @@ from pegen.grammar import GrammarParser, GrammarVisitor
 from pegen.grammar_visualizer import ASTGrammarPrinter
 from pegen.python_generator import PythonParserGenerator
 
-from test.util import generate_parser, parse_string, make_parser
+from pegen.testutil import generate_parser, parse_string, make_parser
 
 
 def test_parse_grammar():
@@ -23,7 +23,6 @@ def test_parse_grammar():
     assert str(rules['start']) == "start: sum NEWLINE"
     assert str(rules['sum']) == "sum: t1=term '+' t2=term { action } | term"
     assert repr(rules['term']) == "Rule('term', None, Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
-
 
 def test_typed_rules():
     grammar = """

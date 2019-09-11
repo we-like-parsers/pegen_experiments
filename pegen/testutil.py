@@ -66,5 +66,3 @@ def generate_parser_c_extension(rules, path):
                                          build_dir=str(path / "build"))
     extension = import_file("parse", extension_path)
     return extension
-
-

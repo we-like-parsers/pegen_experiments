@@ -2,19 +2,21 @@ import ast
 import pytest
 
 from pegen.grammar import GrammarParser
-from test.util import parse_string, import_file, generate_parser_c_extension
+from pegen.testutil import parse_string, generate_parser_c_extension
 
 
-def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=[], invalid_cases=[]):
+def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=None, invalid_cases=None):
     rules = parse_string(grammar, GrammarParser).rules
     extension = generate_parser_c_extension(rules, tmp_path)
 
-    for case in valid_cases:
-        extension.parse_string(case)
-
-    for case in invalid_cases:
-        with pytest.raises(SyntaxError):
+    if valid_cases:
+        for case in valid_cases:
             extension.parse_string(case)
+
+    if invalid_cases:
+        for case in invalid_cases:
+            with pytest.raises(SyntaxError):
+                extension.parse_string(case)
 
 
 def test_c_parser(tmp_path):
