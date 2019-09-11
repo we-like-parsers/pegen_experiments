@@ -11,6 +11,7 @@ import argparse
 import sys
 import time
 import token
+import traceback
 
 from typing import Final
 
