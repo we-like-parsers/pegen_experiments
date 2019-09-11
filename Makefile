@@ -33,7 +33,7 @@ time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
 simpy:
-	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR)
+	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) -v
 
 tags: TAGS
 
