@@ -50,10 +50,25 @@ return_stmt: 'return' [expressions]
 raise_stmt: 'raise' [expression ['from' expression]]
 
 function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
-parameters: kwparams ['*' ',' kwparams] | param [',' [parameters]] | '*' kwparams # TODO: allow bare name after *
-kwparams: kwparam [',' [kwparams]]
-kwparam: NAME [':' expression] '=' expression | '**' NAME [':' expression]
-param: NAME [':' expression] | '*' NAME [':' expression]
+
+parameters: (slash_without_default [',' plain_names] [',' names_with_default] [',' [star_etc]]
+            | slash_with_default [',' names_with_default] [',' [star_etc]]
+            | plain_names [',' names_with_default] [',' [star_etc]]
+            | names_with_default [',' [star_etc]]
+            | star_etc
+            )
+star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' '**' NAME] [',']
+          | '*' (',' plain_name ['=' expression])+ [',' '**' NAME] [',']
+          | '**' NAME [':' annotation] [',']
+          )
+slash_without_default: plain_names ',' '/'
+slash_with_default: [plain_names ','] names_with_default ',' '/'
+names_with_default: name_with_default (',' name_with_default)*
+plain_names: plain_name !'=' (',' plain_name !'=')*
+name_with_default: plain_name '=' expression
+plain_name: NAME [':' annotation]
+annotation: expression
+
 decorators: ('@' factor NEWLINE)+
 
 class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
