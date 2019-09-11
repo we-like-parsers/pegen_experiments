@@ -2,7 +2,6 @@ import ast
 import pytest
 
 from pegen.grammar import GrammarParser
-
 from test.util import parse_string, import_file, generate_parser_c_extension
 
 
