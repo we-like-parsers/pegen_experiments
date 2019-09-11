@@ -82,7 +82,7 @@ def test_c_parser(tmp_path):
     expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
     expr[expr_ty]: ( l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
                    | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
-                   | t=term { t }
+                   | t=term
                    )
     term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
                    | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
