@@ -77,6 +77,7 @@ def main():
 
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
+    success = True
     for root, dirs, files in os.walk(directory):
         for file in files:
             # Only attempt to parse Python files
@@ -92,6 +93,10 @@ def main():
                 report_status(
                     succeeded=False, file=file_path, verbose=verbose, error=error
                 )
+                success = False
+
+    if not success:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
