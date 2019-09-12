@@ -44,7 +44,7 @@ while_stmt: 'while' full_expression ':' block [else_block]
 
 for_stmt: [ASYNC] 'for' star_targets 'in' expressions ':' block [else_block]
 
-with_stmt: [ASYNC] 'with' expression ['as' target] ':' block
+with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression 'as' target])* ':' block
 
 try_stmt: try_block finally_block | try_block except_block+ [else_block] [finally_block]
 try_block: 'try' ':' block
