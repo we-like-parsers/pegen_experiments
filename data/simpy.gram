@@ -4,7 +4,7 @@ start: [statements] ENDMARKER
 statements: statement+
 
 statement:  compound_stmt | simple_stmt
-simple_stmt: small_stmt (';' small_stmt)* NEWLINE
+simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
