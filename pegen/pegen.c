@@ -315,6 +315,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         goto exit;
     }
 
+    PyErr_Clear();
+
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         if (PyErr_Occurred()) {
