@@ -235,13 +235,35 @@ number_token(Parser *p)
     Token *t = expect_token(p, NUMBER);
     if (t == NULL)
         return NULL;
-    // TODO: Check for float, complex.
+    // TODO: Just copy CPython's machinery for parsing numbers.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
     if (c == NULL) {
 	PyErr_Clear();
-	c = PyFloat_FromString(t->bytes);
+        PyObject *tbytes = t->bytes;
+        Py_ssize_t size = PyBytes_Size(tbytes);
+        char *bytes = PyBytes_AsString(tbytes);
+        char lastc = size == 0 ? 0 : bytes[size - 1];
+        int iscomplex = 0;
+        PyObject *obytes = NULL;
+        if (size > 0 && (lastc == 'j' || lastc == 'J')) {
+            iscomplex = 1;
+            obytes = PyBytes_FromStringAndSize(bytes, size - 1);
+            if (obytes == NULL)
+                return NULL;
+            tbytes = obytes;
+        }
+	c = PyFloat_FromString(tbytes);
+        Py_XDECREF(obytes);
 	if (c == NULL)
 	    return NULL;
+        if (iscomplex) {
+            double real = PyFloat_AsDouble(c);
+            double imag = 0;
+            Py_DECREF(c);
+            c = PyComplex_FromDoubles(real, imag);
+            if (c == NULL)
+                return NULL;
+        }
     }
     if (PyArena_AddPyObject(p->arena, c) < 0) {
         Py_DECREF(c);
