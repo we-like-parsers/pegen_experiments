@@ -63,14 +63,14 @@ parameters: (slash_without_default [',' plain_names] [',' names_with_default] ['
             | names_with_default [',' [star_etc]]
             | star_etc
             )
-star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' '**' NAME] [',']
-          | '*' (',' plain_name ['=' expression])+ [',' '**' NAME] [',']
-          | '**' NAME [':' annotation] [',']
-          )
 slash_without_default: plain_names ',' '/'
 slash_with_default: [plain_names ','] names_with_default ',' '/'
 names_with_default: name_with_default (',' name_with_default)*
 plain_names: plain_name !'=' (',' plain_name !'=')*
+star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' '**' NAME] [',']
+          | '*' (',' plain_name ['=' expression])+ [',' '**' NAME] [',']
+          | '**' NAME [':' annotation] [',']
+          )
 name_with_default: plain_name '=' expression
 plain_name: NAME [':' annotation]
 annotation: expression
@@ -87,8 +87,20 @@ expressions: expression (',' expression)* [',']
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
 expression: lambdef | disjunction ['if' disjunction 'else' disjunction]
-lambdef: 'lambda' [varargslist] ':' expression
-varargslist: NAME (',' NAME)* [',']  # TODO: defaults, *args, **kwds
+lambdef: 'lambda' [lambda_parameters] ':' expression
+
+lambda_parameters: (lambda_plain_names [',' lambda_names_with_default] [',' [lambda_star_etc]]
+                   | lambda_names_with_default [',' [lambda_star_etc]]
+                   | lambda_star_etc
+                   )
+lambda_names_with_default: lambda_name_with_default (',' lambda_name_with_default)*
+lambda_plain_names: NAME !'=' (',' NAME !'=')*
+lambda_star_etc: ('*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
+                 | '*' (',' NAME ['=' expression])+ [',' '**' NAME] [',']
+                 | '**' NAME [',']
+                 )
+lambda_name_with_default: NAME '=' expression
+
 disjunction: conjunction ('or' conjunction)*
 conjunction: comparison ('and' comparison)*
 comparison: 'not'* bitwise_or (compare_op bitwise_or)*
