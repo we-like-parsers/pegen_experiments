@@ -13,7 +13,7 @@ small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | asse
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
-assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign yield_expression
+assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign (yield_expr | expressions)
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 global_stmt: 'global' NAME (',' NAME)*
@@ -44,7 +44,7 @@ while_stmt: 'while' full_expression ':' block [else_block]
 
 for_stmt: [ASYNC] 'for' star_targets 'in' expressions ':' block [else_block]
 
-with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression 'as' target])* ':' block
+with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression ['as' target]])* ':' block
 
 try_stmt: try_block finally_block | try_block except_block+ [else_block] [finally_block]
 try_block: 'try' ':' block
@@ -118,7 +118,7 @@ power: primary '**' factor | primary
 primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
-slice: [expression] ':' [expression] | expression
+slice: [expression] ':' [expression] [':' [expression]] | expression
 atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING+ | NUMBER | '...'
 list: '[' [full_expressions] ']'
 listcomp: '[' expression for_if_clauses ']'
@@ -133,7 +133,7 @@ kvpairs: kvpair (',' kvpair)* [',']
 kvpair: expression ':' expression
 for_if_clauses: ('for' star_targets 'in' expression ('if' expression)*)+
 
-yield_expr: 'yield' 'from' expression | 'yield' [expression]
+yield_expr: 'yield' 'from' expression | 'yield' [expressions]
 
 arguments: expression for_if_clauses | args [',']
 args: kwargs | posarg [',' args]  # Weird to make it work
