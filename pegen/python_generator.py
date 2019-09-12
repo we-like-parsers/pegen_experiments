@@ -35,7 +35,7 @@ class PythonCallMakerVisitor(GrammarVisitor):
         if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
             name = name.lower()
             return name, f"self.{name}()"
-        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER'):
+        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER', 'ASYNC', 'AWAIT'):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
 
