@@ -56,7 +56,8 @@ fill_token(Parser *p)
     char *start, *end;
     int type = PyTokenizer_Get(p->tok, &start, &end);
     if (type == ERRORTOKEN) {
-        PyErr_Format(PyExc_ValueError, "Error token");
+        if (!PyErr_Occurred())
+            PyErr_Format(PyExc_ValueError, "Error token");
         return -1;
     }
 
@@ -316,6 +317,9 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
+        if (PyErr_Occurred()) {
+            goto exit;
+        }
         if (p->fill == 0) {
             PyErr_Format(PyExc_SyntaxError, "error at start before reading any input");
         }
