@@ -270,6 +270,32 @@ def test_mutually_left_recursive():
                     TokenInfo(type=NAME, string='E', start=(1, 6), end=(1, 7), line='B C A E')]
 
 
+def test_nasty_mutually_left_recursive():
+    # This grammar does not recognize 'x - + =', much to my chagrin.
+    # But that's the way PEG works.
+    # [Breathlessly]
+    # The problem is that the toplevel target call
+    # recurses into maybe, which recognizes 'x - +',
+    # and then the toplevel target looks for another '+',
+    # which fails, so it retreats to NAME,
+    # which succeeds, so we end up just recognizing 'x',
+    # and then start fails because there's no '=' after that.
+    grammar = """
+    start: target '='
+    target: maybe '+' | NAME
+    maybe: maybe '-' | target
+    """
+    rules = parse_string(grammar, GrammarParser).rules
+    out = io.StringIO()
+    genr = PythonParserGenerator(rules, out)
+    genr.generate("<string>")
+    ns = {}
+    exec(out.getvalue(), ns)
+    parser_class = ns['GeneratedParser']
+    with pytest.raises(SyntaxError):
+        parse_string("x - + =", parser_class)
+
+
 def test_lookahead():
     grammar = """
     start: (expr_stmt | assign_stmt) &'.'
@@ -510,4 +536,3 @@ class TestGrammarVisualizer:
                                 """)
 
         assert output == expected_output
-
