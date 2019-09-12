@@ -129,10 +129,17 @@ kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' expression
 kwarg: NAME '=' expression | '**' expression
 
+# NOTE: star_targets may contain *NAME, targets may not.
+# TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets: star_target (',' star_target)* [',']
-targets: target (',' target)* [',']  # TODO: recursively disallow *target
+star_target: '*' NAME | star_atom t_tail*
+star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
 
-star_target: '*' target | target
-target: target '.' NAME | target '[' slices ']' | atomic_target
-atomic_target: NAME | '[' targets ']' | '(' targets ')' | '(' target ')'
-# TODO: target: primary '.' NAME | primary '[' slices ']'
+targets: target (',' target)* [',']
+target: t_atom t_tail*
+t_atom: NAME | '(' [targets] ')' | '[' [targets] ']'
+
+t_tail: call_tail* (attr_tail | index_tail)
+call_tail: '(' [arguments] ')'
+attr_tail: '.' NAME
+index_tail: '[' slices ']'
