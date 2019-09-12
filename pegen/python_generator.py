@@ -13,7 +13,7 @@ import ast
 import sys
 import tokenize
 
-from pegen.parser import memoize, memoize_left_rec, Parser
+from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
 """
 MODULE_SUFFIX = """
@@ -118,7 +118,10 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         if node.left_recursive:
             if node.leader:
                 self.print("@memoize_left_rec")
-            # Non-leader rules in a cycle are not memoized
+            else:
+                # Non-leader rules in a cycle are not memoized,
+                # but they must still be logged.
+                self.print("@logger")
         else:
             self.print("@memoize")
         self.print(f"def {node.name}(self):")

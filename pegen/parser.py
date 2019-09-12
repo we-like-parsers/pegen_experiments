@@ -19,6 +19,29 @@ P = TypeVar('P', bound='Parser')
 F = TypeVar('F', bound=Callable[..., Any])
 
 
+def logger(method: F) -> F:
+    """For non-memoized functions that we want to be logged.
+
+    (In practice this is only non-leader left-recursive functions.)
+    """
+    method_name = method.__name__
+
+    def logger_wrapper(self: P, *args: Any) -> T:
+        if not self._verbose:
+            return method(self, *args)
+        argsr = ",".join(repr(arg) for arg in args)
+        fill = '  ' * self._level
+        print(f"{fill}{method_name}({argsr}) .... (looking at {self.showpeek()})")
+        self._level += 1
+        tree = method(self, *args)
+        self._level -= 1
+        print(f"{fill}... {method_name}({argsr}) --> {tree!s:.200}")
+        return tree
+
+    logger_wrapper.__wrapped__ = method  # type: ignore
+    return cast(F, logger_wrapper)
+
+
 def memoize(method: F) -> F:
     """Memoize a symbol method."""
     method_name = method.__name__
