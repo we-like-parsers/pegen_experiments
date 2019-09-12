@@ -102,7 +102,8 @@ def main() -> None:
         for scc in gen.first_sccs:
             print(" ", scc, end="")
             if len(scc) > 1:
-                print("  # Indirectly left-recursive")
+                print("  # Indirectly left-recursive; leaders:",
+                      {name for name in scc if rules.rules[name].leader})
             else:
                 name = next(iter(scc))
                 if name in gen.first_graph[name]:
