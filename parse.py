@@ -6,22 +6,22 @@ import ast
 import sys
 import tokenize
 
-from pegen.parser import memoize, memoize_left_rec, Parser
+from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
 
 class GeneratedParser(Parser):
 
     @memoize
     def start(self):
-        # start: statements $
+        # start: statements? $
         mark = self.mark()
         cut = False
         if (
-            (statements := self.statements())
+            (opt := self.statements(),)
             and
             (endmarker := self.expect('ENDMARKER'))
         ):
-            return [statements, endmarker]
+            return [opt, endmarker]
         self.reset(mark)
         if cut: return None
         return None
@@ -41,20 +41,20 @@ class GeneratedParser(Parser):
 
     @memoize
     def statement(self):
-        # statement: simple_stmt | compound_stmt
+        # statement: compound_stmt | simple_stmt
         mark = self.mark()
-        cut = False
-        if (
-            (simple_stmt := self.simple_stmt())
-        ):
-            return [simple_stmt]
-        self.reset(mark)
-        if cut: return None
         cut = False
         if (
             (compound_stmt := self.compound_stmt())
         ):
             return [compound_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (simple_stmt := self.simple_stmt())
+        ):
+            return [simple_stmt]
         self.reset(mark)
         if cut: return None
         return None
@@ -78,7 +78,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def small_stmt(self):
-        # small_stmt: return_stmt | import_stmt | 'pass' | assignment | expression
+        # small_stmt: return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt | assignment | expression
         mark = self.mark()
         cut = False
         if (
@@ -103,6 +103,48 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
+            (raise_stmt := self.raise_stmt())
+        ):
+            return [raise_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (yield_stmt := self.yield_stmt())
+        ):
+            return [yield_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (assert_stmt := self.assert_stmt())
+        ):
+            return [assert_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (del_stmt := self.del_stmt())
+        ):
+            return [del_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (global_stmt := self.global_stmt())
+        ):
+            return [global_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (nonlocal_stmt := self.nonlocal_stmt())
+        ):
+            return [nonlocal_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
             (assignment := self.assignment())
         ):
             return [assignment]
@@ -119,7 +161,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def compound_stmt(self):
-        # compound_stmt: if_stmt | while_stmt | with_stmt | function_def | class_def
+        # compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
         mark = self.mark()
         cut = False
         if (
@@ -137,9 +179,23 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
+            (for_stmt := self.for_stmt())
+        ):
+            return [for_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
             (with_stmt := self.with_stmt())
         ):
             return [with_stmt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (try_stmt := self.try_stmt())
+        ):
+            return [try_stmt]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -160,69 +216,346 @@ class GeneratedParser(Parser):
 
     @memoize
     def assignment(self):
-        # assignment: target '=' expression
+        # assignment: target ':' expression '=' yield_expression? | ((star_targets '='))+ (yield_expr | expressions) | target augassign yield_expression
         mark = self.mark()
         cut = False
         if (
             (target := self.target())
             and
-            (literal := self.expect('='))
+            (literal := self.expect(':'))
             and
             (expression := self.expression())
+            and
+            (opt := self._tmp_3(),)
         ):
-            return [target, literal, expression]
+            return [target, literal, expression, opt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (_loop1_4 := self._loop1_4())
+            and
+            (_tmp_5 := self._tmp_5())
+        ):
+            return [_loop1_4, _tmp_5]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (target := self.target())
+            and
+            (augassign := self.augassign())
+            and
+            (yield_expression := self.yield_expression())
+        ):
+            return [target, augassign, yield_expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def augassign(self):
+        # augassign: '+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//='
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('+='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('-='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('*='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('@='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('/='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('%='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('&='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('|='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('^='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('<<='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('>>='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('**='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('//='))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def global_stmt(self):
+        # global_stmt: 'global' NAME ((',' NAME))*
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('global'))
+            and
+            (name := self.name())
+            and
+            (_loop0_6 := self._loop0_6(),)
+        ):
+            return [literal, name, _loop0_6]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def nonlocal_stmt(self):
+        # nonlocal_stmt: 'nonlocal' NAME ((',' NAME))*
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('nonlocal'))
+            and
+            (name := self.name())
+            and
+            (_loop0_7 := self._loop0_7(),)
+        ):
+            return [literal, name, _loop0_7]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def yield_stmt(self):
+        # yield_stmt: yield_expr
+        mark = self.mark()
+        cut = False
+        if (
+            (yield_expr := self.yield_expr())
+        ):
+            return [yield_expr]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def assert_stmt(self):
+        # assert_stmt: 'assert' expression ',' expression?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('assert'))
+            and
+            (expression := self.expression())
+            and
+            (opt := self._tmp_8(),)
+        ):
+            return [literal, expression, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def del_stmt(self):
+        # del_stmt: 'del' targets
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('del'))
+            and
+            (targets := self.targets())
+        ):
+            return [literal, targets]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def import_stmt(self):
-        # import_stmt: 'import' names | 'from' NAME 'import' ('*' | names)
+        # import_stmt: import_name | import_from
         mark = self.mark()
         cut = False
         if (
-            (literal := self.expect('import'))
-            and
-            (names := self.names())
+            (import_name := self.import_name())
         ):
-            return [literal, names]
+            return [import_name]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (literal := self.expect('from'))
-            and
-            (name := self.name())
-            and
-            (literal_1 := self.expect('import'))
-            and
-            (_tmp_3 := self._tmp_3())
+            (import_from := self.import_from())
         ):
-            return [literal, name, literal_1, _tmp_3]
+            return [import_from]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def names(self):
-        # names: NAME ',' names | NAME
+    def import_name(self):
+        # import_name: 'import' dotted_as_names
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('import'))
+            and
+            (dotted_as_names := self.dotted_as_names())
+        ):
+            return [literal, dotted_as_names]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def import_from(self):
+        # import_from: 'from' ((('.' | '...'))* !'import' dotted_name | (('.' | '...'))+) 'import' ('*' | '(' import_as_names ')' | import_as_names)
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('from'))
+            and
+            (_tmp_9 := self._tmp_9())
+            and
+            (literal_1 := self.expect('import'))
+            and
+            (_tmp_10 := self._tmp_10())
+        ):
+            return [literal, _tmp_9, literal_1, _tmp_10]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def import_as_name(self):
+        # import_as_name: NAME 'as' NAME?
         mark = self.mark()
         cut = False
         if (
             (name := self.name())
             and
-            (literal := self.expect(','))
-            and
-            (names := self.names())
+            (opt := self._tmp_11(),)
         ):
-            return [name, literal, names]
+            return [name, opt]
         self.reset(mark)
         if cut: return None
+        return None
+
+    @memoize
+    def dotted_as_name(self):
+        # dotted_as_name: dotted_name 'as' NAME?
+        mark = self.mark()
+        cut = False
+        if (
+            (dotted_name := self.dotted_name())
+            and
+            (opt := self._tmp_12(),)
+        ):
+            return [dotted_name, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def import_as_names(self):
+        # import_as_names: import_as_name ((',' import_as_name))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (import_as_name := self.import_as_name())
+            and
+            (_loop0_13 := self._loop0_13(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [import_as_name, _loop0_13, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def dotted_as_names(self):
+        # dotted_as_names: dotted_as_name ((',' dotted_as_name))*
+        mark = self.mark()
+        cut = False
+        if (
+            (dotted_as_name := self.dotted_as_name())
+            and
+            (_loop0_14 := self._loop0_14(),)
+        ):
+            return [dotted_as_name, _loop0_14]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def dotted_name(self):
+        # dotted_name: NAME (('.' NAME))*
+        mark = self.mark()
         cut = False
         if (
             (name := self.name())
+            and
+            (_loop0_15 := self._loop0_15(),)
         ):
-            return [name]
+            return [name, _loop0_15]
         self.reset(mark)
         if cut: return None
         return None
@@ -241,11 +574,11 @@ class GeneratedParser(Parser):
             and
             (block := self.block())
             and
-            (_loop0_4 := self._loop0_4(),)
+            (_loop0_16 := self._loop0_16(),)
             and
             (opt := self.else_block(),)
         ):
-            return [literal, full_expression, literal_1, block, _loop0_4, opt]
+            return [literal, full_expression, literal_1, block, _loop0_16, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -308,22 +641,132 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def with_stmt(self):
-        # with_stmt: 'with' expression 'as' target? ':' block
+    def for_stmt(self):
+        # for_stmt: ASYNC? 'for' star_targets 'in' expressions ':' block else_block?
         mark = self.mark()
         cut = False
         if (
+            (opt := self.expect('ASYNC'),)
+            and
+            (literal := self.expect('for'))
+            and
+            (star_targets := self.star_targets())
+            and
+            (literal_1 := self.expect('in'))
+            and
+            (expressions := self.expressions())
+            and
+            (literal_2 := self.expect(':'))
+            and
+            (block := self.block())
+            and
+            (opt_1 := self.else_block(),)
+        ):
+            return [opt, literal, star_targets, literal_1, expressions, literal_2, block, opt_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def with_stmt(self):
+        # with_stmt: ASYNC? 'with' expression 'as' target? ':' block
+        mark = self.mark()
+        cut = False
+        if (
+            (opt := self.expect('ASYNC'),)
+            and
             (literal := self.expect('with'))
             and
             (expression := self.expression())
             and
-            (opt := self._tmp_5(),)
+            (opt_1 := self._tmp_17(),)
             and
             (literal_1 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [literal, expression, opt, literal_1, block]
+            return [opt, literal, expression, opt_1, literal_1, block]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def try_stmt(self):
+        # try_stmt: try_block finally_block | try_block (except_block)+ else_block? finally_block?
+        mark = self.mark()
+        cut = False
+        if (
+            (try_block := self.try_block())
+            and
+            (finally_block := self.finally_block())
+        ):
+            return [try_block, finally_block]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (try_block := self.try_block())
+            and
+            (_loop1_18 := self._loop1_18())
+            and
+            (opt := self.else_block(),)
+            and
+            (opt_1 := self.finally_block(),)
+        ):
+            return [try_block, _loop1_18, opt, opt_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def try_block(self):
+        # try_block: 'try' ':' block
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('try'))
+            and
+            (literal_1 := self.expect(':'))
+            and
+            (block := self.block())
+        ):
+            return [literal, literal_1, block]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def except_block(self):
+        # except_block: 'except' expression 'as' target?? ':' block
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('except'))
+            and
+            (opt := self._tmp_19(),)
+            and
+            (literal_1 := self.expect(':'))
+            and
+            (block := self.block())
+        ):
+            return [literal, opt, literal_1, block]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def finally_block(self):
+        # finally_block: 'finally' ':' block
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('finally'))
+            and
+            (literal_1 := self.expect(':'))
+            and
+            (block := self.block())
+        ):
+            return [literal, literal_1, block]
         self.reset(mark)
         if cut: return None
         return None
@@ -344,12 +787,29 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
+    def raise_stmt(self):
+        # raise_stmt: 'raise' expression 'from' expression??
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('raise'))
+            and
+            (opt := self._tmp_20(),)
+        ):
+            return [literal, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
     def function_def(self):
-        # function_def: decorators? 'def' NAME '(' parameters? ')' ':' block
+        # function_def: decorators? ASYNC? 'def' NAME '(' parameters? ')' '->' expression? ':' block
         mark = self.mark()
         cut = False
         if (
             (opt := self.decorators(),)
+            and
+            (opt_1 := self.expect('ASYNC'),)
             and
             (literal := self.expect('def'))
             and
@@ -357,69 +817,110 @@ class GeneratedParser(Parser):
             and
             (literal_1 := self.expect('('))
             and
-            (opt_1 := self.parameters(),)
+            (opt_2 := self.parameters(),)
             and
             (literal_2 := self.expect(')'))
+            and
+            (opt_3 := self._tmp_21(),)
             and
             (literal_3 := self.expect(':'))
             and
             (block := self.block())
         ):
-            return [opt, literal, name, literal_1, opt_1, literal_2, literal_3, block]
+            return [opt, opt_1, literal, name, literal_1, opt_2, literal_2, opt_3, literal_3, block]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def parameters(self):
-        # parameters: kwparams | param ',' parameters??
+        # parameters: slash_without_default ',' plain_names? ',' names_with_default? ',' star_etc?? | slash_with_default ',' names_with_default? ',' star_etc?? | plain_names ',' names_with_default? ',' star_etc?? | names_with_default ',' star_etc?? | star_etc
         mark = self.mark()
         cut = False
         if (
-            (kwparams := self.kwparams())
+            (slash_without_default := self.slash_without_default())
+            and
+            (opt := self._tmp_22(),)
+            and
+            (opt_1 := self._tmp_23(),)
+            and
+            (opt_2 := self._tmp_24(),)
         ):
-            return [kwparams]
+            return [slash_without_default, opt, opt_1, opt_2]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (param := self.param())
+            (slash_with_default := self.slash_with_default())
             and
-            (opt := self._tmp_6(),)
+            (opt := self._tmp_25(),)
+            and
+            (opt_1 := self._tmp_26(),)
         ):
-            return [param, opt]
+            return [slash_with_default, opt, opt_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (plain_names := self.plain_names())
+            and
+            (opt := self._tmp_27(),)
+            and
+            (opt_1 := self._tmp_28(),)
+        ):
+            return [plain_names, opt, opt_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (names_with_default := self.names_with_default())
+            and
+            (opt := self._tmp_29(),)
+        ):
+            return [names_with_default, opt]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (star_etc := self.star_etc())
+        ):
+            return [star_etc]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def kwparams(self):
-        # kwparams: kwparam ',' kwparams??
+    def star_etc(self):
+        # star_etc: '*' NAME ':' annotation? ((',' plain_name '=' expression?))* ',' '**' NAME? ','? | '*' ((',' plain_name '=' expression?))+ ',' '**' NAME? ','? | '**' NAME ':' annotation? ','?
         mark = self.mark()
         cut = False
         if (
-            (kwparam := self.kwparam())
+            (literal := self.expect('*'))
             and
-            (opt := self._tmp_7(),)
-        ):
-            return [kwparam, opt]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def kwparam(self):
-        # kwparam: NAME '=' expression | '**' NAME
-        mark = self.mark()
-        cut = False
-        if (
             (name := self.name())
             and
-            (literal := self.expect('='))
+            (opt := self._tmp_30(),)
             and
-            (expression := self.expression())
+            (_loop0_31 := self._loop0_31(),)
+            and
+            (opt_1 := self._tmp_32(),)
+            and
+            (opt_2 := self.expect(','),)
         ):
-            return [name, literal, expression]
+            return [literal, name, opt, _loop0_31, opt_1, opt_2]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('*'))
+            and
+            (_loop1_33 := self._loop1_33())
+            and
+            (opt := self._tmp_34(),)
+            and
+            (opt_1 := self.expect(','),)
+        ):
+            return [literal, _loop1_33, opt, opt_1]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -427,30 +928,125 @@ class GeneratedParser(Parser):
             (literal := self.expect('**'))
             and
             (name := self.name())
+            and
+            (opt := self._tmp_35(),)
+            and
+            (opt_1 := self.expect(','),)
         ):
-            return [literal, name]
+            return [literal, name, opt, opt_1]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def param(self):
-        # param: NAME | '*' NAME
+    def slash_without_default(self):
+        # slash_without_default: plain_names ',' '/'
+        mark = self.mark()
+        cut = False
+        if (
+            (plain_names := self.plain_names())
+            and
+            (literal := self.expect(','))
+            and
+            (literal_1 := self.expect('/'))
+        ):
+            return [plain_names, literal, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def slash_with_default(self):
+        # slash_with_default: plain_names ','? names_with_default ',' '/'
+        mark = self.mark()
+        cut = False
+        if (
+            (opt := self._tmp_36(),)
+            and
+            (names_with_default := self.names_with_default())
+            and
+            (literal := self.expect(','))
+            and
+            (literal_1 := self.expect('/'))
+        ):
+            return [opt, names_with_default, literal, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def names_with_default(self):
+        # names_with_default: name_with_default ((',' name_with_default))*
+        mark = self.mark()
+        cut = False
+        if (
+            (name_with_default := self.name_with_default())
+            and
+            (_loop0_37 := self._loop0_37(),)
+        ):
+            return [name_with_default, _loop0_37]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def plain_names(self):
+        # plain_names: plain_name !'=' ((',' plain_name !'='))*
+        mark = self.mark()
+        cut = False
+        if (
+            (plain_name := self.plain_name())
+            and
+            self.negative_lookahead(self.expect, '=')
+            and
+            (_loop0_38 := self._loop0_38(),)
+        ):
+            return [plain_name, _loop0_38]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def name_with_default(self):
+        # name_with_default: plain_name '=' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (plain_name := self.plain_name())
+            and
+            (literal := self.expect('='))
+            and
+            (expression := self.expression())
+        ):
+            return [plain_name, literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def plain_name(self):
+        # plain_name: NAME ':' annotation?
         mark = self.mark()
         cut = False
         if (
             (name := self.name())
+            and
+            (opt := self._tmp_39(),)
         ):
-            return [name]
+            return [name, opt]
         self.reset(mark)
         if cut: return None
+        return None
+
+    @memoize
+    def annotation(self):
+        # annotation: expression
+        mark = self.mark()
         cut = False
         if (
-            (literal := self.expect('*'))
-            and
-            (name := self.name())
+            (expression := self.expression())
         ):
-            return [literal, name]
+            return [expression]
         self.reset(mark)
         if cut: return None
         return None
@@ -461,9 +1057,9 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (_loop1_8 := self._loop1_8())
+            (_loop1_40 := self._loop1_40())
         ):
-            return [_loop1_8]
+            return [_loop1_40]
         self.reset(mark)
         if cut: return None
         return None
@@ -480,7 +1076,7 @@ class GeneratedParser(Parser):
             and
             (name := self.name())
             and
-            (opt_1 := self._tmp_9(),)
+            (opt_1 := self._tmp_41(),)
             and
             (literal_1 := self.expect(':'))
             and
@@ -525,18 +1121,35 @@ class GeneratedParser(Parser):
         if (
             (full_expression := self.full_expression())
             and
-            (_loop0_10 := self._loop0_10(),)
+            (_loop0_42 := self._loop0_42(),)
             and
             (opt := self.expect(','),)
         ):
-            return [full_expression, _loop0_10, opt]
+            return [full_expression, _loop0_42, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def expressions(self):
+        # expressions: expression ((',' expression))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (expression := self.expression())
+            and
+            (_loop0_43 := self._loop0_43(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [expression, _loop0_43, opt]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def full_expression(self):
-        # full_expression: NAME ':=' disjunction | disjunction
+        # full_expression: NAME ':=' expression | expression
         mark = self.mark()
         cut = False
         if (
@@ -544,16 +1157,94 @@ class GeneratedParser(Parser):
             and
             (literal := self.expect(':='))
             and
-            (disjunction := self.disjunction())
+            (expression := self.expression())
         ):
-            return [name, literal, disjunction]
+            return [name, literal, expression]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (expression := self.expression())
+        ):
+            return [expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def yield_expression(self):
+        # yield_expression: yield_expr | expression
+        mark = self.mark()
+        cut = False
+        if (
+            (yield_expr := self.yield_expr())
+        ):
+            return [yield_expr]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (expression := self.expression())
+        ):
+            return [expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def expression(self):
+        # expression: lambdef | disjunction 'if' disjunction 'else' disjunction?
+        mark = self.mark()
+        cut = False
+        if (
+            (lambdef := self.lambdef())
+        ):
+            return [lambdef]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
             (disjunction := self.disjunction())
+            and
+            (opt := self._tmp_44(),)
         ):
-            return [disjunction]
+            return [disjunction, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def lambdef(self):
+        # lambdef: 'lambda' varargslist? ':' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('lambda'))
+            and
+            (opt := self.varargslist(),)
+            and
+            (literal_1 := self.expect(':'))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, opt, literal_1, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def varargslist(self):
+        # varargslist: NAME ((',' NAME))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (name := self.name())
+            and
+            (_loop0_45 := self._loop0_45(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [name, _loop0_45, opt]
         self.reset(mark)
         if cut: return None
         return None
@@ -566,9 +1257,9 @@ class GeneratedParser(Parser):
         if (
             (conjunction := self.conjunction())
             and
-            (_loop0_11 := self._loop0_11(),)
+            (_loop0_46 := self._loop0_46(),)
         ):
-            return [conjunction, _loop0_11]
+            return [conjunction, _loop0_46]
         self.reset(mark)
         if cut: return None
         return None
@@ -581,9 +1272,9 @@ class GeneratedParser(Parser):
         if (
             (comparison := self.comparison())
             and
-            (_loop0_12 := self._loop0_12(),)
+            (_loop0_47 := self._loop0_47(),)
         ):
-            return [comparison, _loop0_12]
+            return [comparison, _loop0_47]
         self.reset(mark)
         if cut: return None
         return None
@@ -594,20 +1285,20 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (_loop0_13 := self._loop0_13(),)
+            (_loop0_48 := self._loop0_48(),)
             and
             (bitwise_or := self.bitwise_or())
             and
-            (_loop0_14 := self._loop0_14(),)
+            (_loop0_49 := self._loop0_49(),)
         ):
-            return [_loop0_13, bitwise_or, _loop0_14]
+            return [_loop0_48, bitwise_or, _loop0_49]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def compare_op(self):
-        # compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'in' | 'not in'
+        # compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | 'not'? 'in' | 'is' 'not'?
         mark = self.mark()
         cut = False
         if (
@@ -653,121 +1344,234 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
+            (opt := self.expect('not'),)
+            and
             (literal := self.expect('in'))
         ):
-            return [literal]
+            return [opt, literal]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (literal := self.expect('not in'))
+            (literal := self.expect('is'))
+            and
+            (opt := self.expect('not'),)
         ):
-            return [literal]
+            return [literal, opt]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def bitwise_or(self):
-        # bitwise_or: bitwise_and (('|' bitwise_and))*
+        # bitwise_or: bitwise_xor (('|' bitwise_xor))*
+        mark = self.mark()
+        cut = False
+        if (
+            (bitwise_xor := self.bitwise_xor())
+            and
+            (_loop0_50 := self._loop0_50(),)
+        ):
+            return [bitwise_xor, _loop0_50]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def bitwise_xor(self):
+        # bitwise_xor: bitwise_and (('^' bitwise_and))*
         mark = self.mark()
         cut = False
         if (
             (bitwise_and := self.bitwise_and())
             and
-            (_loop0_15 := self._loop0_15(),)
+            (_loop0_51 := self._loop0_51(),)
         ):
-            return [bitwise_and, _loop0_15]
+            return [bitwise_and, _loop0_51]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def bitwise_and(self):
-        # bitwise_and: expression (('&' expression))*
+        # bitwise_and: shift_expr (('&' shift_expr))*
         mark = self.mark()
         cut = False
         if (
-            (expression := self.expression())
+            (shift_expr := self.shift_expr())
             and
-            (_loop0_16 := self._loop0_16(),)
+            (_loop0_52 := self._loop0_52(),)
         ):
-            return [expression, _loop0_16]
+            return [shift_expr, _loop0_52]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def expressions(self):
-        # expressions: expression ((',' expression))* ','?
+    def shift_expr(self):
+        # shift_expr: sum ((('<<' | '>>') sum))*
         mark = self.mark()
         cut = False
         if (
-            (expression := self.expression())
+            (sum := self.sum())
             and
-            (_loop0_17 := self._loop0_17(),)
-            and
-            (opt := self.expect(','),)
+            (_loop0_53 := self._loop0_53(),)
         ):
-            return [expression, _loop0_17, opt]
+            return [sum, _loop0_53]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def expression(self):
-        # expression: term ((('+' term | '-' term)))*
+    def sum(self):
+        # sum: term ((('+' term | '-' term)))*
         mark = self.mark()
         cut = False
         if (
             (term := self.term())
             and
-            (_loop0_18 := self._loop0_18(),)
+            (_loop0_54 := self._loop0_54(),)
         ):
-            return [term, _loop0_18]
+            return [term, _loop0_54]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def term(self):
-        # term: factor ((('*' factor | '/' factor)))*
+        # term: factor ((('*' factor | '/' factor | '//' factor | '%' factor | '@' factor)))*
         mark = self.mark()
         cut = False
         if (
             (factor := self.factor())
             and
-            (_loop0_19 := self._loop0_19(),)
+            (_loop0_55 := self._loop0_55(),)
         ):
-            return [factor, _loop0_19]
+            return [factor, _loop0_55]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def factor(self):
-        # factor: primary (('.' NAME | '[' expression ']' | '(' arguments ','?? ')'))*
+        # factor: ('+' | '-' | '~') factor | power
+        mark = self.mark()
+        cut = False
+        if (
+            (_tmp_56 := self._tmp_56())
+            and
+            (factor := self.factor())
+        ):
+            return [_tmp_56, factor]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (power := self.power())
+        ):
+            return [power]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def power(self):
+        # power: primary '**' factor | primary
         mark = self.mark()
         cut = False
         if (
             (primary := self.primary())
             and
-            (_loop0_20 := self._loop0_20(),)
+            (literal := self.expect('**'))
+            and
+            (factor := self.factor())
         ):
-            return [primary, _loop0_20]
+            return [primary, literal, factor]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (primary := self.primary())
+        ):
+            return [primary]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def primary(self):
-        # primary: list | tuple | group | NAME | STRING | NUMBER
+        # primary: AWAIT? atom (('.' NAME | '[' slices ']' | '(' arguments? ')'))*
+        mark = self.mark()
+        cut = False
+        if (
+            (opt := self.expect('AWAIT'),)
+            and
+            (atom := self.atom())
+            and
+            (_loop0_57 := self._loop0_57(),)
+        ):
+            return [opt, atom, _loop0_57]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def slices(self):
+        # slices: slice ((',' slice))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (slice := self.slice())
+            and
+            (_loop0_58 := self._loop0_58(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [slice, _loop0_58, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def slice(self):
+        # slice: expression? ':' expression? | expression
+        mark = self.mark()
+        cut = False
+        if (
+            (opt := self.expression(),)
+            and
+            (literal := self.expect(':'))
+            and
+            (opt_1 := self.expression(),)
+        ):
+            return [opt, literal, opt_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (expression := self.expression())
+        ):
+            return [expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def atom(self):
+        # atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | (STRING)+ | NUMBER | '...'
         mark = self.mark()
         cut = False
         if (
             (list := self.list())
         ):
             return [list]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (listcomp := self.listcomp())
+        ):
+            return [listcomp]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -786,6 +1590,41 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
+            (genexp := self.genexp())
+        ):
+            return [genexp]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (set := self.set())
+        ):
+            return [set]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (setcomp := self.setcomp())
+        ):
+            return [setcomp]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (dict := self.dict())
+        ):
+            return [dict]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (dictcomp := self.dictcomp())
+        ):
+            return [dictcomp]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
             (name := self.name())
         ):
             return [name]
@@ -793,9 +1632,9 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (string := self.string())
+            (_loop1_59 := self._loop1_59())
         ):
-            return [string]
+            return [_loop1_59]
         self.reset(mark)
         if cut: return None
         cut = False
@@ -803,6 +1642,13 @@ class GeneratedParser(Parser):
             (number := self.number())
         ):
             return [number]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('...'))
+        ):
+            return [literal]
         self.reset(mark)
         if cut: return None
         return None
@@ -825,6 +1671,25 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
+    def listcomp(self):
+        # listcomp: '[' expression for_if_clauses ']'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('['))
+            and
+            (expression := self.expression())
+            and
+            (for_if_clauses := self.for_if_clauses())
+            and
+            (literal_1 := self.expect(']'))
+        ):
+            return [literal, expression, for_if_clauses, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
     def tuple(self):
         # tuple: '(' full_expression ',' full_expressions?? ')'
         mark = self.mark()
@@ -832,7 +1697,7 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('('))
             and
-            (opt := self._tmp_21(),)
+            (opt := self._tmp_60(),)
             and
             (literal_1 := self.expect(')'))
         ):
@@ -843,24 +1708,212 @@ class GeneratedParser(Parser):
 
     @memoize
     def group(self):
-        # group: '(' full_expression ')'
+        # group: '(' (yield_expr | full_expression) ')'
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect('('))
             and
-            (full_expression := self.full_expression())
+            (_tmp_61 := self._tmp_61())
             and
             (literal_1 := self.expect(')'))
         ):
-            return [literal, full_expression, literal_1]
+            return [literal, _tmp_61, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def genexp(self):
+        # genexp: '(' expression for_if_clauses ')'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('('))
+            and
+            (expression := self.expression())
+            and
+            (for_if_clauses := self.for_if_clauses())
+            and
+            (literal_1 := self.expect(')'))
+        ):
+            return [literal, expression, for_if_clauses, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def set(self):
+        # set: '{' expressions '}'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('{'))
+            and
+            (expressions := self.expressions())
+            and
+            (literal_1 := self.expect('}'))
+        ):
+            return [literal, expressions, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def setcomp(self):
+        # setcomp: '{' expression for_if_clauses '}'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('{'))
+            and
+            (expression := self.expression())
+            and
+            (for_if_clauses := self.for_if_clauses())
+            and
+            (literal_1 := self.expect('}'))
+        ):
+            return [literal, expression, for_if_clauses, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def dict(self):
+        # dict: '{' kvpairs? '}'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('{'))
+            and
+            (opt := self.kvpairs(),)
+            and
+            (literal_1 := self.expect('}'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def dictcomp(self):
+        # dictcomp: '{' kvpair for_if_clauses '}'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('{'))
+            and
+            (kvpair := self.kvpair())
+            and
+            (for_if_clauses := self.for_if_clauses())
+            and
+            (literal_1 := self.expect('}'))
+        ):
+            return [literal, kvpair, for_if_clauses, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def kvpairs(self):
+        # kvpairs: kvpair ((',' kvpair))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (kvpair := self.kvpair())
+            and
+            (_loop0_62 := self._loop0_62(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [kvpair, _loop0_62, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def kvpair(self):
+        # kvpair: expression ':' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (expression := self.expression())
+            and
+            (literal := self.expect(':'))
+            and
+            (expression_1 := self.expression())
+        ):
+            return [expression, literal, expression_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def for_if_clauses(self):
+        # for_if_clauses: (('for' star_targets 'in' expression (('if' expression))*))+
+        mark = self.mark()
+        cut = False
+        if (
+            (_loop1_63 := self._loop1_63())
+        ):
+            return [_loop1_63]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def yield_expr(self):
+        # yield_expr: 'yield' 'from' expression | 'yield' expression?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('yield'))
+            and
+            (literal_1 := self.expect('from'))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, literal_1, expression]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('yield'))
+            and
+            (opt := self.expression(),)
+        ):
+            return [literal, opt]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def arguments(self):
-        # arguments: kwargs | posarg ',' arguments?
+        # arguments: expression for_if_clauses | args ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (expression := self.expression())
+            and
+            (for_if_clauses := self.for_if_clauses())
+        ):
+            return [expression, for_if_clauses]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (args := self.args())
+            and
+            (opt := self.expect(','),)
+        ):
+            return [args, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def args(self):
+        # args: kwargs | posarg ',' args?
         mark = self.mark()
         cut = False
         if (
@@ -873,7 +1926,7 @@ class GeneratedParser(Parser):
         if (
             (posarg := self.posarg())
             and
-            (opt := self._tmp_22(),)
+            (opt := self._tmp_64(),)
         ):
             return [posarg, opt]
         self.reset(mark)
@@ -888,16 +1941,16 @@ class GeneratedParser(Parser):
         if (
             (kwarg := self.kwarg())
             and
-            (_loop0_23 := self._loop0_23(),)
+            (_loop0_65 := self._loop0_65(),)
         ):
-            return [kwarg, _loop0_23]
+            return [kwarg, _loop0_65]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def posarg(self):
-        # posarg: full_expression | '*' disjunction
+        # posarg: full_expression | '*' expression
         mark = self.mark()
         cut = False
         if (
@@ -910,16 +1963,16 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('*'))
             and
-            (disjunction := self.disjunction())
+            (expression := self.expression())
         ):
-            return [literal, disjunction]
+            return [literal, expression]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
     def kwarg(self):
-        # kwarg: NAME '=' disjunction | '**' disjunction
+        # kwarg: NAME '=' expression | '**' expression
         mark = self.mark()
         cut = False
         if (
@@ -927,31 +1980,225 @@ class GeneratedParser(Parser):
             and
             (literal := self.expect('='))
             and
-            (disjunction := self.disjunction())
+            (expression := self.expression())
         ):
-            return [name, literal, disjunction]
+            return [name, literal, expression]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
             (literal := self.expect('**'))
             and
-            (disjunction := self.disjunction())
+            (expression := self.expression())
         ):
-            return [literal, disjunction]
+            return [literal, expression]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def target(self):
-        # target: NAME
+    def star_targets(self):
+        # star_targets: star_target ((',' star_target))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (star_target := self.star_target())
+            and
+            (_loop0_66 := self._loop0_66(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [star_target, _loop0_66, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def star_target(self):
+        # star_target: '*' NAME | star_atom (t_tail)*
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('*'))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (star_atom := self.star_atom())
+            and
+            (_loop0_67 := self._loop0_67(),)
+        ):
+            return [star_atom, _loop0_67]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def star_atom(self):
+        # star_atom: NAME | '(' star_targets? ')' | '[' star_targets? ']'
         mark = self.mark()
         cut = False
         if (
             (name := self.name())
         ):
             return [name]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('('))
+            and
+            (opt := self.star_targets(),)
+            and
+            (literal_1 := self.expect(')'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('['))
+            and
+            (opt := self.star_targets(),)
+            and
+            (literal_1 := self.expect(']'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def targets(self):
+        # targets: target ((',' target))* ','?
+        mark = self.mark()
+        cut = False
+        if (
+            (target := self.target())
+            and
+            (_loop0_68 := self._loop0_68(),)
+            and
+            (opt := self.expect(','),)
+        ):
+            return [target, _loop0_68, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def target(self):
+        # target: t_atom (t_tail)*
+        mark = self.mark()
+        cut = False
+        if (
+            (t_atom := self.t_atom())
+            and
+            (_loop0_69 := self._loop0_69(),)
+        ):
+            return [t_atom, _loop0_69]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def t_atom(self):
+        # t_atom: NAME | '(' targets? ')' | '[' targets? ']'
+        mark = self.mark()
+        cut = False
+        if (
+            (name := self.name())
+        ):
+            return [name]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('('))
+            and
+            (opt := self.targets(),)
+            and
+            (literal_1 := self.expect(')'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('['))
+            and
+            (opt := self.targets(),)
+            and
+            (literal_1 := self.expect(']'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def t_tail(self):
+        # t_tail: (call_tail)* (attr_tail | index_tail)
+        mark = self.mark()
+        cut = False
+        if (
+            (_loop0_70 := self._loop0_70(),)
+            and
+            (_tmp_71 := self._tmp_71())
+        ):
+            return [_loop0_70, _tmp_71]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def call_tail(self):
+        # call_tail: '(' arguments? ')'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('('))
+            and
+            (opt := self.arguments(),)
+            and
+            (literal_1 := self.expect(')'))
+        ):
+            return [literal, opt, literal_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def attr_tail(self):
+        # attr_tail: '.' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('.'))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def index_tail(self):
+        # index_tail: '[' slices ']'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('['))
+            and
+            (slices := self.slices())
+            and
+            (literal_1 := self.expect(']'))
+        ):
+            return [literal, slices, literal_1]
         self.reset(mark)
         if cut: return None
         return None
@@ -978,9 +2225,9 @@ class GeneratedParser(Parser):
         children = []
         cut = False
         while (
-            (_tmp_24 := self._tmp_24())
+            (_tmp_72 := self._tmp_72())
         ):
-            children.append([_tmp_24])
+            children.append([_tmp_72])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
@@ -988,7 +2235,126 @@ class GeneratedParser(Parser):
 
     @memoize
     def _tmp_3(self):
-        # _tmp_3: '*' | names
+        # _tmp_3: '=' yield_expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('='))
+            and
+            (yield_expression := self.yield_expression())
+        ):
+            return [literal, yield_expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop1_4(self):
+        # _loop1_4: (star_targets '=')
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_73 := self._tmp_73())
+        ):
+            children.append([_tmp_73])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_5(self):
+        # _tmp_5: yield_expr | expressions
+        mark = self.mark()
+        cut = False
+        if (
+            (yield_expr := self.yield_expr())
+        ):
+            return [yield_expr]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (expressions := self.expressions())
+        ):
+            return [expressions]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_6(self):
+        # _loop0_6: (',' NAME)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_74 := self._tmp_74())
+        ):
+            children.append([_tmp_74])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_7(self):
+        # _loop0_7: (',' NAME)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_75 := self._tmp_75())
+        ):
+            children.append([_tmp_75])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_8(self):
+        # _tmp_8: ',' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_9(self):
+        # _tmp_9: (('.' | '...'))* !'import' dotted_name | (('.' | '...'))+
+        mark = self.mark()
+        cut = False
+        if (
+            (_loop0_76 := self._loop0_76(),)
+            and
+            self.negative_lookahead(self.expect, 'import')
+            and
+            (dotted_name := self.dotted_name())
+        ):
+            return [_loop0_76, dotted_name]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (_loop1_77 := self._loop1_77())
+        ):
+            return [_loop1_77]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_10(self):
+        # _tmp_10: '*' | '(' import_as_names ')' | import_as_names
         mark = self.mark()
         cut = False
         if (
@@ -999,16 +2365,102 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (names := self.names())
+            (literal := self.expect('('))
+            and
+            (import_as_names := self.import_as_names())
+            and
+            (literal_1 := self.expect(')'))
         ):
-            return [names]
+            return [literal, import_as_names, literal_1]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (import_as_names := self.import_as_names())
+        ):
+            return [import_as_names]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def _loop0_4(self):
-        # _loop0_4: elif_block
+    def _tmp_11(self):
+        # _tmp_11: 'as' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('as'))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_12(self):
+        # _tmp_12: 'as' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('as'))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_13(self):
+        # _loop0_13: (',' import_as_name)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_78 := self._tmp_78())
+        ):
+            children.append([_tmp_78])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_14(self):
+        # _loop0_14: (',' dotted_as_name)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_79 := self._tmp_79())
+        ):
+            children.append([_tmp_79])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_15(self):
+        # _loop0_15: ('.' NAME)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_80 := self._tmp_80())
+        ):
+            children.append([_tmp_80])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_16(self):
+        # _loop0_16: elif_block
         mark = self.mark()
         children = []
         cut = False
@@ -1022,8 +2474,8 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _tmp_5(self):
-        # _tmp_5: 'as' target
+    def _tmp_17(self):
+        # _tmp_17: 'as' target
         mark = self.mark()
         cut = False
         if (
@@ -1037,53 +2489,357 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_6(self):
-        # _tmp_6: ',' parameters?
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect(','))
-            and
-            (opt := self.parameters(),)
-        ):
-            return [literal, opt]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_7(self):
-        # _tmp_7: ',' kwparams?
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect(','))
-            and
-            (opt := self.kwparams(),)
-        ):
-            return [literal, opt]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _loop1_8(self):
-        # _loop1_8: ('@' factor NEWLINE)
+    def _loop1_18(self):
+        # _loop1_18: except_block
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_25 := self._tmp_25())
+            (except_block := self.except_block())
         ):
-            children.append([_tmp_25])
+            children.append([except_block])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _tmp_9(self):
-        # _tmp_9: '(' full_expressions ')'
+    def _tmp_19(self):
+        # _tmp_19: expression 'as' target?
+        mark = self.mark()
+        cut = False
+        if (
+            (expression := self.expression())
+            and
+            (opt := self._tmp_81(),)
+        ):
+            return [expression, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_20(self):
+        # _tmp_20: expression 'from' expression?
+        mark = self.mark()
+        cut = False
+        if (
+            (expression := self.expression())
+            and
+            (opt := self._tmp_82(),)
+        ):
+            return [expression, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_21(self):
+        # _tmp_21: '->' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('->'))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_22(self):
+        # _tmp_22: ',' plain_names
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (plain_names := self.plain_names())
+        ):
+            return [literal, plain_names]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_23(self):
+        # _tmp_23: ',' names_with_default
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (names_with_default := self.names_with_default())
+        ):
+            return [literal, names_with_default]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_24(self):
+        # _tmp_24: ',' star_etc?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (opt := self.star_etc(),)
+        ):
+            return [literal, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_25(self):
+        # _tmp_25: ',' names_with_default
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (names_with_default := self.names_with_default())
+        ):
+            return [literal, names_with_default]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_26(self):
+        # _tmp_26: ',' star_etc?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (opt := self.star_etc(),)
+        ):
+            return [literal, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_27(self):
+        # _tmp_27: ',' names_with_default
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (names_with_default := self.names_with_default())
+        ):
+            return [literal, names_with_default]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_28(self):
+        # _tmp_28: ',' star_etc?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (opt := self.star_etc(),)
+        ):
+            return [literal, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_29(self):
+        # _tmp_29: ',' star_etc?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (opt := self.star_etc(),)
+        ):
+            return [literal, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_30(self):
+        # _tmp_30: ':' annotation
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(':'))
+            and
+            (annotation := self.annotation())
+        ):
+            return [literal, annotation]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_31(self):
+        # _loop0_31: (',' plain_name '=' expression?)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_83 := self._tmp_83())
+        ):
+            children.append([_tmp_83])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_32(self):
+        # _tmp_32: ',' '**' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (literal_1 := self.expect('**'))
+            and
+            (name := self.name())
+        ):
+            return [literal, literal_1, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop1_33(self):
+        # _loop1_33: (',' plain_name '=' expression?)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_84 := self._tmp_84())
+        ):
+            children.append([_tmp_84])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_34(self):
+        # _tmp_34: ',' '**' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (literal_1 := self.expect('**'))
+            and
+            (name := self.name())
+        ):
+            return [literal, literal_1, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_35(self):
+        # _tmp_35: ':' annotation
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(':'))
+            and
+            (annotation := self.annotation())
+        ):
+            return [literal, annotation]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_36(self):
+        # _tmp_36: plain_names ','
+        mark = self.mark()
+        cut = False
+        if (
+            (plain_names := self.plain_names())
+            and
+            (literal := self.expect(','))
+        ):
+            return [plain_names, literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_37(self):
+        # _loop0_37: (',' name_with_default)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_85 := self._tmp_85())
+        ):
+            children.append([_tmp_85])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_38(self):
+        # _loop0_38: (',' plain_name !'=')
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_86 := self._tmp_86())
+        ):
+            children.append([_tmp_86])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_39(self):
+        # _tmp_39: ':' annotation
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(':'))
+            and
+            (annotation := self.annotation())
+        ):
+            return [literal, annotation]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop1_40(self):
+        # _loop1_40: ('@' factor NEWLINE)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_87 := self._tmp_87())
+        ):
+            children.append([_tmp_87])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_41(self):
+        # _tmp_41: '(' full_expressions ')'
         mark = self.mark()
         cut = False
         if (
@@ -1099,53 +2855,102 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _loop0_10(self):
-        # _loop0_10: (',' full_expression)
+    def _loop0_42(self):
+        # _loop0_42: (',' full_expression)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_26 := self._tmp_26())
+            (_tmp_88 := self._tmp_88())
         ):
-            children.append([_tmp_26])
+            children.append([_tmp_88])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_11(self):
-        # _loop0_11: ('or' conjunction)
+    def _loop0_43(self):
+        # _loop0_43: (',' expression)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_27 := self._tmp_27())
+            (_tmp_89 := self._tmp_89())
         ):
-            children.append([_tmp_27])
+            children.append([_tmp_89])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_12(self):
-        # _loop0_12: ('and' comparison)
+    def _tmp_44(self):
+        # _tmp_44: 'if' disjunction 'else' disjunction
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('if'))
+            and
+            (disjunction := self.disjunction())
+            and
+            (literal_1 := self.expect('else'))
+            and
+            (disjunction_1 := self.disjunction())
+        ):
+            return [literal, disjunction, literal_1, disjunction_1]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_45(self):
+        # _loop0_45: (',' NAME)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_28 := self._tmp_28())
+            (_tmp_90 := self._tmp_90())
         ):
-            children.append([_tmp_28])
+            children.append([_tmp_90])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_13(self):
-        # _loop0_13: 'not'
+    def _loop0_46(self):
+        # _loop0_46: ('or' conjunction)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_91 := self._tmp_91())
+        ):
+            children.append([_tmp_91])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_47(self):
+        # _loop0_47: ('and' comparison)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_92 := self._tmp_92())
+        ):
+            children.append([_tmp_92])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_48(self):
+        # _loop0_48: 'not'
         mark = self.mark()
         children = []
         cut = False
@@ -1159,113 +2964,185 @@ class GeneratedParser(Parser):
         return children
 
     @memoize
-    def _loop0_14(self):
-        # _loop0_14: (compare_op bitwise_or)
+    def _loop0_49(self):
+        # _loop0_49: (compare_op bitwise_or)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_29 := self._tmp_29())
+            (_tmp_93 := self._tmp_93())
         ):
-            children.append([_tmp_29])
+            children.append([_tmp_93])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_15(self):
-        # _loop0_15: ('|' bitwise_and)
+    def _loop0_50(self):
+        # _loop0_50: ('|' bitwise_xor)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_30 := self._tmp_30())
+            (_tmp_94 := self._tmp_94())
         ):
-            children.append([_tmp_30])
+            children.append([_tmp_94])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_16(self):
-        # _loop0_16: ('&' expression)
+    def _loop0_51(self):
+        # _loop0_51: ('^' bitwise_and)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_31 := self._tmp_31())
+            (_tmp_95 := self._tmp_95())
         ):
-            children.append([_tmp_31])
+            children.append([_tmp_95])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_17(self):
-        # _loop0_17: (',' expression)
+    def _loop0_52(self):
+        # _loop0_52: ('&' shift_expr)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_32 := self._tmp_32())
+            (_tmp_96 := self._tmp_96())
         ):
-            children.append([_tmp_32])
+            children.append([_tmp_96])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_18(self):
-        # _loop0_18: (('+' term | '-' term))
+    def _loop0_53(self):
+        # _loop0_53: (('<<' | '>>') sum)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_33 := self._tmp_33())
+            (_tmp_97 := self._tmp_97())
         ):
-            children.append([_tmp_33])
+            children.append([_tmp_97])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_19(self):
-        # _loop0_19: (('*' factor | '/' factor))
+    def _loop0_54(self):
+        # _loop0_54: (('+' term | '-' term))
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_34 := self._tmp_34())
+            (_tmp_98 := self._tmp_98())
         ):
-            children.append([_tmp_34])
+            children.append([_tmp_98])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _loop0_20(self):
-        # _loop0_20: ('.' NAME | '[' expression ']' | '(' arguments ','?? ')')
+    def _loop0_55(self):
+        # _loop0_55: (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_35 := self._tmp_35())
+            (_tmp_99 := self._tmp_99())
         ):
-            children.append([_tmp_35])
+            children.append([_tmp_99])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _tmp_21(self):
-        # _tmp_21: full_expression ',' full_expressions?
+    def _tmp_56(self):
+        # _tmp_56: '+' | '-' | '~'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('+'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('-'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('~'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_57(self):
+        # _loop0_57: ('.' NAME | '[' slices ']' | '(' arguments? ')')
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_100 := self._tmp_100())
+        ):
+            children.append([_tmp_100])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_58(self):
+        # _loop0_58: (',' slice)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_101 := self._tmp_101())
+        ):
+            children.append([_tmp_101])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop1_59(self):
+        # _loop1_59: STRING
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (string := self.string())
+        ):
+            children.append([string])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_60(self):
+        # _tmp_60: full_expression ',' full_expressions?
         mark = self.mark()
         cut = False
         if (
@@ -1281,38 +3158,183 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_22(self):
-        # _tmp_22: ',' arguments
+    def _tmp_61(self):
+        # _tmp_61: yield_expr | full_expression
         mark = self.mark()
         cut = False
         if (
-            (literal := self.expect(','))
-            and
-            (arguments := self.arguments())
+            (yield_expr := self.yield_expr())
         ):
-            return [literal, arguments]
+            return [yield_expr]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (full_expression := self.full_expression())
+        ):
+            return [full_expression]
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def _loop0_23(self):
-        # _loop0_23: (',' kwarg)
+    def _loop0_62(self):
+        # _loop0_62: (',' kvpair)
         mark = self.mark()
         children = []
         cut = False
         while (
-            (_tmp_36 := self._tmp_36())
+            (_tmp_102 := self._tmp_102())
         ):
-            children.append([_tmp_36])
+            children.append([_tmp_102])
             mark = self.mark()
         self.reset(mark)
         if cut: return None
         return children
 
     @memoize
-    def _tmp_24(self):
-        # _tmp_24: ';' small_stmt
+    def _loop1_63(self):
+        # _loop1_63: ('for' star_targets 'in' expression (('if' expression))*)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_103 := self._tmp_103())
+        ):
+            children.append([_tmp_103])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_64(self):
+        # _tmp_64: ',' args
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (args := self.args())
+        ):
+            return [literal, args]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_65(self):
+        # _loop0_65: (',' kwarg)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_104 := self._tmp_104())
+        ):
+            children.append([_tmp_104])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_66(self):
+        # _loop0_66: (',' star_target)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_105 := self._tmp_105())
+        ):
+            children.append([_tmp_105])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_67(self):
+        # _loop0_67: t_tail
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (t_tail := self.t_tail())
+        ):
+            children.append([t_tail])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_68(self):
+        # _loop0_68: (',' target)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_106 := self._tmp_106())
+        ):
+            children.append([_tmp_106])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_69(self):
+        # _loop0_69: t_tail
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (t_tail := self.t_tail())
+        ):
+            children.append([t_tail])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop0_70(self):
+        # _loop0_70: call_tail
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (call_tail := self.call_tail())
+        ):
+            children.append([call_tail])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_71(self):
+        # _tmp_71: attr_tail | index_tail
+        mark = self.mark()
+        cut = False
+        if (
+            (attr_tail := self.attr_tail())
+        ):
+            return [attr_tail]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (index_tail := self.index_tail())
+        ):
+            return [index_tail]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_72(self):
+        # _tmp_72: ';' small_stmt
         mark = self.mark()
         cut = False
         if (
@@ -1326,8 +3348,224 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_25(self):
-        # _tmp_25: '@' factor NEWLINE
+    def _tmp_73(self):
+        # _tmp_73: star_targets '='
+        mark = self.mark()
+        cut = False
+        if (
+            (star_targets := self.star_targets())
+            and
+            (literal := self.expect('='))
+        ):
+            return [star_targets, literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_74(self):
+        # _tmp_74: ',' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_75(self):
+        # _tmp_75: ',' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_76(self):
+        # _loop0_76: ('.' | '...')
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_107 := self._tmp_107())
+        ):
+            children.append([_tmp_107])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _loop1_77(self):
+        # _loop1_77: ('.' | '...')
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_108 := self._tmp_108())
+        ):
+            children.append([_tmp_108])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_78(self):
+        # _tmp_78: ',' import_as_name
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (import_as_name := self.import_as_name())
+        ):
+            return [literal, import_as_name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_79(self):
+        # _tmp_79: ',' dotted_as_name
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (dotted_as_name := self.dotted_as_name())
+        ):
+            return [literal, dotted_as_name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_80(self):
+        # _tmp_80: '.' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('.'))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_81(self):
+        # _tmp_81: 'as' target
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('as'))
+            and
+            (target := self.target())
+        ):
+            return [literal, target]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_82(self):
+        # _tmp_82: 'from' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('from'))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_83(self):
+        # _tmp_83: ',' plain_name '=' expression?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (plain_name := self.plain_name())
+            and
+            (opt := self._tmp_109(),)
+        ):
+            return [literal, plain_name, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_84(self):
+        # _tmp_84: ',' plain_name '=' expression?
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (plain_name := self.plain_name())
+            and
+            (opt := self._tmp_110(),)
+        ):
+            return [literal, plain_name, opt]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_85(self):
+        # _tmp_85: ',' name_with_default
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (name_with_default := self.name_with_default())
+        ):
+            return [literal, name_with_default]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_86(self):
+        # _tmp_86: ',' plain_name !'='
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (plain_name := self.plain_name())
+            and
+            self.negative_lookahead(self.expect, '=')
+        ):
+            return [literal, plain_name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_87(self):
+        # _tmp_87: '@' factor NEWLINE
         mark = self.mark()
         cut = False
         if (
@@ -1343,8 +3581,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_26(self):
-        # _tmp_26: ',' full_expression
+    def _tmp_88(self):
+        # _tmp_88: ',' full_expression
         mark = self.mark()
         cut = False
         if (
@@ -1358,83 +3596,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_27(self):
-        # _tmp_27: 'or' conjunction
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect('or'))
-            and
-            (conjunction := self.conjunction())
-        ):
-            return [literal, conjunction]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_28(self):
-        # _tmp_28: 'and' comparison
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect('and'))
-            and
-            (comparison := self.comparison())
-        ):
-            return [literal, comparison]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_29(self):
-        # _tmp_29: compare_op bitwise_or
-        mark = self.mark()
-        cut = False
-        if (
-            (compare_op := self.compare_op())
-            and
-            (bitwise_or := self.bitwise_or())
-        ):
-            return [compare_op, bitwise_or]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_30(self):
-        # _tmp_30: '|' bitwise_and
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect('|'))
-            and
-            (bitwise_and := self.bitwise_and())
-        ):
-            return [literal, bitwise_and]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_31(self):
-        # _tmp_31: '&' expression
-        mark = self.mark()
-        cut = False
-        if (
-            (literal := self.expect('&'))
-            and
-            (expression := self.expression())
-        ):
-            return [literal, expression]
-        self.reset(mark)
-        if cut: return None
-        return None
-
-    @memoize
-    def _tmp_32(self):
-        # _tmp_32: ',' expression
+    def _tmp_89(self):
+        # _tmp_89: ',' expression
         mark = self.mark()
         cut = False
         if (
@@ -1448,8 +3611,128 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_33(self):
-        # _tmp_33: '+' term | '-' term
+    def _tmp_90(self):
+        # _tmp_90: ',' NAME
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (name := self.name())
+        ):
+            return [literal, name]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_91(self):
+        # _tmp_91: 'or' conjunction
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('or'))
+            and
+            (conjunction := self.conjunction())
+        ):
+            return [literal, conjunction]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_92(self):
+        # _tmp_92: 'and' comparison
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('and'))
+            and
+            (comparison := self.comparison())
+        ):
+            return [literal, comparison]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_93(self):
+        # _tmp_93: compare_op bitwise_or
+        mark = self.mark()
+        cut = False
+        if (
+            (compare_op := self.compare_op())
+            and
+            (bitwise_or := self.bitwise_or())
+        ):
+            return [compare_op, bitwise_or]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_94(self):
+        # _tmp_94: '|' bitwise_xor
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('|'))
+            and
+            (bitwise_xor := self.bitwise_xor())
+        ):
+            return [literal, bitwise_xor]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_95(self):
+        # _tmp_95: '^' bitwise_and
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('^'))
+            and
+            (bitwise_and := self.bitwise_and())
+        ):
+            return [literal, bitwise_and]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_96(self):
+        # _tmp_96: '&' shift_expr
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('&'))
+            and
+            (shift_expr := self.shift_expr())
+        ):
+            return [literal, shift_expr]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_97(self):
+        # _tmp_97: ('<<' | '>>') sum
+        mark = self.mark()
+        cut = False
+        if (
+            (_tmp_111 := self._tmp_111())
+            and
+            (sum := self.sum())
+        ):
+            return [_tmp_111, sum]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_98(self):
+        # _tmp_98: '+' term | '-' term
         mark = self.mark()
         cut = False
         if (
@@ -1472,8 +3755,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_34(self):
-        # _tmp_34: '*' factor | '/' factor
+    def _tmp_99(self):
+        # _tmp_99: '*' factor | '/' factor | '//' factor | '%' factor | '@' factor
         mark = self.mark()
         cut = False
         if (
@@ -1493,11 +3776,38 @@ class GeneratedParser(Parser):
             return [literal, factor]
         self.reset(mark)
         if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('//'))
+            and
+            (factor := self.factor())
+        ):
+            return [literal, factor]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('%'))
+            and
+            (factor := self.factor())
+        ):
+            return [literal, factor]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('@'))
+            and
+            (factor := self.factor())
+        ):
+            return [literal, factor]
+        self.reset(mark)
+        if cut: return None
         return None
 
     @memoize
-    def _tmp_35(self):
-        # _tmp_35: '.' NAME | '[' expression ']' | '(' arguments ','?? ')'
+    def _tmp_100(self):
+        # _tmp_100: '.' NAME | '[' slices ']' | '(' arguments? ')'
         mark = self.mark()
         cut = False
         if (
@@ -1512,18 +3822,18 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('['))
             and
-            (expression := self.expression())
+            (slices := self.slices())
             and
             (literal_1 := self.expect(']'))
         ):
-            return [literal, expression, literal_1]
+            return [literal, slices, literal_1]
         self.reset(mark)
         if cut: return None
         cut = False
         if (
             (literal := self.expect('('))
             and
-            (opt := self._tmp_37(),)
+            (opt := self.arguments(),)
             and
             (literal_1 := self.expect(')'))
         ):
@@ -1533,8 +3843,59 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_36(self):
-        # _tmp_36: ',' kwarg
+    def _tmp_101(self):
+        # _tmp_101: ',' slice
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (slice := self.slice())
+        ):
+            return [literal, slice]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_102(self):
+        # _tmp_102: ',' kvpair
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (kvpair := self.kvpair())
+        ):
+            return [literal, kvpair]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_103(self):
+        # _tmp_103: 'for' star_targets 'in' expression (('if' expression))*
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('for'))
+            and
+            (star_targets := self.star_targets())
+            and
+            (literal_1 := self.expect('in'))
+            and
+            (expression := self.expression())
+            and
+            (_loop0_112 := self._loop0_112(),)
+        ):
+            return [literal, star_targets, literal_1, expression, _loop0_112]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_104(self):
+        # _tmp_104: ',' kwarg
         mark = self.mark()
         cut = False
         if (
@@ -1548,16 +3909,151 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def _tmp_37(self):
-        # _tmp_37: arguments ','?
+    def _tmp_105(self):
+        # _tmp_105: ',' star_target
         mark = self.mark()
         cut = False
         if (
-            (arguments := self.arguments())
+            (literal := self.expect(','))
             and
-            (opt := self.expect(','),)
+            (star_target := self.star_target())
         ):
-            return [arguments, opt]
+            return [literal, star_target]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_106(self):
+        # _tmp_106: ',' target
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect(','))
+            and
+            (target := self.target())
+        ):
+            return [literal, target]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_107(self):
+        # _tmp_107: '.' | '...'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('.'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('...'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_108(self):
+        # _tmp_108: '.' | '...'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('.'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('...'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_109(self):
+        # _tmp_109: '=' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('='))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_110(self):
+        # _tmp_110: '=' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('='))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _tmp_111(self):
+        # _tmp_111: '<<' | '>>'
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('<<'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect('>>'))
+        ):
+            return [literal]
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def _loop0_112(self):
+        # _loop0_112: ('if' expression)
+        mark = self.mark()
+        children = []
+        cut = False
+        while (
+            (_tmp_113 := self._tmp_113())
+        ):
+            children.append([_tmp_113])
+            mark = self.mark()
+        self.reset(mark)
+        if cut: return None
+        return children
+
+    @memoize
+    def _tmp_113(self):
+        # _tmp_113: 'if' expression
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect('if'))
+            and
+            (expression := self.expression())
+        ):
+            return [literal, expression]
         self.reset(mark)
         if cut: return None
         return None
