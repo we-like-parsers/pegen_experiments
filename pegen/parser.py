@@ -33,21 +33,22 @@ def memoize(method: F) -> F:
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
+        argsr = ",".join(repr(arg) for arg in args)
         fill = '  ' * self._level
         if key not in self._cache:
             if verbose:
-                print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
+                print(f"{fill}{method_name}({argsr}) ... (looking at {self.showpeek()})")
             self._level += 1
             tree = method(self, *args)
             self._level -= 1
             if verbose:
-                print(f"{fill}... {method_name} -> {tree!s:.100}")
+                print(f"{fill}... {method_name}({argsr}) -> {tree!s:.200}")
             endmark = self.mark()
             self._cache[key] = tree, endmark
         else:
             tree, endmark = self._cache[key]
             if verbose:
-                print(f"{fill}{method_name} -> {tree!s:.100}")
+                print(f"{fill}{method_name}({argsr}) -> {tree!s:.200}")
             self.reset(endmark)
         return tree
 
@@ -96,14 +97,14 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
                 endmark = self.mark()
                 depth += 1
                 if verbose:
-                    print(f"{fill}Recursive {method_name} at {mark} depth {depth}: {result!s:.100} to {endmark}")
+                    print(f"{fill}Recursive {method_name} at {mark} depth {depth}: {result!s:.200} to {endmark}")
                 if not result:
                     if verbose:
-                        print(f"{fill}Fail with {lastresult!s:.100} to {lastmark}")
+                        print(f"{fill}Fail with {lastresult!s:.200} to {lastmark}")
                     break
                 if endmark <= lastmark:
                     if verbose:
-                        print(f"{fill}Bailing with {lastresult!s:.100} to {lastmark}")
+                        print(f"{fill}Bailing with {lastresult!s:.200} to {lastmark}")
                     break
                 self._cache[key] = lastresult, lastmark = result, endmark
 
@@ -112,7 +113,7 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
 
             self._level -= 1
             if verbose:
-                print(f"{fill}{method_name} -> {tree!s:.100}")
+                print(f"{fill}{method_name}() -> {tree!s:.200} [cached]")
             if tree:
                 endmark = self.mark()
             else:
@@ -122,7 +123,7 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
         else:
             tree, endmark = self._cache[key]
             if verbose:
-                print(f"{fill}{method_name} -> {tree!s:.100}")
+                print(f"{fill}{method_name}() -> {tree!s:.200} [fresh]")
             if tree:
                 self.reset(endmark)
         return tree
