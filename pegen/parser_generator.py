@@ -30,7 +30,9 @@ class ParserGenerator:
     def __init__(self, rules: Dict[str, Rule], file: Optional[IO[Text]]):
         if "start" not in rules:
             raise GrammarError("Grammar must have a 'start' rule")
-        RuleCheckingVisitor(rules).visit(rules["start"])
+        checker = RuleCheckingVisitor(rules)
+        for rule in rules.values():
+            checker.visit(rule)
         self.rules = rules
         self.file = file
         self.level = 0

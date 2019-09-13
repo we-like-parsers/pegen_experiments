@@ -357,7 +357,7 @@ def test_cut():
 
 def test_dangling_reference():
     grammar = """
-    start: foo bar ENDMARKER
+    start: foo ENDMARKER
     foo: bar NAME
     """
     with pytest.raises(GrammarError):
@@ -366,8 +366,8 @@ def test_dangling_reference():
 
 def test_bad_token_reference():
     grammar = """
-    start: foo ENDMARKE
-    foo: NAME
+    start: foo
+    foo: NAMEE
     """
     with pytest.raises(GrammarError):
         parser_class = make_parser(grammar)
