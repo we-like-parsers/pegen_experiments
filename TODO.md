@@ -10,10 +10,10 @@ Grammar features:
 
 Refactoring:
 
-- [ ] Change code generators to use visitor pattern
+- [x] Change code generators to use visitor pattern
 - [x] Split up into multiple modules
-- [ ] Less dependence on Python tokenizer
-- [ ] Code cleanup
+- [ ] Less dependence on Python tokenizer (not a priority, actually)
+- [ ] Code cleanup (always under construction)
 - [ ] Respond to Nam's code review
 
 Python code generator:
@@ -26,20 +26,20 @@ Python code generator:
 C Code generator:
 
 - [x] actually return a result from parse() (an ast.AST)
-- [ ] tests
+- [ ] more tests
 - [ ] verbose debug output (selected when generating)
 - [x] optional
 - [x] groups
 - [x] repetitions
-- [ ] lookaheads
-- [ ] cut operator
+- [x] lookaheads
+- [x] cut operator
 - [x] left recursion
 - [ ] reserved words
 - [ ] option to return a code object instead of an AST
 - [ ] Avoid name conflicts between variable names and internal vars (e.g. mark, p)
-- [ ] Python grammar development
-- [ ] Test against a large amount of real Python code
-- [ ] Better SyntaxError report
+- [x] Python grammar development
+- [x] Test against a large amount of real Python code
+- [ ] Improve SyntaxError report (stop putting line/col in message)
 - [ ] String kinds, quotes and backslash escapes
 - [ ] Store context for NAME tokens
 - [ ] Use some syntax like '@prefix <string>' to put prefix in the .gram file instead of hardcoding
