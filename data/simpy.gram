@@ -82,12 +82,13 @@ class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
 block: simple_stmt | NEWLINE INDENT statements DEDENT
 
-full_expressions: ('*' bitwise_or | full_expression) (',' ('*' bitwise_or | full_expression))* [',']
+star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
 expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
 
+star_full_expression: '*' bitwise_or | full_expression
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
-expression: lambdef | disjunction ['if' disjunction 'else' disjunction]
+expression: lambdef | disjunction ['if' disjunction 'else' expression]
 lambdef: 'lambda' [lambda_parameters] ':' expression
 
 lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
@@ -125,9 +126,9 @@ primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
 atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING+ | NUMBER | '...'
-list: '[' [full_expressions] ']'
+list: '[' [star_full_expressions] ']'
 listcomp: '[' full_expression for_if_clauses ']'
-tuple: '(' [full_expression ',' [full_expressions]] ')'
+tuple: '(' [star_full_expression ',' [star_full_expressions]] ')'
 group: '(' (yield_expr | full_expression) ')'
 genexp: '(' expression for_if_clauses ')'
 set: '{' expressions '}'
@@ -150,7 +151,7 @@ kwarg: NAME '=' expression | '*' expression | '**' expression
 # NOTE: the !'in' is to handle "for x, in ...".
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets: star_target (',' !'in' star_target)* [',']
-star_target: '*' NAME | atom t_tail+ | star_atom t_tail*
+star_target: '*' bitwise_or | atom t_tail+ | star_atom t_tail*
 star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets: target (',' target)* [',']
