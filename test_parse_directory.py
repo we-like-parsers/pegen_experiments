@@ -42,10 +42,15 @@ def report_status(succeeded, file, verbose, error=None, short=False):
         COLOR = FAIL
 
     if short:
-        if isinstance(error, SyntaxError) and error.lineno is not None:
-            print(f"{file}:{error.lineno}: error: {error}")
+        lineno = 0
+        offset = 0
+        if isinstance(error, SyntaxError):
+            lineno = error.lineno or 1
+            offset = error.offset or 1
+            message = error.args[0]
         else:
-            print(f"{file}:0: error: {error}")
+            message = f"{error.__class__.__name__}: {error}"
+        print(f"{file}:{lineno}:{offset}: {message}")
     else:
         print(f"{COLOR}{file:60} {status}{ENDC}")
 
