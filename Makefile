@@ -35,6 +35,9 @@ time_stdlib:
 simpy:
 	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
 
+mypy:
+	mypy pegen
+
 tags: TAGS
 
 TAGS: pegen/*.py test/test_pegen.py
