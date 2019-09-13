@@ -128,7 +128,7 @@ def main():
             except Exception as error:
                 report_status(
                     succeeded=False,
-                    file=file_path,
+                    file=file,
                     verbose=verbose,
                     error=error,
                     short=args.short,
