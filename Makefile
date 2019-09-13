@@ -38,6 +38,9 @@ simpy:
 mypy:
 	mypy pegen
 
+black:
+	black pegen tatsu test test*.py scripts
+
 tags: TAGS
 
 TAGS: pegen/*.py test/test_pegen.py

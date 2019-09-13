@@ -35,7 +35,7 @@ class UnknownBuffer(Buffer):
         eol_comments_re=None,
         ignorecase=None,
         namechars="",
-        **kwargs
+        **kwargs,
     ):
         super(UnknownBuffer, self).__init__(
             text,
@@ -45,7 +45,7 @@ class UnknownBuffer(Buffer):
             eol_comments_re=eol_comments_re,
             ignorecase=ignorecase,
             namechars=namechars,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -62,7 +62,7 @@ class UnknownParser(Parser):
         keywords=None,
         namechars="",
         buffer_class=UnknownBuffer,
-        **kwargs
+        **kwargs,
     ):
         if keywords is None:
             keywords = KEYWORDS
@@ -77,7 +77,7 @@ class UnknownParser(Parser):
             keywords=keywords,
             namechars=namechars,
             buffer_class=buffer_class,
-            **kwargs
+            **kwargs,
         )
 
     @tatsumasu()

@@ -20,12 +20,7 @@ from pathlib import Path
 
 from pegen.grammar import GrammarParser
 from pegen.build import build_parser
-from pegen.testutil import (
-    generate_parser,
-    generate_parser_c_extension,
-    make_parser,
-    parse_string,
-)
+from pegen.testutil import generate_parser, generate_parser_c_extension, make_parser, parse_string
 
 GRAMMAR_FILE = "data/simpy.gram"
 INITIAL_NESTING_DEPTH = 10
@@ -55,9 +50,7 @@ def check_nested_expr(nesting_depth, parser, language):
 
 
 def main():
-    print(
-        f"Testing {GRAMMAR_FILE} starting at nesting depth of {INITIAL_NESTING_DEPTH}..."
-    )
+    print(f"Testing {GRAMMAR_FILE} starting at nesting depth of {INITIAL_NESTING_DEPTH}...")
 
     with TemporaryDirectory() as tmp_dir:
         nesting_depth = INITIAL_NESTING_DEPTH
@@ -74,9 +67,7 @@ def main():
             if c_succeeded:
                 c_succeeded = check_nested_expr(nesting_depth, c_parser, "C")
             if python_succeeded:
-                python_succeeded = check_nested_expr(
-                    nesting_depth, python_parser, "Python"
-                )
+                python_succeeded = check_nested_expr(nesting_depth, python_parser, "Python")
 
             nesting_depth += NESTED_INCR_AMT
 
