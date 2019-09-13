@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import traceback
+from pathlib import PurePath
 
 from pegen.build import build_parser_and_generator
 
@@ -20,10 +21,17 @@ argparser.add_argument(
 )
 argparser.add_argument("-g", "--grammar-file", help="Grammar file path")
 argparser.add_argument(
+    "-e",
+    "--exclude",
+    action="append",
+    default=[],
+    help="Glob(s) for matching files to exclude",
+)
+argparser.add_argument(
     "-s",
     "--short",
     action="store_true",
-    help="Only show errors, in a more Emacs-friendly format"
+    help="Only show errors, in a more Emacs-friendly format",
 )
 argparser.add_argument(
     "-v",
@@ -62,6 +70,7 @@ def main():
     directory = args.directory
     grammar_file = args.grammar_file
     verbose = args.verbose
+    excluded_files = args.exclude
 
     if not directory:
         print("You must specify a directory of files to test.", file=sys.stderr)
@@ -69,7 +78,10 @@ def main():
 
     if grammar_file:
         if not os.path.exists(grammar_file):
-            print(f"The specified grammar file, {grammar_file}, does not exist.", file=sys.stderr)
+            print(
+                f"The specified grammar file, {grammar_file}, does not exist.",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         try:
@@ -100,11 +112,19 @@ def main():
     errors = 0
     for root, dirs, files in os.walk(directory):
         for file in files:
-            # Only attempt to parse Python files
-            if not file.endswith(".py"):
-                continue
-
             file_path = os.path.join(root, file)
+
+            should_exclude_file = any(
+                [
+                    True
+                    for pattern in excluded_files
+                    if PurePath(file_path).match(pattern)
+                ]
+            )
+
+            # Only attempt to parse Python files and files that are not excluded
+            if not PurePath(file_path).match("*.py") or should_exclude_file:
+                continue
 
             try:
                 parse.parse_file(file_path)
@@ -112,8 +132,11 @@ def main():
                     report_status(succeeded=True, file=file_path, verbose=verbose)
             except Exception as error:
                 report_status(
-                    succeeded=False, file=file_path, verbose=verbose, error=error,
-                    short=args.short
+                    succeeded=False,
+                    file=file_path,
+                    verbose=verbose,
+                    error=error,
+                    short=args.short,
                 )
                 errors += 1
 
