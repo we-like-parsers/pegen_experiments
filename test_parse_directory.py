@@ -111,7 +111,7 @@ def main():
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
     errors = 0
-    for file in sorted(glob(f"{directory}/**/*.py")):
+    for file in sorted(glob(f"{directory}/**/*.py", recursive=True)):
         # Only attempt to parse Python files and files that are not excluded
         should_exclude_file = False
         for pattern in excluded_files:
