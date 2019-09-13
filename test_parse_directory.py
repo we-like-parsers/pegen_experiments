@@ -112,17 +112,16 @@ def main():
     # - Output success/failure for each file
     errors = 0
     for file in sorted(glob(f"{directory}/**/*.py")):
-        file_path = os.path.join(os.getcwd(), file)
-
         # Only attempt to parse Python files and files that are not excluded
         should_exclude_file = False
         for pattern in excluded_files:
-            if PurePath(file_path).match(pattern):
+            if PurePath(file).match(pattern):
                 should_exclude_file = True
                 break
+
         if not should_exclude_file:
             try:
-                parse.parse_file(file_path)
+                parse.parse_file(file)
                 if not args.short:
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
