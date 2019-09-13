@@ -17,29 +17,16 @@ argparser = argparse.ArgumentParser(
     prog="test_parse_directory",
     description="Helper program to test directories or files for pegen",
 )
-argparser.add_argument(
-    "-d", "--directory", help="Directory path containing files to test"
-)
+argparser.add_argument("-d", "--directory", help="Directory path containing files to test")
 argparser.add_argument("-g", "--grammar-file", help="Grammar file path")
 argparser.add_argument(
-    "-e",
-    "--exclude",
-    action="append",
-    default=[],
-    help="Glob(s) for matching files to exclude",
+    "-e", "--exclude", action="append", default=[], help="Glob(s) for matching files to exclude"
 )
 argparser.add_argument(
-    "-s",
-    "--short",
-    action="store_true",
-    help="Only show errors, in a more Emacs-friendly format",
+    "-s", "--short", action="store_true", help="Only show errors, in a more Emacs-friendly format"
 )
 argparser.add_argument(
-    "-v",
-    "--verbose",
-    action="store_true",
-    default=0,
-    help="Display detailed errors for failures",
+    "-v", "--verbose", action="store_true", default=0, help="Display detailed errors for failures"
 )
 
 
@@ -79,10 +66,7 @@ def main():
 
     if grammar_file:
         if not os.path.exists(grammar_file):
-            print(
-                f"The specified grammar file, {grammar_file}, does not exist.",
-                file=sys.stderr,
-            )
+            print(f"The specified grammar file, {grammar_file}, does not exist.", file=sys.stderr)
             sys.exit(1)
 
         try:
@@ -126,11 +110,7 @@ def main():
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
                 report_status(
-                    succeeded=False,
-                    file=file,
-                    verbose=verbose,
-                    error=error,
-                    short=args.short,
+                    succeeded=False, file=file, verbose=verbose, error=error, short=args.short
                 )
                 errors += 1
 

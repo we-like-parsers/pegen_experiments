@@ -8,7 +8,7 @@ Mark = int  # NewType('Mark', int)
 
 # Hack: extra token to represent '{ ... }'
 CURLY_STUFF = token.N_TOKENS + 1
-token.tok_name[CURLY_STUFF] = 'CURLY_STUFF'
+token.tok_name[CURLY_STUFF] = "CURLY_STUFF"
 
 exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
 
@@ -80,11 +80,11 @@ class Tokenizer:
 
     def report(self, cached, back):
         if back:
-            fill = '-' * self._index + '-'
+            fill = "-" * self._index + "-"
         elif cached:
-            fill = '-' * self._index + '>'
+            fill = "-" * self._index + ">"
         else:
-            fill = '-' * self._index + '*'
+            fill = "-" * self._index + "*"
         if self._index == 0:
             print(f"{fill} (Bof)")
         else:
@@ -94,15 +94,15 @@ class Tokenizer:
 
 def grammar_tokenizer(token_generator):
     for tok in token_generator:
-        if tok.string == '{':
+        if tok.string == "{":
             start = tok.start
             nest = 1
-            accumulated = ['{']
+            accumulated = ["{"]
             for tok in token_generator:
                 accumulated.append(tok.string)
-                if tok.string == '{':
+                if tok.string == "{":
                     nest += 1
-                elif tok.string == '}':
+                elif tok.string == "}":
                     nest -= 1
                     if nest == 0:
                         end = tok.end

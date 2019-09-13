@@ -2,8 +2,10 @@
 
 from typing import *
 
-def strongly_connected_components(vertices: AbstractSet[str],
-                                  edges: Dict[str, AbstractSet[str]]) -> Iterator[AbstractSet[str]]:
+
+def strongly_connected_components(
+    vertices: AbstractSet[str], edges: Dict[str, AbstractSet[str]]
+) -> Iterator[AbstractSet[str]]:
     """Compute Strongly Connected Components of a directed graph.
 
     Args:
@@ -37,8 +39,8 @@ def strongly_connected_components(vertices: AbstractSet[str],
 
         if boundaries[-1] == index[v]:
             boundaries.pop()
-            scc = set(stack[index[v]:])
-            del stack[index[v]:]
+            scc = set(stack[index[v] :])
+            del stack[index[v] :]
             identified.update(scc)
             yield scc
 
@@ -47,8 +49,9 @@ def strongly_connected_components(vertices: AbstractSet[str],
             yield from dfs(v)
 
 
-def topsort(data: Dict[AbstractSet[str],
-                       Set[AbstractSet[str]]]) -> Iterable[AbstractSet[AbstractSet[str]]]:
+def topsort(
+    data: Dict[AbstractSet[str], Set[AbstractSet[str]]]
+) -> Iterable[AbstractSet[AbstractSet[str]]]:
     """Topological sort.
 
     Args:
@@ -90,13 +93,13 @@ def topsort(data: Dict[AbstractSet[str],
         if not ready:
             break
         yield ready
-        data = {item: (dep - ready)
-                for item, dep in data.items()
-                if item not in ready}
+        data = {item: (dep - ready) for item, dep in data.items() if item not in ready}
     assert not data, "A cyclic dependency exists amongst %r" % data
 
 
-def find_cycles_in_scc(graph: Dict[str, AbstractSet[str]], scc: AbstractSet[str], start: str) -> Iterable[List[str]]:
+def find_cycles_in_scc(
+    graph: Dict[str, AbstractSet[str]], scc: AbstractSet[str], start: str
+) -> Iterable[List[str]]:
     """Find cycles in SCC emanating from start.
 
     Yields lists of the form ['A', 'B', 'C', 'A'], which means there's
@@ -110,8 +113,7 @@ def find_cycles_in_scc(graph: Dict[str, AbstractSet[str]], scc: AbstractSet[str]
     assert scc <= graph.keys(), scc - graph.keys()
 
     # Reduce the graph to nodes in the SCC.
-    graph = {src: {dst for dst in dsts if dst in scc}
-             for src, dsts in graph.items() if src in scc}
+    graph = {src: {dst for dst in dsts if dst in scc} for src, dsts in graph.items() if src in scc}
     assert start in graph
 
     # Recursive helper that yields cycles.

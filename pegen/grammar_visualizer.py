@@ -3,8 +3,10 @@ import sys
 
 from pegen.build import build_parser
 
-argparser = argparse.ArgumentParser(prog='pegen', description="Pretty print the AST for a given PEG grammar")
-argparser.add_argument('filename', help="Grammar description")
+argparser = argparse.ArgumentParser(
+    prog="pegen", description="Pretty print the AST for a given PEG grammar"
+)
+argparser.add_argument("filename", help="Grammar description")
 
 
 class ASTGrammarPrinter:

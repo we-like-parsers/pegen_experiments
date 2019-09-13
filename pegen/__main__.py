@@ -28,34 +28,51 @@ def print_memstats() -> bool:
     process = psutil.Process()
     meminfo = process.memory_info()
     res = {}
-    res['rss'] = meminfo.rss / MiB
-    res['vms'] = meminfo.vms / MiB
-    if sys.platform == 'win32':
-        res['maxrss'] = meminfo.peak_wset / MiB
+    res["rss"] = meminfo.rss / MiB
+    res["vms"] = meminfo.vms / MiB
+    if sys.platform == "win32":
+        res["maxrss"] = meminfo.peak_wset / MiB
     else:
         # See https://stackoverflow.com/questions/938733/total-memory-used-by-python-process
         import resource  # Since it doesn't exist on Windows.
+
         rusage = resource.getrusage(resource.RUSAGE_SELF)
-        if sys.platform == 'darwin':
+        if sys.platform == "darwin":
             factor = 1
         else:
             factor = 1024  # Linux
-        res['maxrss'] = rusage.ru_maxrss * factor / MiB
+        res["maxrss"] = rusage.ru_maxrss * factor / MiB
     for key, value in res.items():
         print(f"  {key:12.12s}: {value:10.0f} MiB")
     return True
 
 
-
-argparser = argparse.ArgumentParser(prog='pegen', description="Experimental PEG-like parser generator")
-argparser.add_argument('-q', '--quiet', action='store_true', help="Don't print the parsed grammar")
-argparser.add_argument('-v', '--verbose', action='count', default=0,
-                       help="Print timing stats; repeat for more debug output")
-argparser.add_argument('-c', '--cpython', action='store_true', help="Generate C code for inclusion into CPython")
-argparser.add_argument('--compile-extension', action='store_true', help="Compile generated C code into an extension module")
-argparser.add_argument('-o', '--output', metavar='OUT',
-                       help="Where to write the generated parser (default parse.py or parse.c)")
-argparser.add_argument('filename', help="Grammar description")
+argparser = argparse.ArgumentParser(
+    prog="pegen", description="Experimental PEG-like parser generator"
+)
+argparser.add_argument("-q", "--quiet", action="store_true", help="Don't print the parsed grammar")
+argparser.add_argument(
+    "-v",
+    "--verbose",
+    action="count",
+    default=0,
+    help="Print timing stats; repeat for more debug output",
+)
+argparser.add_argument(
+    "-c", "--cpython", action="store_true", help="Generate C code for inclusion into CPython"
+)
+argparser.add_argument(
+    "--compile-extension",
+    action="store_true",
+    help="Compile generated C code into an extension module",
+)
+argparser.add_argument(
+    "-o",
+    "--output",
+    metavar="OUT",
+    help="Where to write the generated parser (default parse.py or parse.c)",
+)
+argparser.add_argument("filename", help="Grammar description")
 
 
 def main() -> None:
@@ -104,8 +121,10 @@ def main() -> None:
         for scc in gen.first_sccs:
             print(" ", scc, end="")
             if len(scc) > 1:
-                print("  # Indirectly left-recursive; leaders:",
-                      {name for name in scc if rules.rules[name].leader})
+                print(
+                    "  # Indirectly left-recursive; leaders:",
+                    {name for name in scc if rules.rules[name].leader},
+                )
             else:
                 name = next(iter(scc))
                 if name in gen.first_graph[name]:
@@ -133,5 +152,5 @@ def main() -> None:
             print("(Can't find psutil; install it for memory stats.)")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

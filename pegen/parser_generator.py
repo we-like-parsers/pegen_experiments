@@ -11,14 +11,15 @@ from pegen.grammar import GrammarError, GrammarVisitor
 
 
 class RuleCheckingVisitor(GrammarVisitor):
-
     def __init__(self, rules: Dict[str, Rule]):
         self.rules = rules
 
     def visit_NameLeaf(self, node: NameLeaf):
-        if (node.value not in self.rules
+        if (
+            node.value not in self.rules
             and node.value not in token.tok_name.values()
-            and node.value != "CUT"):
+            and node.value != "CUT"
+        ):
             # TODO: Add line/col info to (leaf) nodes
             raise GrammarError(f"Dangling reference to rule {node.value!r}")
 
@@ -77,17 +78,17 @@ class ParserGenerator:
 
     def name_node(self, rhs: Rhs) -> str:
         self.counter += 1
-        name = f'_tmp_{self.counter}'  # TODO: Pick a nicer name.
+        name = f"_tmp_{self.counter}"  # TODO: Pick a nicer name.
         self.todo[name] = Rule(name, None, rhs)
         return name
 
     def name_loop(self, node: Plain, is_repeat1: bool) -> str:
         self.counter += 1
         if is_repeat1:
-            prefix = '_loop1_'
+            prefix = "_loop1_"
         else:
-            prefix = '_loop0_'
-        name = f'{prefix}{self.counter}'  # TODO: It's ugly to signal via the name.
+            prefix = "_loop0_"
+        name = f"{prefix}{self.counter}"  # TODO: It's ugly to signal via the name.
         self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
@@ -111,7 +112,9 @@ def compute_nullables(rules: Dict[str, Rule]) -> None:
         rule.nullable_visit(rules)
 
 
-def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, AbstractSet[str]], List[AbstractSet[str]]]:
+def compute_left_recursives(
+    rules: Dict[str, Rule]
+) -> Tuple[Dict[str, AbstractSet[str]], List[AbstractSet[str]]]:
     graph = make_first_graph(rules)
     sccs = list(sccutils.strongly_connected_components(graph.keys(), graph))
     for scc in sccs:
@@ -123,10 +126,11 @@ def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, AbstractS
             for start in scc:
                 for cycle in sccutils.find_cycles_in_scc(graph, scc, start):
                     ## print("Cycle:", " -> ".join(cycle))
-                    leaders -= (scc - set(cycle))
+                    leaders -= scc - set(cycle)
                     if not leaders:
                         raise ValueError(
-                            f"SCC {scc} has no leadership candidate (no element is included in all cycles)")
+                            f"SCC {scc} has no leadership candidate (no element is included in all cycles)"
+                        )
             ## print("Leaders:", leaders)
             leader = min(leaders)  # Pick an arbitrary leader from the candidates.
             rules[leader].leader = True

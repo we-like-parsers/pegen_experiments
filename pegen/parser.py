@@ -14,9 +14,9 @@ from pegen.tokenizer import grammar_tokenizer
 from pegen.tokenizer import Mark
 from pegen.tokenizer import Tokenizer
 
-T = TypeVar('T')
-P = TypeVar('P', bound='Parser')
-F = TypeVar('F', bound=Callable[..., Any])
+T = TypeVar("T")
+P = TypeVar("P", bound="Parser")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def logger(method: F) -> F:
@@ -30,7 +30,7 @@ def logger(method: F) -> F:
         if not self._verbose:
             return method(self, *args)
         argsr = ",".join(repr(arg) for arg in args)
-        fill = '  ' * self._level
+        fill = "  " * self._level
         print(f"{fill}{method_name}({argsr}) .... (looking at {self.showpeek()})")
         self._level += 1
         tree = method(self, *args)
@@ -57,7 +57,7 @@ def memoize(method: F) -> F:
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
         argsr = ",".join(repr(arg) for arg in args)
-        fill = '  ' * self._level
+        fill = "  " * self._level
         if key not in self._cache:
             if verbose:
                 print(f"{fill}{method_name}({argsr}) ... (looking at {self.showpeek()})")
@@ -93,7 +93,7 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
-        fill = '  ' * self._level
+        fill = "  " * self._level
         if key not in self._cache:
             if verbose:
                 print(f"{fill}{method_name} ... (looking at {self.showpeek()})")
@@ -120,7 +120,9 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
                 endmark = self.mark()
                 depth += 1
                 if verbose:
-                    print(f"{fill}Recursive {method_name} at {mark} depth {depth}: {result!s:.200} to {endmark}")
+                    print(
+                        f"{fill}Recursive {method_name} at {mark} depth {depth}: {result!s:.200} to {endmark}"
+                    )
                 if not result:
                     if verbose:
                         print(f"{fill}Fail with {lastresult!s:.200} to {lastmark}")
@@ -174,7 +176,7 @@ class Parser:
 
     def cut(self):
         if self._verbose:
-            fill = '  ' * self._level
+            fill = "  " * self._level
             print(f"{fill}CUT ... (looking at {self.showpeek()})")
         return True
 
@@ -235,18 +237,30 @@ class Parser:
 
     def make_syntax_error(self, filename="<unknown>") -> SyntaxError:
         tok = self._tokenizer.diagnose()
-        return SyntaxError("pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line))
+        return SyntaxError(
+            "pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line)
+        )
 
 
 def simple_parser_main(parser_class):
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('-v', '--verbose', action='count', default=0,
-                           help="Print timing stats; repeat for more debug output")
-    argparser.add_argument('-q', '--quiet', action='store_true',
-                           help="Don't print the parsed program")
-    argparser.add_argument('-G', '--grammar-parser', action='store_true',
-                           help="Recognize { ... } stuff; use for meta-grammar")
-    argparser.add_argument('filename', help="Input file ('-' to use stdin)")
+    argparser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Print timing stats; repeat for more debug output",
+    )
+    argparser.add_argument(
+        "-q", "--quiet", action="store_true", help="Don't print the parsed program"
+    )
+    argparser.add_argument(
+        "-G",
+        "--grammar-parser",
+        action="store_true",
+        help="Recognize { ... } stuff; use for meta-grammar",
+    )
+    argparser.add_argument("filename", help="Input file ('-' to use stdin)")
 
     args = argparser.parse_args()
     verbose = args.verbose
@@ -256,7 +270,7 @@ def simple_parser_main(parser_class):
     t0 = time.time()
 
     filename = args.filename
-    if filename == '' or filename == '-':
+    if filename == "" or filename == "-":
         filename = "<stdin>"
         file = sys.stdin
     else:
@@ -306,5 +320,3 @@ def simple_parser_main(parser_class):
         print(f"  token array : {len(tokenizer._tokens):10}")
         print(f"        cache : {len(parser._cache):10}")
         ## print_memstats()
-
-

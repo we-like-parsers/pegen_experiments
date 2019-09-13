@@ -64,29 +64,28 @@ PyInit_parse(void)
 
 
 class CCallMakerVisitor(GrammarVisitor):
-
     def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
 
     def visit_NameLeaf(self, node):
         name = node.value
-        if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
+        if name in ("NAME", "NUMBER", "STRING", "CUT", "CURLY_STUFF"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER', 'ASYNC', 'AWAIT'):
+        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
         return f"{name}_var", f"{name}_rule(p)"
 
     def visit_StringLeaf(self, node):
         val = ast.literal_eval(node.value)
-        if re.match(r'[a-zA-Z_]\w*\Z', val):
-            return 'keyword', f'keyword_token(p, "{val}")'
+        if re.match(r"[a-zA-Z_]\w*\Z", val):
+            return "keyword", f'keyword_token(p, "{val}")'
         else:
             assert val in exact_token_types, f"{node.value} is not a known literal"
             type = exact_token_types[val]
-            return 'literal', f'expect_token(p, {type})'
+            return "literal", f"expect_token(p, {type})"
 
     def visit_Rhs(self, node):
         if node in self.cache:
@@ -106,8 +105,8 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def lookahead_call_helper(self, node, positive):
         name, call = self.visit(node.node)
-        func, args = call.split('(', 1)
-        assert args[-1] == ')'
+        func, args = call.split("(", 1)
+        assert args[-1] == ")"
         args = args[:-1]
         if not args.startswith("p,"):
             return None, f"lookahead({positive}, {func}, {args})"
@@ -145,7 +144,6 @@ class CCallMakerVisitor(GrammarVisitor):
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
-
     def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
         super().__init__(rules, file)
         self.callmakervisitor = CCallMakerVisitor(self)
@@ -194,11 +192,11 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print()
         for rulename, rule in self.todo.items():
             if rule.is_loop():
-                type = 'asdl_seq *'
+                type = "asdl_seq *"
             elif rule.type:
-                type = rule.type + ' '
+                type = rule.type + " "
             else:
-                type = 'void *'
+                type = "void *"
             self.print(f"static {type}{rulename}_rule(Parser *p);")
         self.print()
         while self.todo:
@@ -206,20 +204,20 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 del self.todo[rulename]
                 self.print()
                 self.visit(rule)
-        mode = int(self.rules['start'].type == 'mod_ty')
-        self.print(EXTENSION_SUFFIX.rstrip('\n') % dict(mode=mode))
+        mode = int(self.rules["start"].type == "mod_ty")
+        self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
     def visit_Rule(self, node):
         is_loop = node.is_loop()
-        is_repeat1 = node.name.startswith('_loop1')
+        is_repeat1 = node.name.startswith("_loop1")
         memoize = not node.left_recursive
         rhs = node.flatten()
         if is_loop:
-            type = 'asdl_seq *'
+            type = "asdl_seq *"
         elif node.type:
             type = node.type
         else:
-            type = 'void *'
+            type = "void *"
 
         self.print(f"// {node}")
         if node.left_recursive and node.leader:
@@ -240,7 +238,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("while (1) {")
                 with self.indent():
                     self.call_with_errorcheck_return(
-                            f"update_memo(p, mark, {node.name}_type, res)", "res")
+                        f"update_memo(p, mark, {node.name}_type, res)", "res"
+                    )
                     self.print("p->mark = mark;")
                     self.print(f"void *raw = {node.name}_raw(p);")
                     self.print("if (raw == NULL || p->mark <= resmark)")
@@ -268,7 +267,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("int mark = p->mark;")
             if is_loop:
                 self.print("void **children = PyMem_Malloc(0);")
-                self.out_of_memory_return(f'!children', "NULL")
+                self.out_of_memory_return(f"!children", "NULL")
                 self.print("ssize_t n = 0;")
             self.visit(rhs, is_loop=is_loop, rulename=node.name if memoize else None)
             if is_loop:
@@ -279,7 +278,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                         self.print("return NULL;")
                     self.print("}")
                 self.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
-                self.out_of_memory_return(f'!seq', "NULL", message=f'asdl_seq_new {node.name}')
+                self.out_of_memory_return(f"!seq", "NULL", message=f"asdl_seq_new {node.name}")
                 self.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
                 self.print("PyMem_Free(children);")
                 if node.name:
@@ -301,7 +300,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         if not name:
             self.print(call)
         else:
-            if name != 'cut':
+            if name != "cut":
                 name = dedupe(name, names)
             self.print(f"({name} = {call})")
 
@@ -313,9 +312,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             vars.update(self.collect_vars(alt))
         for v, type in sorted(item for item in vars.items() if item[0] is not None):
             if not type:
-                type = 'void *'
+                type = "void *"
             else:
-                type += ' '
+                type += " "
             self.print(f"{type}{v};")
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, rulename=rulename)
@@ -345,13 +344,13 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 else:
                     self.print(f"res = {names[0]};")
             else:
-                assert action[0] == '{' and action[-1] == '}', repr(action)
+                assert action[0] == "{" and action[-1] == "}", repr(action)
                 action = action[1:-1].strip()
                 self.print(f"res = {action};")
                 ## self.print(f'fprintf(stderr, "Hit with action at %d: {node}, {names}, {action}\\n", p->mark);')
             if is_loop:
                 self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-                self.out_of_memory_return(f'!children', "NULL", message=f'realloc {rulename}')
+                self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
                 self.print(f"children[n++] = res;")
                 self.print("mark = p->mark;")
             else:
@@ -378,18 +377,18 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         type = None
         if not name:
             return name, type
-        if name.startswith('cut'):
-            return name, 'int'
-        if name.endswith('_var'):
+        if name.startswith("cut"):
+            return name, "int"
+        if name.endswith("_var"):
             rulename = name[:-4]
             rule = self.rules.get(rulename)
             if rule is not None:
                 if rule.is_loop():
-                    type = 'asdl_seq *'
+                    type = "asdl_seq *"
                 else:
                     type = rule.type
-            elif name.startswith('_loop'):
-                type = 'asdl_seq *'
+            elif name.startswith("_loop"):
+                type = "asdl_seq *"
         if node.name:
             name = node.name
         name = dedupe(name, names)

@@ -9,6 +9,7 @@ from pegen.c_generator import CParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import Tokenizer, grammar_tokenizer
 
+
 def generate_parser(rules):
     # Generate a parser.
     out = io.StringIO()
@@ -18,7 +19,7 @@ def generate_parser(rules):
     # Load the generated parser class.
     ns = {}
     exec(out.getvalue(), ns)
-    return ns['GeneratedParser']
+    return ns["GeneratedParser"]
 
 
 def run_parser(file, parser_class, *, verbose=False):
@@ -62,7 +63,6 @@ def generate_parser_c_extension(rules, path):
     with open(source, "w") as file:
         genr = CParserGenerator(rules, file)
         genr.generate("parse.c")
-    extension_path = compile_c_extension(str(source),
-                                         build_dir=str(path / "build"))
+    extension_path = compile_c_extension(str(source), build_dir=str(path / "build"))
     extension = import_file("parse", extension_path)
     return extension
