@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import traceback
+from glob import glob
 from pathlib import PurePath
 
 from pegen.build import build_parser_and_generator
@@ -110,26 +111,20 @@ def main():
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
     errors = 0
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(root, file)
+    for file in sorted(glob(f"{directory}/**/*.py")):
+        file_path = os.path.join(os.getcwd(), file)
 
-            should_exclude_file = any(
-                [
-                    True
-                    for pattern in excluded_files
-                    if PurePath(file_path).match(pattern)
-                ]
-            )
-
-            # Only attempt to parse Python files and files that are not excluded
-            if not PurePath(file_path).match("*.py") or should_exclude_file:
-                continue
-
+        # Only attempt to parse Python files and files that are not excluded
+        should_exclude_file = False
+        for pattern in excluded_files:
+            if PurePath(file_path).match(pattern):
+                should_exclude_file = True
+                break
+        if not should_exclude_file:
             try:
                 parse.parse_file(file_path)
                 if not args.short:
-                    report_status(succeeded=True, file=file_path, verbose=verbose)
+                    report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
                 report_status(
                     succeeded=False,
