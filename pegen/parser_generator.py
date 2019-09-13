@@ -108,7 +108,7 @@ def compute_nullables(rules: Dict[str, Rule]) -> None:
     Thanks to TatSu (tatsu/leftrec.py) for inspiration.
     """
     for rule in rules.values():
-        rule.visit(rules)
+        rule.nullable_visit(rules)
 
 
 def compute_left_recursives(rules: Dict[str, Rule]) -> Tuple[Dict[str, AbstractSet[str]], List[AbstractSet[str]]]:

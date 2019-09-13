@@ -75,12 +75,12 @@ class Rule:
     def __iter__(self):
         yield self.rhs
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         if self.visited:
             # A left-recursive rule is considered non-nullable.
             return False
         self.visited = True
-        self.nullable = self.rhs.visit(rules)
+        self.nullable = self.rhs.nullable_visit(rules)
         return self.nullable
 
     def initial_names(self) -> AbstractSet[str]:
@@ -114,7 +114,7 @@ class Leaf:
         yield
 
     @abstractmethod
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -135,9 +135,9 @@ class NameLeaf(Leaf):
     def __repr__(self):
         return f"NameLeaf({self.value!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         if self.value in rules:
-            return rules[self.value].visit(rules)
+            return rules[self.value].nullable_visit(rules)
         # Token or unknown; never empty.
         return False
 
@@ -151,7 +151,7 @@ class StringLeaf(Leaf):
     def __repr__(self):
         return f"StringLeaf({self.value!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         # The string token '' is considered empty.
         return not self.value
 
@@ -174,9 +174,9 @@ class Rhs:
     def __iter__(self):
         yield self.alts
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         for alt in self.alts:
-            if alt.visit(rules):
+            if alt.nullable_visit(rules):
                 return True
         return False
 
@@ -216,9 +216,9 @@ class Alt:
     def __iter__(self):
         yield self.items
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         for item in self.items:
-            if not item.visit(rules):
+            if not item.nullable_visit(rules):
                 return False
         return True
 
@@ -254,8 +254,8 @@ class NamedItem:
     def __iter__(self):
         yield self.item
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
-        self.nullable = self.item.visit(rules)
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
+        self.nullable = self.item.nullable_visit(rules)
         return self.nullable
 
     def initial_names(self) -> AbstractSet[str]:
@@ -277,7 +277,7 @@ class Lookahead:
     def __iter__(self):
         yield self.node
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
     def initial_names(self) -> AbstractSet[str]:
@@ -316,7 +316,7 @@ class Opt:
     def __iter__(self):
         yield self.node
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
     def initial_names(self) -> AbstractSet[str]:
@@ -331,7 +331,7 @@ class Repeat:
         self.memo: Optional[Tuple[Optional[str], str]] = None
 
     @abstractmethod
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
     def __iter__(self):
@@ -349,7 +349,7 @@ class Repeat0(Repeat):
     def __repr__(self):
         return f"Repeat0({self.node!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return True
 
 
@@ -361,7 +361,7 @@ class Repeat1(Repeat):
     def __repr__(self):
         return f"Repeat1({self.node!r})"
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return False
 
 
@@ -379,8 +379,8 @@ class Group:
     def __iter__(self):
         yield self.rhs
 
-    def visit(self, rules: Dict[str, Rule]) -> bool:
-        return self.rhs.visit(rules)
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
+        return self.rhs.nullable_visit(rules)
 
     def initial_names(self) -> AbstractSet[str]:
         return self.rhs.initial_names()
