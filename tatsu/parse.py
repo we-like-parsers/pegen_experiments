@@ -29,12 +29,12 @@ class UnknownBuffer(Buffer):
     def __init__(
         self,
         text,
-        whitespace=re.compile(' '),
+        whitespace=re.compile(" "),
         nameguard=None,
         comments_re=None,
         eol_comments_re=None,
         ignorecase=None,
-        namechars='',
+        namechars="",
         **kwargs
     ):
         super(UnknownBuffer, self).__init__(
@@ -52,7 +52,7 @@ class UnknownBuffer(Buffer):
 class UnknownParser(Parser):
     def __init__(
         self,
-        whitespace=re.compile(' '),
+        whitespace=re.compile(" "),
         nameguard=None,
         comments_re=None,
         eol_comments_re=None,
@@ -60,7 +60,7 @@ class UnknownParser(Parser):
         left_recursion=True,
         parseinfo=True,
         keywords=None,
-        namechars='',
+        namechars="",
         buffer_class=UnknownBuffer,
         **kwargs
     ):
@@ -87,9 +87,9 @@ class UnknownParser(Parser):
 
     @tatsumasu()
     def _statements_(self):  # noqa
-
         def block0():
             self._statement_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
@@ -99,15 +99,16 @@ class UnknownParser(Parser):
                 self._simple_stmt_()
             with self._option():
                 self._compound_stmt_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _simple_stmt_(self):  # noqa
         self._small_stmt_()
 
         def block0():
-            self._token(';')
+            self._token(";")
             self._small_stmt_()
+
         self._closure(block0)
         self._NEWLINE_()
 
@@ -119,12 +120,12 @@ class UnknownParser(Parser):
             with self._option():
                 self._import_stmt_()
             with self._option():
-                self._token('pass')
+                self._token("pass")
             with self._option():
                 self._assignment_()
             with self._option():
                 self._expression_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _compound_stmt_(self):  # noqa
@@ -139,92 +140,93 @@ class UnknownParser(Parser):
                 self._function_def_()
             with self._option():
                 self._class_def_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _assignment_(self):  # noqa
         self._target_()
-        self._token('=')
+        self._token("=")
         self._expression_()
 
     @tatsumasu()
     def _import_stmt_(self):  # noqa
         with self._choice():
             with self._option():
-                self._token('import')
+                self._token("import")
                 self._names_()
             with self._option():
-                self._token('from')
+                self._token("from")
                 self._NAME_()
-                self._token('import')
+                self._token("import")
                 with self._group():
                     with self._choice():
                         with self._option():
-                            self._token('*')
+                            self._token("*")
                         with self._option():
                             self._names_()
-                        self._error('no available options')
-            self._error('no available options')
+                        self._error("no available options")
+            self._error("no available options")
 
     @tatsumasu()
     def _names_(self):  # noqa
         with self._choice():
             with self._option():
                 self._NAME_()
-                self._token(',')
+                self._token(",")
                 self._names_()
             with self._option():
                 self._NAME_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _if_stmt_(self):  # noqa
-        self._token('if')
+        self._token("if")
         self._full_expression_()
-        self._token(':')
+        self._token(":")
         self._block_()
 
         def block0():
             self._elif_block_()
+
         self._closure(block0)
         with self._optional():
             self._else_block_()
 
     @tatsumasu()
     def _elif_block_(self):  # noqa
-        self._token('elif')
+        self._token("elif")
         self._full_expression_()
-        self._token(':')
+        self._token(":")
         self._block_()
 
     @tatsumasu()
     def _else_block_(self):  # noqa
-        self._token('else')
-        self._token(':')
+        self._token("else")
+        self._token(":")
         self._block_()
 
     @tatsumasu()
     def _while_stmt_(self):  # noqa
-        self._token('while')
+        self._token("while")
         self._full_expression_()
-        self._token(':')
+        self._token(":")
         self._block_()
         with self._optional():
             self._else_block_()
 
     @tatsumasu()
     def _with_stmt_(self):  # noqa
-        self._token('with')
+        self._token("with")
         self._expression_()
         with self._optional():
-            self._token('as')
+            self._token("as")
             self._target_()
-        self._token(':')
+        self._token(":")
         self._block_()
 
     @tatsumasu()
     def _return_stmt_(self):  # noqa
-        self._token('return')
+        self._token("return")
         with self._optional():
             self._expressions_()
 
@@ -232,13 +234,13 @@ class UnknownParser(Parser):
     def _function_def_(self):  # noqa
         with self._optional():
             self._decorators_()
-        self._token('def')
+        self._token("def")
         self._NAME_()
-        self._token('(')
+        self._token("(")
         with self._optional():
             self._parameters_()
-        self._token(')')
-        self._token(':')
+        self._token(")")
+        self._token(":")
         self._block_()
 
     @tatsumasu()
@@ -249,16 +251,16 @@ class UnknownParser(Parser):
             with self._option():
                 self._param_()
                 with self._optional():
-                    self._token(',')
+                    self._token(",")
                     with self._optional():
                         self._parameters_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _kwparams_(self):  # noqa
         self._kwparam_()
         with self._optional():
-            self._token(',')
+            self._token(",")
             with self._optional():
                 self._kwparams_()
 
@@ -267,12 +269,12 @@ class UnknownParser(Parser):
         with self._choice():
             with self._option():
                 self._NAME_()
-                self._token('=')
+                self._token("=")
                 self._expression_()
             with self._option():
-                self._token('**')
+                self._token("**")
                 self._NAME_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _param_(self):  # noqa
@@ -280,30 +282,30 @@ class UnknownParser(Parser):
             with self._option():
                 self._NAME_()
             with self._option():
-                self._token('*')
+                self._token("*")
                 self._NAME_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _decorators_(self):  # noqa
-
         def block0():
-            self._token('@')
+            self._token("@")
             self._factor_()
             self._NEWLINE_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
     def _class_def_(self):  # noqa
         with self._optional():
             self._decorators_()
-        self._token('class')
+        self._token("class")
         self._NAME_()
         with self._optional():
-            self._token('(')
+            self._token("(")
             self._full_expressions_()
-            self._token(')')
-        self._token(':')
+            self._token(")")
+        self._token(":")
         self._block_()
 
     @tatsumasu()
@@ -316,37 +318,39 @@ class UnknownParser(Parser):
                 self._INDENT_()
                 self._statements_()
                 self._DEDENT_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _full_expressions_(self):  # noqa
         self._full_expression_()
 
         def block0():
-            self._token(',')
+            self._token(",")
             self._full_expression_()
+
         self._closure(block0)
         with self._optional():
-            self._token(',')
+            self._token(",")
 
     @tatsumasu()
     def _full_expression_(self):  # noqa
         with self._choice():
             with self._option():
                 self._NAME_()
-                self._token(':=')
+                self._token(":=")
                 self._disjunction_()
             with self._option():
                 self._disjunction_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _disjunction_(self):  # noqa
         self._conjunction_()
 
         def block0():
-            self._token('or')
+            self._token("or")
             self._conjunction_()
+
         self._closure(block0)
 
     @tatsumasu()
@@ -354,51 +358,54 @@ class UnknownParser(Parser):
         self._comparison_()
 
         def block0():
-            self._token('and')
+            self._token("and")
             self._comparison_()
+
         self._closure(block0)
 
     @tatsumasu()
     def _comparison_(self):  # noqa
-
         def block0():
-            self._token('not')
+            self._token("not")
+
         self._closure(block0)
         self._bitwise_or_()
 
         def block1():
             self._compare_op_()
             self._bitwise_or_()
+
         self._closure(block1)
 
     @tatsumasu()
     def _compare_op_(self):  # noqa
         with self._choice():
             with self._option():
-                self._token('<')
+                self._token("<")
             with self._option():
-                self._token('<=')
+                self._token("<=")
             with self._option():
-                self._token('==')
+                self._token("==")
             with self._option():
-                self._token('>=')
+                self._token(">=")
             with self._option():
-                self._token('>')
+                self._token(">")
             with self._option():
-                self._token('!=')
+                self._token("!=")
             with self._option():
-                self._token('in')
+                self._token("in")
             with self._option():
-                self._token('not in')
-            self._error('no available options')
+                self._token("not in")
+            self._error("no available options")
 
     @tatsumasu()
     def _bitwise_or_(self):  # noqa
         self._bitwise_and_()
 
         def block0():
-            self._token('|')
+            self._token("|")
             self._bitwise_and_()
+
         self._closure(block0)
 
     @tatsumasu()
@@ -406,8 +413,9 @@ class UnknownParser(Parser):
         self._expression_()
 
         def block0():
-            self._token('&')
+            self._token("&")
             self._expression_()
+
         self._closure(block0)
 
     @tatsumasu()
@@ -415,11 +423,12 @@ class UnknownParser(Parser):
         self._expression_()
 
         def block0():
-            self._token(',')
+            self._token(",")
             self._expression_()
+
         self._closure(block0)
         with self._optional():
-            self._token(',')
+            self._token(",")
 
     @tatsumasu()
     def _expression_(self):  # noqa
@@ -428,12 +437,13 @@ class UnknownParser(Parser):
         def block0():
             with self._choice():
                 with self._option():
-                    self._token('+')
+                    self._token("+")
                     self._term_()
                 with self._option():
-                    self._token('-')
+                    self._token("-")
                     self._term_()
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block0)
 
     @tatsumasu()
@@ -443,12 +453,13 @@ class UnknownParser(Parser):
         def block0():
             with self._choice():
                 with self._option():
-                    self._token('*')
+                    self._token("*")
                     self._factor_()
                 with self._option():
-                    self._token('/')
+                    self._token("/")
                     self._factor_()
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block0)
 
     @tatsumasu()
@@ -458,20 +469,21 @@ class UnknownParser(Parser):
         def block0():
             with self._choice():
                 with self._option():
-                    self._token('.')
+                    self._token(".")
                     self._NAME_()
                 with self._option():
-                    self._token('[')
+                    self._token("[")
                     self._expression_()
-                    self._token(']')
+                    self._token("]")
                 with self._option():
-                    self._token('(')
+                    self._token("(")
                     with self._optional():
                         self._arguments_()
                         with self._optional():
-                            self._token(',')
-                    self._token(')')
-                self._error('no available options')
+                            self._token(",")
+                    self._token(")")
+                self._error("no available options")
+
         self._closure(block0)
 
     @tatsumasu()
@@ -489,30 +501,30 @@ class UnknownParser(Parser):
                 self._STRING_()
             with self._option():
                 self._NUMBER_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _list_(self):  # noqa
-        self._token('[')
+        self._token("[")
         with self._optional():
             self._full_expressions_()
-        self._token(']')
+        self._token("]")
 
     @tatsumasu()
     def _tuple_(self):  # noqa
-        self._token('(')
+        self._token("(")
         with self._optional():
             self._full_expression_()
-            self._token(',')
+            self._token(",")
             with self._optional():
                 self._full_expressions_()
-        self._token(')')
+        self._token(")")
 
     @tatsumasu()
     def _group_(self):  # noqa
-        self._token('(')
+        self._token("(")
         self._full_expression_()
-        self._token(')')
+        self._token(")")
 
     @tatsumasu()
     def _arguments_(self):  # noqa
@@ -522,17 +534,18 @@ class UnknownParser(Parser):
             with self._option():
                 self._posarg_()
                 with self._optional():
-                    self._token(',')
+                    self._token(",")
                     self._arguments_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _kwargs_(self):  # noqa
         self._kwarg_()
 
         def block0():
-            self._token(',')
+            self._token(",")
             self._kwarg_()
+
         self._closure(block0)
 
     @tatsumasu()
@@ -541,21 +554,21 @@ class UnknownParser(Parser):
             with self._option():
                 self._full_expression_()
             with self._option():
-                self._token('*')
+                self._token("*")
                 self._disjunction_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _kwarg_(self):  # noqa
         with self._choice():
             with self._option():
                 self._NAME_()
-                self._token('=')
+                self._token("=")
                 self._disjunction_()
             with self._option():
-                self._token('**')
+                self._token("**")
                 self._disjunction_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _target_(self):  # noqa
@@ -580,7 +593,7 @@ class UnknownParser(Parser):
                 self._STRING_LITERAL_()
             with self._option():
                 self._BYTES_LITERAL_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _number_(self):  # noqa
@@ -591,7 +604,7 @@ class UnknownParser(Parser):
                 self._float_number_()
             with self._option():
                 self._IMAG_NUMBER_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _integer_(self):  # noqa
@@ -604,7 +617,7 @@ class UnknownParser(Parser):
                 self._HEX_INTEGER_()
             with self._option():
                 self._BIN_INTEGER_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _newline_(self):  # noqa
@@ -615,11 +628,11 @@ class UnknownParser(Parser):
                 with self._option():
                     with self._group():
                         with self._optional():
-                            self._token('\\r')
-                        self._pattern('[\\n\\r\\f]')
+                            self._token("\\r")
+                        self._pattern("[\\n\\r\\f]")
                     with self._optional():
                         self._SPACES_()
-                self._error('no available options')
+                self._error("no available options")
 
     @tatsumasu()
     def _NAME_(self):  # noqa
@@ -627,29 +640,30 @@ class UnknownParser(Parser):
 
         def block0():
             self._ID_CONTINUE_()
+
         self._closure(block0)
 
     @tatsumasu()
     def _STRING_LITERAL_(self):  # noqa
-        self._pattern('[uU]?[rR]?')
+        self._pattern("[uU]?[rR]?")
         with self._group():
             with self._choice():
                 with self._option():
                     self._SHORT_STRING_()
                 with self._option():
                     self._LONG_STRING_()
-                self._error('no available options')
+                self._error("no available options")
 
     @tatsumasu()
     def _BYTES_LITERAL_(self):  # noqa
-        self._pattern('[bB][rR]?')
+        self._pattern("[bB][rR]?")
         with self._group():
             with self._choice():
                 with self._option():
                     self._SHORT_BYTES_()
                 with self._option():
                     self._LONG_BYTES_()
-                self._error('no available options')
+                self._error("no available options")
 
     @tatsumasu()
     def _decimal_integer_(self):  # noqa
@@ -659,39 +673,44 @@ class UnknownParser(Parser):
 
                 def block0():
                     self._DIGIT_()
+
                 self._closure(block0)
             with self._option():
 
                 def block1():
-                    self._token('0')
+                    self._token("0")
+
                 self._positive_closure(block1)
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _OCT_INTEGER_(self):  # noqa
-        self._token('0')
-        self._pattern('[oO]')
+        self._token("0")
+        self._pattern("[oO]")
 
         def block0():
             self._OCT_DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
     def _HEX_INTEGER_(self):  # noqa
-        self._token('0')
-        self._pattern('[xX]')
+        self._token("0")
+        self._pattern("[xX]")
 
         def block0():
             self._HEX_DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
     def _BIN_INTEGER_(self):  # noqa
-        self._token('0')
-        self._pattern('[bB]')
+        self._token("0")
+        self._pattern("[bB]")
 
         def block0():
             self._BIN_DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
@@ -701,7 +720,7 @@ class UnknownParser(Parser):
                 self._POINT_FLOAT_()
             with self._option():
                 self._EXPONENT_FLOAT_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _IMAG_NUMBER_(self):  # noqa
@@ -711,8 +730,8 @@ class UnknownParser(Parser):
                     self._float_number_()
                 with self._option():
                     self._INT_PART_()
-                self._error('no available options')
-        self._pattern('[jJ]')
+                self._error("no available options")
+        self._pattern("[jJ]")
 
     @tatsumasu()
     def _skip__(self):  # noqa
@@ -724,11 +743,11 @@ class UnknownParser(Parser):
                     self._COMMENT_()
                 with self._option():
                     self._LINE_JOINING_()
-                self._error('no available options')
+                self._error("no available options")
 
     @tatsumasu()
     def _unknown_char_(self):  # noqa
-        self._pattern('\\w+|\\S+')
+        self._pattern("\\w+|\\S+")
 
     @tatsumasu()
     def _SHORT_STRING_(self):  # noqa
@@ -740,9 +759,10 @@ class UnknownParser(Parser):
                     self._STRING_ESCAPE_SEQ_()
                 with self._option():
                     self._pattern("[^\\\\\\r\\n\\f']")
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block0)
-        self._pattern('[\\\'"]')
+        self._pattern("[\\'\"]")
 
         def block2():
             with self._choice():
@@ -750,7 +770,8 @@ class UnknownParser(Parser):
                     self._STRING_ESCAPE_SEQ_()
                 with self._option():
                     self._pattern('[^\\\\\\r\\n\\f"]')
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block2)
         self._token('"')
 
@@ -767,7 +788,7 @@ class UnknownParser(Parser):
                 with self._optional():
                     self._LONG_STRING_ITEM_()
                 self._token('"""')
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _LONG_STRING_ITEM_(self):  # noqa
@@ -776,38 +797,38 @@ class UnknownParser(Parser):
                 self._LONG_STRING_CHAR_()
             with self._option():
                 self._STRING_ESCAPE_SEQ_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _LONG_STRING_CHAR_(self):  # noqa
         with self._ifnot():
-            self._token('\\\\')
-        self._pattern('.')
+            self._token("\\\\")
+        self._pattern(".")
 
     @tatsumasu()
     def _STRING_ESCAPE_SEQ_(self):  # noqa
-        self._token('\\\\')
-        self._pattern('\\w+|\\S+')
+        self._token("\\\\")
+        self._pattern("\\w+|\\S+")
 
     @tatsumasu()
     def _NON_ZERO_DIGIT_(self):  # noqa
-        self._pattern('[1-9]')
+        self._pattern("[1-9]")
 
     @tatsumasu()
     def _DIGIT_(self):  # noqa
-        self._pattern('[0-9]')
+        self._pattern("[0-9]")
 
     @tatsumasu()
     def _OCT_DIGIT_(self):  # noqa
-        self._pattern('[0-7]')
+        self._pattern("[0-7]")
 
     @tatsumasu()
     def _HEX_DIGIT_(self):  # noqa
-        self._pattern('[0-9a-fA-F]')
+        self._pattern("[0-9a-fA-F]")
 
     @tatsumasu()
     def _BIN_DIGIT_(self):  # noqa
-        self._pattern('[01]')
+        self._pattern("[01]")
 
     @tatsumasu()
     def _POINT_FLOAT_(self):  # noqa
@@ -818,8 +839,8 @@ class UnknownParser(Parser):
                 self._FRACTION_()
             with self._option():
                 self._INT_PART_()
-                self._token('.')
-            self._error('no available options')
+                self._token(".")
+            self._error("no available options")
 
     @tatsumasu()
     def _EXPONENT_FLOAT_(self):  # noqa
@@ -829,30 +850,32 @@ class UnknownParser(Parser):
                     self._INT_PART_()
                 with self._option():
                     self._POINT_FLOAT_()
-                self._error('no available options')
+                self._error("no available options")
         self._EXPONENT_()
 
     @tatsumasu()
     def _INT_PART_(self):  # noqa
-
         def block0():
             self._DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
     def _FRACTION_(self):  # noqa
-        self._token('.')
+        self._token(".")
 
         def block0():
             self._DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
     def _EXPONENT_(self):  # noqa
-        self._pattern('[eE][+-]?')
+        self._pattern("[eE][+-]?")
 
         def block0():
             self._DIGIT_()
+
         self._positive_closure(block0)
 
     @tatsumasu()
@@ -865,9 +888,10 @@ class UnknownParser(Parser):
                     self._SHORT_BYTES_CHAR_NO_SINGLE_QUOTE_()
                 with self._option():
                     self._BYTES_ESCAPE_SEQ_()
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block0)
-        self._pattern('[\\\'"]')
+        self._pattern("[\\'\"]")
 
         def block2():
             with self._choice():
@@ -875,7 +899,8 @@ class UnknownParser(Parser):
                     self._SHORT_BYTES_CHAR_NO_DOUBLE_QUOTE_()
                 with self._option():
                     self._BYTES_ESCAPE_SEQ_()
-                self._error('no available options')
+                self._error("no available options")
+
         self._closure(block2)
         self._token('"')
 
@@ -892,7 +917,7 @@ class UnknownParser(Parser):
                 with self._optional():
                     self._LONG_BYTES_ITEM_()
                 self._token('"""')
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _LONG_BYTES_ITEM_(self):  # noqa
@@ -901,81 +926,81 @@ class UnknownParser(Parser):
                 self._LONG_BYTES_CHAR_()
             with self._option():
                 self._BYTES_ESCAPE_SEQ_()
-            self._error('no available options')
+            self._error("no available options")
 
     @tatsumasu()
     def _SHORT_BYTES_CHAR_NO_SINGLE_QUOTE_(self):  # noqa
         with self._choice():
             with self._option():
-                self._pattern('[\\u0000-\\u0009]')
+                self._pattern("[\\u0000-\\u0009]")
             with self._option():
-                self._pattern('[\\u000B-\\u000C]')
+                self._pattern("[\\u000B-\\u000C]")
             with self._option():
-                self._pattern('[\\u000E-\\u0026]')
+                self._pattern("[\\u000E-\\u0026]")
             with self._option():
-                self._pattern('[\\u0028-\\u005B]')
+                self._pattern("[\\u0028-\\u005B]")
             with self._option():
-                self._pattern('[\\u005D-\\u007F]')
-            self._error('no available options')
+                self._pattern("[\\u005D-\\u007F]")
+            self._error("no available options")
 
     @tatsumasu()
     def _SHORT_BYTES_CHAR_NO_DOUBLE_QUOTE_(self):  # noqa
         with self._choice():
             with self._option():
-                self._pattern('[\\u0000-\\u0009]')
+                self._pattern("[\\u0000-\\u0009]")
             with self._option():
-                self._pattern('[\\u000B-\\u000C]')
+                self._pattern("[\\u000B-\\u000C]")
             with self._option():
-                self._pattern('[\\u000E-\\u0021]')
+                self._pattern("[\\u000E-\\u0021]")
             with self._option():
-                self._pattern('[\\u0023-\\u005B]')
+                self._pattern("[\\u0023-\\u005B]")
             with self._option():
-                self._pattern('[\\u005D-\\u007F]')
-            self._error('no available options')
+                self._pattern("[\\u005D-\\u007F]")
+            self._error("no available options")
 
     @tatsumasu()
     def _LONG_BYTES_CHAR_(self):  # noqa
         with self._choice():
             with self._option():
-                self._pattern('[\\u0000-\\u005B]')
+                self._pattern("[\\u0000-\\u005B]")
             with self._option():
-                self._pattern('[\\u005D-\\u007F]')
-            self._error('no available options')
+                self._pattern("[\\u005D-\\u007F]")
+            self._error("no available options")
 
     @tatsumasu()
     def _BYTES_ESCAPE_SEQ_(self):  # noqa
-        self._token('\\\\')
-        self._pattern('[\\u0000-\\u007F]')
+        self._token("\\\\")
+        self._pattern("[\\u0000-\\u007F]")
 
     @tatsumasu()
     def _SPACES_(self):  # noqa
-        self._pattern('[ \\t]+')
+        self._pattern("[ \\t]+")
 
     @tatsumasu()
     def _COMMENT_(self):  # noqa
-        self._token('#')
-        self._pattern('[^\\r\\n\\f]*')
+        self._token("#")
+        self._pattern("[^\\r\\n\\f]*")
 
     @tatsumasu()
     def _LINE_JOINING_(self):  # noqa
-        self._token('\\\\')
+        self._token("\\\\")
         with self._optional():
             self._SPACES_()
         with self._group():
             with self._optional():
-                self._token('\\r')
-            self._pattern('[\\n\\r\\f]')
+                self._token("\\r")
+            self._pattern("[\\n\\r\\f]")
 
     @tatsumasu()
     def _ID_START_(self):  # noqa
         with self._choice():
             with self._option():
-                self._token('_')
+                self._token("_")
             with self._option():
-                self._pattern('[A-Z]')
+                self._pattern("[A-Z]")
             with self._option():
-                self._pattern('[a-z]')
-            self._error('no available options')
+                self._pattern("[a-z]")
+            self._error("no available options")
 
     @tatsumasu()
     def _ID_CONTINUE_(self):  # noqa
@@ -983,8 +1008,8 @@ class UnknownParser(Parser):
             with self._option():
                 self._ID_START_()
             with self._option():
-                self._pattern('[0-9]')
-            self._error('no available options')
+                self._pattern("[0-9]")
+            self._error("no available options")
 
     @tatsumasu()
     def _INDENT_(self):  # noqa
@@ -1274,8 +1299,8 @@ class UnknownSemantics(object):
 
 def main(filename, start=None, **kwargs):
     if start is None:
-        start = 'start'
-    if not filename or filename == '-':
+        start = "start"
+    if not filename or filename == "-":
         text = sys.stdin.read()
     else:
         with open(filename) as f:
@@ -1284,15 +1309,14 @@ def main(filename, start=None, **kwargs):
     return parser.parse(text, rule_name=start, filename=filename, **kwargs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import json
     from tatsu.util import asjson
 
-    ast = generic_main(main, UnknownParser, name='Unknown')
-    print('AST:')
+    ast = generic_main(main, UnknownParser, name="Unknown")
+    print("AST:")
     print(ast)
     print()
-    print('JSON:')
+    print("JSON:")
     print(json.dumps(asjson(ast), indent=2))
     print()
-

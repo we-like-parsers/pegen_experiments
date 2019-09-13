@@ -5,6 +5,7 @@ import tokenize
 
 import pegen
 
+
 def main():
     t0 = time.time()
     ntoks = 0
@@ -29,5 +30,6 @@ def main():
         print(f"{ntoks/dt:.0f} tokens/sec, {nlines/dt:.0f} lines/sec", file=sys.stderr)
     pegen.print_memstats()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

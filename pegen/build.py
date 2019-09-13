@@ -33,11 +33,15 @@ def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
 
     source_file_path = pathlib.Path(generated_source_path)
     extension_name = source_file_path.stem
-    extension = [Extension(extension_name,
-                           sources=[str(MOD_DIR.parent / "pegen.c"), generated_source_path],
-                           include_dirs=[str(MOD_DIR.parent)],
-                           extra_compile_args=[], )]
-    dist = Distribution({'name': extension_name, 'ext_modules': extension})
+    extension = [
+        Extension(
+            extension_name,
+            sources=[str(MOD_DIR.parent / "pegen.c"), generated_source_path],
+            include_dirs=[str(MOD_DIR.parent)],
+            extra_compile_args=[],
+        )
+    ]
+    dist = Distribution({"name": extension_name, "ext_modules": extension})
     cmd = build_ext(dist)
     cmd.inplace = True
     if build_dir:
@@ -58,8 +62,7 @@ def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
 def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
     with open(grammar_file) as file:
         tokenizer = Tokenizer(
-            grammar_tokenizer(tokenize.generate_tokens(file.readline)),
-            verbose=verbose_tokenizer,
+            grammar_tokenizer(tokenize.generate_tokens(file.readline)), verbose=verbose_tokenizer
         )
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
         rules = parser.start()
@@ -71,12 +74,7 @@ def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
 
 
 def build_generator(
-    tokenizer,
-    rules,
-    grammar_file,
-    output_file,
-    compile_extension=False,
-    verbose_c_extension=False,
+    tokenizer, rules, grammar_file, output_file, compile_extension=False, verbose_c_extension=False
 ):
     with open(output_file, "w") as file:
         gen: ParserGenerator
@@ -116,16 +114,9 @@ def build_parser_and_generator(
         verbose_c_extension (bool, optional): Whether to display additional
           output when compiling the C extension . Defaults to False.
     """
-    rules, parser, tokenizer = build_parser(
-        grammar_file, verbose_tokenizer, verbose_parser
-    )
+    rules, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
     gen = build_generator(
-        tokenizer,
-        rules,
-        grammar_file,
-        output_file,
-        compile_extension,
-        verbose_c_extension,
+        tokenizer, rules, grammar_file, output_file, compile_extension, verbose_c_extension
     )
 
     return rules, parser, tokenizer, gen

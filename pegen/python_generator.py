@@ -25,22 +25,21 @@ if __name__ == '__main__':
 
 
 class PythonCallMakerVisitor(GrammarVisitor):
-
     def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
 
     def visit_NameLeaf(self, node):
         name = node.value
-        if name in ('NAME', 'NUMBER', 'STRING', 'CUT', 'CURLY_STUFF'):
+        if name in ("NAME", "NUMBER", "STRING", "CUT", "CURLY_STUFF"):
             name = name.lower()
             return name, f"self.{name}()"
-        if name in ('NEWLINE', 'DEDENT', 'INDENT', 'ENDMARKER', 'ASYNC', 'AWAIT'):
+        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
 
     def visit_StringLeaf(self, node):
-        return 'literal', f"self.expect({node.value})"
+        return "literal", f"self.expect({node.value})"
 
     def visit_Rhs(self, node):
         if node in self.cache:
@@ -60,8 +59,8 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
     def lookahead_call_helper(self, node):
         name, call = self.visit(node.node)
-        head, tail = call.split('(', 1)
-        assert tail[-1] == ')'
+        head, tail = call.split("(", 1)
+        assert tail[-1] == ")"
         tail = tail[:-1]
         return head, tail
 
@@ -96,7 +95,6 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
 
 class PythonParserGenerator(ParserGenerator, GrammarVisitor):
-
     def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
         super().__init__(rules, file)
         self.callmakervisitor = PythonCallMakerVisitor(self)
@@ -110,7 +108,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print()
                 with self.indent():
                     self.visit(rule)
-        self.print(MODULE_SUFFIX.rstrip('\n'))
+        self.print(MODULE_SUFFIX.rstrip("\n"))
 
     def visit_Rule(self, node):
         is_loop = node.is_loop()
@@ -145,7 +143,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         if not name:
             self.print(call)
         else:
-            if name != 'cut':
+            if name != "cut":
                 name = dedupe(name, names)
             self.print(f"({name} := {call})")
 
@@ -176,7 +174,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             if not action:
                 action = f"[{', '.join(names)}]"
             else:
-                assert action[0] == '{' and action[-1] == '}', repr(action)
+                assert action[0] == "{" and action[-1] == "}", repr(action)
                 action = action[1:-1].strip()
             if is_loop:
                 self.print(f"children.append({action})")

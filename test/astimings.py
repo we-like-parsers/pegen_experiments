@@ -6,6 +6,7 @@ import tokenize
 
 import pegen
 
+
 def main():
     t0 = time.time()
     for filename in sys.argv[1:]:
@@ -22,5 +23,6 @@ def main():
     print(f"Parsed in {dt:.3f} secs", file=sys.stderr)
     pegen.print_memstats()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

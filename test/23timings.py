@@ -16,9 +16,9 @@ def main():
     dt = t1 - t0
     with open(filename) as file:
         nlines = len(file.readlines())
-    print("%.3f seconds for %d lines; %.0f lines/sec" % (dt, nlines, nlines/(dt or 1e-9)))
+    print("%.3f seconds for %d lines; %.0f lines/sec" % (dt, nlines, nlines / (dt or 1e-9)))
     pegen.print_memstats()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
