@@ -1,12 +1,26 @@
 from __future__ import annotations  # Requires Python 3.7 or later
 
 import contextlib
+import token
 from abc import abstractmethod
 from typing import *
 
 from pegen import sccutils
-from pegen.grammar import Rule, Rhs, Alt, NamedItem, Plain
-from pegen.grammar import GrammarVisitor
+from pegen.grammar import Rule, Rhs, Alt, NamedItem, Plain, NameLeaf
+from pegen.grammar import GrammarError, GrammarVisitor
+
+
+class RuleCheckingVisitor(GrammarVisitor):
+
+    def __init__(self, rules: Dict[str, Rule]):
+        self.rules = rules
+
+    def visit_NameLeaf(self, node: NameLeaf):
+        if (node.value not in self.rules
+            and node.value not in token.tok_name.values()
+            and node.value != "CUT"):
+            # TODO: Add line/col info to (leaf) nodes
+            raise GrammarError(f"Dangling reference to rule {node.value!r}")
 
 
 class ParserGenerator:
@@ -14,6 +28,9 @@ class ParserGenerator:
     callmakervisitor: GrammarVisitor
 
     def __init__(self, rules: Dict[str, Rule], file: Optional[IO[Text]]):
+        if "start" not in rules:
+            raise GrammarError("Grammar must have a 'start' rule")
+        RuleCheckingVisitor(rules).visit(rules["start"])
         self.rules = rules
         self.file = file
         self.level = 0

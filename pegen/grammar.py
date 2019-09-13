@@ -9,6 +9,10 @@ if TYPE_CHECKING:
     from pegen.parser_generator import ParserGenerator
 
 
+class GrammarError(Exception):
+    pass
+
+
 class GrammarVisitor:
 
     def visit(self, node, *args, **kwargs):

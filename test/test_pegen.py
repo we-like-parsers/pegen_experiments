@@ -5,7 +5,7 @@ from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
 import pytest
 
-from pegen.grammar import GrammarParser, GrammarVisitor
+from pegen.grammar import GrammarParser, GrammarVisitor, GrammarError
 from pegen.grammar_visualizer import ASTGrammarPrinter
 from pegen.python_generator import PythonParserGenerator
 
@@ -353,6 +353,32 @@ def test_cut():
     assert node == [TokenInfo(OP, string='(', start=(1, 0), end=(1, 1), line='(1)'),
                     [TokenInfo(NUMBER, string='1', start=(1, 1), end=(1, 2), line='(1)')],
                     TokenInfo(OP, string=')', start=(1, 2), end=(1, 3), line='(1)')]
+
+
+def test_dangling_reference():
+    grammar = """
+    start: foo bar ENDMARKER
+    foo: bar NAME
+    """
+    with pytest.raises(GrammarError):
+        parser_class = make_parser(grammar)
+
+
+def test_bad_token_reference():
+    grammar = """
+    start: foo ENDMARKE
+    foo: NAME
+    """
+    with pytest.raises(GrammarError):
+        parser_class = make_parser(grammar)
+
+
+def test_missing_start():
+    grammar = """
+    foo: NAME
+    """
+    with pytest.raises(GrammarError):
+        parser_class = make_parser(grammar)
 
 
 class TestGrammarVisitor:

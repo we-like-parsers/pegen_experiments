@@ -82,6 +82,8 @@ def main() -> None:
             args.verbose,
         )
     except Exception as err:
+        if args.verbose:
+            raise  # Show traceback
         traceback.print_exception(err.__class__, err, None)
         sys.exit(1)
 
