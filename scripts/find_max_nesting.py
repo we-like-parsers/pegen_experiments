@@ -11,7 +11,7 @@ The grammar file, initial nesting size, and amount by which the nested size is
 incremented on each success can be controlled by changing the GRAMMAR_FILE,
 INITIAL_NESTING_DEPTH, or NESTED_INCR_AMT variables.
 
-Usage: python -m scripts.find_max_stacksize
+Usage: python -m scripts.find_max_nesting
 """
 import os
 import sys
@@ -54,7 +54,7 @@ def check_nested_expr(nesting_depth, parser, language):
         return False
 
 
-if __name__ == "__main__":
+def main():
     print(
         f"Testing {GRAMMAR_FILE} starting at nesting depth of {INITIAL_NESTING_DEPTH}..."
     )
@@ -81,3 +81,7 @@ if __name__ == "__main__":
             nesting_depth += NESTED_INCR_AMT
 
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
