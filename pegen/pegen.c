@@ -353,6 +353,7 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 	    // TODO: set correct attributes on SyntaxError object
             PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
                          t->line, t->col, token_name(t->type));
+            PyErr_SyntaxLocationObject(p->tok->filename, t->line, t->col);
         }
         goto exit;
     }
@@ -383,11 +384,20 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
         return NULL;
     }
 
-    PyObject *result = NULL;
-    struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
+    PyObject *filename_ob = NULL;
+    if ((filename_ob = PyUnicode_FromString(filename)) == NULL)
+        return NULL;
 
+    // From here on we need to clean up even if there's an error
+    PyObject *result = NULL;
+
+    struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
     if (tok == NULL)
         goto error;
+
+    // Transfers ownership
+    tok->filename = filename_ob;
+    filename_ob = NULL;
 
     result = run_parser(tok, start_rule_func, mode);
 
@@ -395,6 +405,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
 
  error:
     fclose(fp);
+    Py_XDECREF(filename_ob);
     return result;
 }
 
