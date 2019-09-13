@@ -7,7 +7,7 @@ statement:  compound_stmt | simple_stmt
 simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
+small_stmt: ( return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
             | assignment | expressions
             )
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
@@ -57,7 +57,7 @@ raise_stmt: 'raise' [expression ['from' expression]]
 
 function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' annotation] ':' block
 
-parameters: (slash_without_default [',' plain_names] [',' names_with_default] [',' [star_etc]]
+parameters: ( slash_without_default [',' plain_names] [',' names_with_default] [',' [star_etc]]
             | slash_with_default [',' names_with_default] [',' [star_etc]]
             | plain_names [',' names_with_default] [',' [star_etc]]
             | names_with_default [',' [star_etc]]
@@ -67,7 +67,7 @@ slash_without_default: plain_names ',' '/'
 slash_with_default: [plain_names ','] names_with_default ',' '/'
 names_with_default: name_with_default (',' name_with_default)*
 plain_names: plain_name !'=' (',' plain_name !'=')*
-star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' kwds] [',']
+star_etc: ( '*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' kwds] [',']
           | '*' (',' plain_name ['=' expression])+ [',' kwds] [',']
           | kwds [',']
           )
@@ -90,13 +90,17 @@ yield_expression: yield_expr | expression
 expression: lambdef | disjunction ['if' disjunction 'else' disjunction]
 lambdef: 'lambda' [lambda_parameters] ':' expression
 
-lambda_parameters: (lambda_plain_names [',' lambda_names_with_default] [',' [lambda_star_etc]]
+lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
+                   | lambda_slash_with_default [',' lambda_names_with_default] [',' [lambda_star_etc]]
+                   | lambda_plain_names [',' lambda_names_with_default] [',' [lambda_star_etc]]
                    | lambda_names_with_default [',' [lambda_star_etc]]
                    | lambda_star_etc
                    )
+lambda_slash_without_default: lambda_plain_names ',' '/'
+lambda_slash_with_default: [lambda_plain_names ','] lambda_names_with_default ',' '/'
 lambda_names_with_default: lambda_name_with_default (',' lambda_name_with_default)*
 lambda_plain_names: NAME !'=' (',' NAME !'=')*
-lambda_star_etc: ('*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
+lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
                  | '*' (',' NAME ['=' expression])+ [',' '**' NAME] [',']
                  | '**' NAME [',']
                  )
@@ -122,7 +126,7 @@ slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
 atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING+ | NUMBER | '...'
 list: '[' [full_expressions] ']'
-listcomp: '[' expression for_if_clauses ']'
+listcomp: '[' full_expression for_if_clauses ']'
 tuple: '(' [full_expression ',' [full_expressions]] ')'
 group: '(' (yield_expr | full_expression) ')'
 genexp: '(' expression for_if_clauses ')'
@@ -131,8 +135,8 @@ setcomp: '{' expression for_if_clauses '}'
 dict: '{' [kvpairs] '}'
 dictcomp: '{' kvpair for_if_clauses '}'
 kvpairs: kvpair (',' kvpair)* [',']
-kvpair: expression ':' expression
-for_if_clauses: ('for' star_targets 'in' expression ('if' expression)*)+
+kvpair: '**' bitwise_or | expression ':' expression
+for_if_clauses: ([ASYNC] 'for' star_targets 'in' expression ('if' expression)*)+
 
 yield_expr: 'yield' 'from' expression | 'yield' [expressions]
 
@@ -146,11 +150,11 @@ kwarg: NAME '=' expression | '*' expression | '**' expression
 # NOTE: the !'in' is to handle "for x, in ...".
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets: star_target (',' !'in' star_target)* [',']
-star_target: '*' NAME | star_atom t_tail*
+star_target: '*' NAME | atom t_tail+ | star_atom t_tail*
 star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets: target (',' target)* [',']
-target: t_atom t_tail*
+target: atom t_tail+ | t_atom t_tail*
 t_atom: NAME | '(' [targets] ')' | '[' [targets] ']'
 
 t_tail: call_tail* (attr_tail | index_tail)
