@@ -8,7 +8,7 @@ simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt: (return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
-            | assignment | expression
+            | assignment | expressions
             )
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
@@ -55,7 +55,7 @@ return_stmt: 'return' [expressions]
 
 raise_stmt: 'raise' [expression ['from' expression]]
 
-function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' expression] ':' block
+function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' annotation] ':' block
 
 parameters: (slash_without_default [',' plain_names] [',' names_with_default] [',' [star_etc]]
             | slash_with_default [',' names_with_default] [',' [star_etc]]
@@ -67,22 +67,23 @@ slash_without_default: plain_names ',' '/'
 slash_with_default: [plain_names ','] names_with_default ',' '/'
 names_with_default: name_with_default (',' name_with_default)*
 plain_names: plain_name !'=' (',' plain_name !'=')*
-star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' '**' NAME] [',']
-          | '*' (',' plain_name ['=' expression])+ [',' '**' NAME] [',']
-          | '**' NAME [':' annotation] [',']
+star_etc: ('*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' kwds] [',']
+          | '*' (',' plain_name ['=' expression])+ [',' kwds] [',']
+          | kwds [',']
           )
 name_with_default: plain_name '=' expression
 plain_name: NAME [':' annotation]
+kwds: '**' NAME [':' annotation]
 annotation: expression
 
 decorators: ('@' factor NEWLINE)+
 
-class_def: [decorators] 'class' NAME ['(' full_expressions ')'] ':' block
+class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
 block: simple_stmt | NEWLINE INDENT statements DEDENT
 
-full_expressions: full_expression (',' full_expression)* [',']
-expressions: expression (',' expression)* [',']
+full_expressions: ('*' bitwise_or | full_expression) (',' ('*' bitwise_or | full_expression))* [',']
+expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
 
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
@@ -136,14 +137,15 @@ for_if_clauses: ('for' star_targets 'in' expression ('if' expression)*)+
 yield_expr: 'yield' 'from' expression | 'yield' [expressions]
 
 arguments: expression for_if_clauses | args [',']
-args: kwargs | posarg [',' args]  # Weird to make it work
+args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work
 kwargs: kwarg (',' kwarg)*
 posarg: full_expression | '*' expression
-kwarg: NAME '=' expression | '**' expression
+kwarg: NAME '=' expression | '*' expression | '**' expression
 
 # NOTE: star_targets may contain *NAME, targets may not.
+# NOTE: the !'in' is to handle "for x, in ...".
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
-star_targets: star_target (',' star_target)* [',']
+star_targets: star_target (',' !'in' star_target)* [',']
 star_target: '*' NAME | star_atom t_tail*
 star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
 
