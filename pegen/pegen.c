@@ -56,8 +56,12 @@ fill_token(Parser *p)
     char *start, *end;
     int type = PyTokenizer_Get(p->tok, &start, &end);
     if (type == ERRORTOKEN) {
-        if (!PyErr_Occurred())
+        if (!PyErr_Occurred()) {
             PyErr_Format(PyExc_ValueError, "Error token");
+            PyErr_Format(PyExc_SyntaxError, "Tokenizer returned error token");
+            // There is no reliable column information for this error
+            PyErr_SyntaxLocationObject(p->tok->filename, p->tok->lineno, 0);
+        }
         return -1;
     }
 
@@ -346,6 +350,7 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         }
         if (p->fill == 0) {
             PyErr_Format(PyExc_SyntaxError, "error at start before reading any input");
+            PyErr_SyntaxLocationObject(p->tok->filename, 1, 1);
         }
         else {
             Token *t = p->tokens + p->fill - 1;
