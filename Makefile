@@ -6,6 +6,8 @@ TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 TESTDIR = .
 
+build: pegen/parse.c
+
 pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
 

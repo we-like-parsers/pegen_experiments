@@ -4,7 +4,7 @@ import time
 import token
 import tokenize
 
-import pegen
+from pegen.testutil import print_memstats
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     t1 = time.time()
     dt = t1 - t0
     print(f"Parsed in {dt:.3f} secs", file=sys.stderr)
-    pegen.print_memstats()
+    print_memstats()
 
 
 if __name__ == "__main__":
