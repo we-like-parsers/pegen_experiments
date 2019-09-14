@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+import time
 import traceback
 from glob import glob
 from pathlib import PurePath
@@ -100,6 +101,10 @@ def main():
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
     errors = 0
+    total_files = 0
+    total_bytes = 0
+    total_lines = 0
+    t0 = time.time()
     for file in sorted(glob(f"{directory}/**/*.py", recursive=True)):
         # Only attempt to parse Python files and files that are not excluded
         should_exclude_file = False
@@ -118,6 +123,23 @@ def main():
                     succeeded=False, file=file, verbose=verbose, error=error, short=args.short
                 )
                 errors += 1
+            total_files += 1
+            # Count lines and bytes separately
+            with open(file, "rb") as f:
+                total_lines += sum(1 for _ in f)
+                total_bytes += f.tell()
+    t1 = time.time()
+    total_seconds = t1 - t0
+
+    print(
+        f"Checked {total_files:,} files, {total_lines:,} lines,",
+        f"{total_bytes:,} bytes in {total_seconds:,.3f} seconds.",
+    )
+    if total_seconds > 0:
+        print(
+            f"That's {total_lines / total_seconds :,.0f} lines/sec,",
+            f"or {total_bytes / total_seconds :,.0f} bytes/sec.",
+        )
 
     if errors:
         print(f"Encountered {errors} failures.", file=sys.stderr)
