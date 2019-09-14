@@ -64,23 +64,12 @@ items:
     | item { [item] }
 
 item:
-    | NAME '=' molecule { NamedItem(name.string, molecule) }
-    | "&" atom { Lookahead(atom) }
-    | "!" atom { Lookahead(atom, False) }
-    | "~" { Cut() }
-    | molecule { molecule }
-
-molecule:
-    | atom "?" { Maybe(atom) }
-    | atom "*" { Loop(atom) }
-    | atom "+" { Loop(atom, True) }
+    | NAME '=' atom { NamedItem(name.string, atom) }
     | atom { atom }
-    | "[" alts "]" { Maybe(self.synthetic_rule(alts)) }
 
 atom:
     | NAME { name.string }
     | STRING {string.string }
-    | "(" alts ")" { self.synthetic_rule(alts) }
 
 action: "{" stuffs "}" { stuffs }
 
@@ -93,4 +82,4 @@ stuff:
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }
-    | !"}" OP { op.string }
+    | OP { None if op.string == "}" else op.string }
