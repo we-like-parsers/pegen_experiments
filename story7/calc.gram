@@ -1,0 +1,26 @@
+@subheader "from ast import literal_eval\n"
+
+start: expr_stmt* ENDMARKER
+expr_stmt: expr NEWLINE { print(expr) or True }
+
+expr:
+  | expr '+' ~ term { expr + term }
+  | expr '-' ~ term { expr - term }
+  | term { term }
+
+term:
+  | '-' ~ term { - term }
+  | '+' ~ term { + term }
+  | term '*' ~ factor { term * factor }
+  | term '/' ~ factor { term / factor }
+  | term '//' ~ factor { term // factor }
+  | factor { factor }
+
+factor:
+  | atom '**' ~ factor { atom ** factor }
+  | atom { atom }
+
+atom:
+  | STRING { literal_eval(string.string) }
+  | NUMBER { literal_eval(number.string) }
+  | '(' ~ expr ')' { expr }

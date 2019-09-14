@@ -1,0 +1,96 @@
+@class GrammarParser
+
+@subheader """
+from ast import literal_eval
+from token import DEDENT, INDENT, OP
+
+from story7.grammar import Grammar, Rule, Alt, NamedItem, Lookahead, Maybe, Loop, Cut
+
+BaseParser = Parser
+
+class Parser(BaseParser):
+
+    def __init__(self, tokenizer):
+        super().__init__(tokenizer)
+        self.extra_rules = []
+
+    def synthetic_rule(self, alts):
+        if len(alts) == 1 and len(alts[0].items) == 1:
+            return alts[0].items[0]
+        name = f"_synthetic_rule_{len(self.extra_rules)}"
+        rule = Rule(name, alts)
+        self.extra_rules.append(rule)
+        return rule.name
+"""
+
+start: grammar ENDMARKER { grammar }
+
+grammar:
+    | metas rules { Grammar(rules + self.extra_rules, metas) }
+    | rules { Grammar(rules + self.extra_rules, []) }
+
+metas:
+    | meta metas { [meta] + metas }
+    | meta { [meta] }
+
+meta:
+    | "@" NAME NEWLINE { (name.string, None) }
+    | "@" NAME NAME NEWLINE { (name.string, name1.string) }
+    | "@" NAME STRING NEWLINE { (name.string, literal_eval(string.string)) }
+
+rules:
+    | rule rules { [rule] + rules }
+    | rule { [rule] }
+
+rule:
+    | NAME ":" alts NEWLINE INDENT more_alts DEDENT { Rule(name.string, alts + more_alts) }
+    | NAME ":" NEWLINE INDENT more_alts DEDENT { Rule(name.string, more_alts) }
+    | NAME ":" alts NEWLINE { Rule(name.string, alts) }
+
+more_alts:
+    | "|" alts NEWLINE more_alts { alts + more_alts }
+    | "|" alts NEWLINE { alts }
+
+alts:
+    | alt "|" alts { [alt] + alts }
+    | alt { [alt] }
+
+alt:
+    | items action { Alt(items, action) }
+    | items { Alt(items, None) }
+
+items:
+    | item items { [item] + items }
+    | item { [item] }
+
+item:
+    | NAME '=' molecule { NamedItem(name.string, molecule) }
+    | "&" atom { Lookahead(atom) }
+    | "!" atom { Lookahead(atom, False) }
+    | "~" { Cut() }
+    | molecule { molecule }
+
+molecule:
+    | atom "?" { Maybe(atom) }
+    | atom "*" { Loop(atom) }
+    | atom "+" { Loop(atom, True) }
+    | atom { atom }
+    | "[" alts "]" { Maybe(self.synthetic_rule(alts)) }
+
+atom:
+    | NAME { name.string }
+    | STRING {string.string }
+    | "(" alts ")" { self.synthetic_rule(alts) }
+
+action: "{" stuffs "}" { stuffs }
+
+stuffs:
+    | stuff stuffs { stuff + " " + stuffs }
+    | stuff { stuff }
+
+stuff:
+    | "{" stuffs "}" { "{" + stuffs + "}" } 
+    | NAME { name.string }
+    | NUMBER { number.string }
+    | STRING { string.string }
+    | !"}" OP { op.string }
