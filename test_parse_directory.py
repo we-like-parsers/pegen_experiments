@@ -9,6 +9,7 @@ from glob import glob
 from pathlib import PurePath
 
 from pegen.build import build_parser_and_generator
+from pegen.testutil import print_memstats
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -140,6 +141,9 @@ def main():
             f"That's {total_lines / total_seconds :,.0f} lines/sec,",
             f"or {total_bytes / total_seconds :,.0f} bytes/sec.",
         )
+
+    if args.short:
+        print_memstats()
 
     if errors:
         print(f"Encountered {errors} failures.", file=sys.stderr)
