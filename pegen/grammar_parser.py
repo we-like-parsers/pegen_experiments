@@ -161,11 +161,11 @@ class GeneratedParser(Parser):
 
     @memoize
     def alts(self):
-        # alts: alt=alternative "|" alts { Rhs ( [ alt ] + alts . alts ) } | alt=alternative { Rhs ( [ alt ] ) }
+        # alts: alt "|" alts { Rhs ( [ alt ] + alts . alts ) } | alt { Rhs ( [ alt ] ) }
         mark = self.mark()
         cut = False
         if (
-            (alt := self.alternative())
+            (alt := self.alt())
             and
             (literal := self.expect("|"))
             and
@@ -176,7 +176,7 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (alt := self.alternative())
+            (alt := self.alt())
         ):
             return Rhs ( [ alt ] )
         self.reset(mark)
@@ -185,7 +185,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def more_alts(self):
-        # more_alts: "|" alts NEWLINE more_alts=more_alts { Rhs ( alts . alts + more_alts . alts ) } | "|" alts NEWLINE { Rhs ( alts . alts ) }
+        # more_alts: "|" alts NEWLINE more_alts { Rhs ( alts . alts + more_alts . alts ) } | "|" alts NEWLINE { Rhs ( alts . alts ) }
         mark = self.mark()
         cut = False
         if (
@@ -214,8 +214,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def alternative(self):
-        # alternative: items '$'? action { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = action . string ) } | items '$'? { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = None ) }
+    def alt(self):
+        # alt: items '$'? action { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = action . string ) } | items '$'? { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = None ) }
         mark = self.mark()
         cut = False
         if (

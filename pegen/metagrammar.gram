@@ -15,14 +15,14 @@ rulename:
         | NAME {(name.string, None)}
 
 alts:
-    | alt=alternative "|" alts { Rhs([alt] + alts.alts)}
-    | alt=alternative { Rhs([alt]) }
+    | alt "|" alts { Rhs([alt] + alts.alts)}
+    | alt { Rhs([alt]) }
 
 more_alts:
-    | "|" alts NEWLINE more_alts=more_alts { Rhs(alts.alts + more_alts.alts) }
+    | "|" alts NEWLINE more_alts { Rhs(alts.alts + more_alts.alts) }
     | "|" alts NEWLINE { Rhs(alts.alts) }
 
-alternative: 
+alt:
     | items ['$'] action { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=action.string) }
     | items ['$'] { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=None) }
 
