@@ -61,7 +61,7 @@ def import_file(full_name, path):
 
 
 def generate_parser_c_extension(grammar, path):
-    """Generate a parser c extension for the given rules in the given path"""
+    """Generate a parser c extension for the given grammar in the given path"""
     source = path / "parse.c"
     with open(source, "w") as file:
         genr = CParserGenerator(grammar, file)
