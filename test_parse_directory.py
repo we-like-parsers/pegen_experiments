@@ -102,9 +102,8 @@ def main():
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
     errors = 0
-    total_files = 0
-    total_bytes = 0
-    total_lines = 0
+    files = []
+
     t0 = time.time()
     for file in sorted(glob(f"{directory}/**/*.py", recursive=True)):
         # Only attempt to parse Python files and files that are not excluded
@@ -124,13 +123,19 @@ def main():
                     succeeded=False, file=file, verbose=verbose, error=error, short=args.short
                 )
                 errors += 1
-            total_files += 1
-            # Count lines and bytes separately
-            with open(file, "rb") as f:
-                total_lines += sum(1 for _ in f)
-                total_bytes += f.tell()
+            files.append(file)
     t1 = time.time()
+
     total_seconds = t1 - t0
+    total_files = len(files)
+
+    total_bytes = 0
+    total_lines = 0
+    for file in files:
+        # Count lines and bytes separately
+        with open(file, "rb") as f:
+            total_lines += sum(1 for _ in f)
+            total_bytes += f.tell()
 
     print(
         f"Checked {total_files:,} files, {total_lines:,} lines,",
