@@ -1,7 +1,8 @@
 start: rules ENDMARKER {Rules(rules)}
 
-rules: ( rule rules { [rule] + rules } |
-         rule { [rule] } )
+rules:
+    | rule rules { [rule] + rules }
+    | rule { [rule] }
 
 rule:
     | rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(*rulename, alts + more_alts) }
