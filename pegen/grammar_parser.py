@@ -65,7 +65,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rule(self):
-        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , alts + more_alts ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , more_alts ) } | rulename ":" alts NEWLINE { Rule ( * rulename , alts ) }
+        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , alts . alts + more_alts . alts ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , more_alts ) } | rulename ":" alts NEWLINE { Rule ( * rulename , alts ) }
         mark = self.mark()
         cut = False
         if (
@@ -83,7 +83,7 @@ class GeneratedParser(Parser):
             and
             (dedent := self.expect('DEDENT'))
         ):
-            return Rule ( * rulename , alts + more_alts )
+            return Rule ( * rulename , alts . alts + more_alts . alts )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -215,26 +215,42 @@ class GeneratedParser(Parser):
 
     @memoize
     def alt(self):
-        # alt: items '$'? action { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = action . string ) } | items '$'? { Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = None ) }
+        # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action . string ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action . string ) } | items { Alt ( items , action = None ) }
         mark = self.mark()
         cut = False
         if (
             (items := self.items())
             and
-            (opt := self.expect('$'),)
+            (literal := self.expect('$'))
             and
             (action := self.action())
         ):
-            return Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = action . string )
+            return Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action . string )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
             (items := self.items())
             and
-            (opt := self.expect('$'),)
+            (literal := self.expect('$'))
         ):
-            return Alt ( items + ( [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] if opt else [ ] ) , action = None )
+            return Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None )
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (items := self.items())
+            and
+            (action := self.action())
+        ):
+            return Alt ( items , action = action . string )
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (items := self.items())
+        ):
+            return Alt ( items , action = None )
         self.reset(mark)
         if cut: return None
         return None

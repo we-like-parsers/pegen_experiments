@@ -5,14 +5,14 @@ rules:
     | rule { [rule] }
 
 rule:
-    | rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(*rulename, alts + more_alts) }
+    | rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(*rulename, alts.alts + more_alts.alts) }
     | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule(*rulename, more_alts) }
     | rulename ":" alts NEWLINE { Rule(*rulename, alts) }
 
 rulename:
-        | NAME '[' type=NAME '*' ']' {(name.string, type.string+"*")}
-        | NAME '[' type=NAME ']' {(name.string, type.string)}
-        | NAME {(name.string, None)}
+    | NAME '[' type=NAME '*' ']' {(name.string, type.string+"*")}
+    | NAME '[' type=NAME ']' {(name.string, type.string)}
+    | NAME {(name.string, None)}
 
 alts:
     | alt "|" alts { Rhs([alt] + alts.alts)}
@@ -23,8 +23,10 @@ more_alts:
     | "|" alts NEWLINE { Rhs(alts.alts) }
 
 alt:
-    | items ['$'] action { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=action.string) }
-    | items ['$'] { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=None) }
+    | items '$' action { Alt(items + [NamedItem(None, NameLeaf('ENDMARKER'))], action=action.string) }
+    | items '$' { Alt(items + [NamedItem(None, NameLeaf('ENDMARKER'))], action=None) }
+    | items action { Alt(items, action=action.string) }
+    | items { Alt(items, action=None) }
 
 items:
     | named_item items { [named_item] + items }
