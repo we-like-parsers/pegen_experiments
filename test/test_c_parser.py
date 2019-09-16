@@ -6,8 +6,8 @@ from pegen.testutil import parse_string, generate_parser_c_extension
 
 
 def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=None, invalid_cases=None):
-    rules = parse_string(grammar, GrammarParser).rules
-    extension = generate_parser_c_extension(rules, tmp_path)
+    grammar = parse_string(grammar, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
 
     if valid_cases:
         for case in valid_cases:
@@ -40,8 +40,8 @@ def test_c_parser(tmp_path):
                    | s=STRING { s }
                    )
     """
-    rules = parse_string(grammar, GrammarParser).rules
-    extension = generate_parser_c_extension(rules, tmp_path)
+    grammar = parse_string(grammar, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
 
     expressions = [
         "4+5",

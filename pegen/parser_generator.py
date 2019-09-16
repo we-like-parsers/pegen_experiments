@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import *
 
 from pegen import sccutils
-from pegen.grammar import Rule, Rhs, Alt, NamedItem, Plain, NameLeaf
+from pegen.grammar import Grammar, Rule, Rhs, Alt, NamedItem, Plain, NameLeaf
 from pegen.grammar import GrammarError, GrammarVisitor
 
 
@@ -28,16 +28,17 @@ class ParserGenerator:
 
     callmakervisitor: GrammarVisitor
 
-    def __init__(self, rules: Dict[str, Rule], file: Optional[IO[Text]]):
-        if "start" not in rules:
+    def __init__(self, grammar: Grammar, file: Optional[IO[Text]]):
+        self.grammar = grammar
+        self.rules = grammar.rules
+        if "start" not in self.rules:
             raise GrammarError("Grammar must have a 'start' rule")
-        checker = RuleCheckingVisitor(rules)
-        for rule in rules.values():
+        checker = RuleCheckingVisitor(self.rules)
+        for rule in self.rules.values():
             checker.visit(rule)
-        self.rules = rules
         self.file = file
         self.level = 0
-        compute_nullables(rules)
+        compute_nullables(self.rules)
         self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
         self.todo = self.rules.copy()  # Rules to generate
         self.counter = 0  # For name_rule()/name_loop()

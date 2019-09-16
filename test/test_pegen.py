@@ -238,8 +238,9 @@ def test_left_recursive():
     bar: NAME*
     baz: NAME?
     """
-    rules = parse_string(grammar, GrammarParser).rules
-    parser_class = generate_parser(rules)
+    grammar = parse_string(grammar, GrammarParser)
+    parser_class = generate_parser(grammar)
+    rules = grammar.rules
     assert not rules["start"].left_recursive
     assert rules["expr"].left_recursive
     assert not rules["term"].left_recursive
@@ -291,9 +292,10 @@ def test_nullable():
     start: sign NUMBER
     sign: ['-' | '+']
     """
-    rules = parse_string(grammar, GrammarParser).rules
+    grammar = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
+    genr = PythonParserGenerator(grammar, out)
+    rules = grammar.rules
     assert rules["start"].nullable is False  # Not None!
     assert rules["sign"].nullable
 
@@ -303,9 +305,10 @@ def test_advanced_left_recursive():
     start: NUMBER | sign start
     sign: ['-']
     """
-    rules = parse_string(grammar, GrammarParser).rules
+    grammar = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
+    genr = PythonParserGenerator(grammar, out)
+    rules = grammar.rules
     assert rules["start"].nullable is False  # Not None!
     assert rules["sign"].nullable
     assert rules["start"].left_recursive
@@ -318,9 +321,10 @@ def test_mutually_left_recursive():
     foo: bar 'A' | 'B'
     bar: foo 'C' | 'D'
     """
-    rules = parse_string(grammar, GrammarParser).rules
+    grammar = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
+    genr = PythonParserGenerator(grammar, out)
+    rules = grammar.rules
     assert not rules["start"].left_recursive
     assert rules["foo"].left_recursive
     assert rules["bar"].left_recursive
@@ -371,9 +375,9 @@ def test_nasty_mutually_left_recursive():
     target: maybe '+' | NAME
     maybe: maybe '-' | target
     """
-    rules = parse_string(grammar, GrammarParser).rules
+    grammar = parse_string(grammar, GrammarParser)
     out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
+    genr = PythonParserGenerator(grammar, out)
     genr.generate("<string>")
     ns = {}
     exec(out.getvalue(), ns)
@@ -531,10 +535,10 @@ class TestGrammarVisitor:
 
         visitor.visit(rules)
 
-        # Rules/Rule/Rhs/Alt/NamedItem/NameLeaf   -> 6
-        #       Rule/Rhs/                         -> 2
-        #                Alt/NamedItem/StringLeaf -> 3
-        #                Alt/NamedItem/StringLeaf -> 3
+        # Grammar/Rule/Rhs/Alt/NamedItem/NameLeaf   -> 6
+        #         Rule/Rhs/                         -> 2
+        #                  Alt/NamedItem/StringLeaf -> 3
+        #                  Alt/NamedItem/StringLeaf -> 3
 
         assert visitor.n_nodes == 14
 
@@ -547,8 +551,7 @@ class TestGrammarVisitor:
 
         visitor.visit(rules)
 
-        # Rules/Rule/Rhs/Alt/NamedItem/Repeat1/StringLeaf -> 6
-
+        # Grammar/Rule/Rhs/Alt/NamedItem/Repeat1/StringLeaf -> 6
         assert visitor.n_nodes == 7
 
     def test_parse_repeat0_grammar(self):
@@ -560,7 +563,7 @@ class TestGrammarVisitor:
 
         visitor.visit(rules)
 
-        # Rules/Rule/Rhs/Alt/NamedItem/Repeat0/StringLeaf -> 6
+        # Grammar/Rule/Rhs/Alt/NamedItem/Repeat0/StringLeaf -> 6
 
         assert visitor.n_nodes == 7
 
@@ -573,8 +576,8 @@ class TestGrammarVisitor:
 
         visitor.visit(rules)
 
-        # Rules/Rule/Rhs/Alt/NamedItem/StringLeaf                       -> 6
-        #                    NamedItem/Opt/Rhs/Alt/NamedItem/Stringleaf -> 6
+        # Grammar/Rule/Rhs/Alt/NamedItem/StringLeaf                       -> 6
+        #                      NamedItem/Opt/Rhs/Alt/NamedItem/Stringleaf -> 6
 
         assert visitor.n_nodes == 12
 
