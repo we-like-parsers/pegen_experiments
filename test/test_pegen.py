@@ -5,7 +5,8 @@ from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
 import pytest
 
-from pegen.grammar import GrammarParser, GrammarVisitor, GrammarError
+from pegen.grammar_parser import GeneratedParser as GrammarParser
+from pegen.grammar import GrammarVisitor, GrammarError
 from pegen.grammar_visualizer import ASTGrammarPrinter
 from pegen.python_generator import PythonParserGenerator
 

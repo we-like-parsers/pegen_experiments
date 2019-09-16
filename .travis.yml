@@ -32,3 +32,4 @@ matrix:
           - make dump
           - make test
           - make simpy
+          - make regen-metaparser

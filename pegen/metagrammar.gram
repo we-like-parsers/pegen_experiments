@@ -1,0 +1,54 @@
+start: rules ENDMARKER {Rules(rules)}
+
+rules: ( rule rules { [rule] + rules } |
+         rule { [rule] } )
+
+rule:
+    | rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(*rulename, alts + more_alts) }
+    | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule(*rulename, more_alts) }
+    | rulename ":" alts NEWLINE { Rule(*rulename, alts) }
+
+rulename:
+        | NAME '[' type=NAME '*' ']' {(name.string, type.string+"*")}
+        | NAME '[' type=NAME ']' {(name.string, type.string)}
+        | NAME {(name.string, None)}
+
+alts:
+    | alt=alternative "|" alts { Rhs([alt] + alts.alts)}
+    | alt=alternative { Rhs([alt]) }
+
+more_alts:
+    | "|" alts NEWLINE more_alts=more_alts { Rhs(alts.alts + more_alts.alts) }
+    | "|" alts NEWLINE { Rhs(alts.alts) }
+
+alternative: 
+    | items ['$'] action { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=action.string) }
+    | items ['$'] { Alt(items + ([NamedItem(None, NameLeaf('ENDMARKER'))] if opt else []), action=None) }
+
+items:
+    | named_item items { [named_item] + items }
+    | named_item { [named_item] }
+
+named_item:
+    | NAME '=' item {NamedItem(name.string, item)}
+    | item {NamedItem(None, item)}
+    | item=lookahead {NamedItem(None, item)}
+
+lookahead:
+    | '&' atom {PositiveLookahead(atom)}
+    | '!' atom {NegativeLookahead(atom)}
+    | '~' {NameLeaf('CUT')}
+
+item: 
+    | '[' alts ']' {Opt(alts)}
+    |  atom '?' {Opt(atom)}
+    |  atom '*' {Repeat0(atom)}
+    |  atom '+' {Repeat1(atom)}
+    |  atom {atom}
+
+atom:
+    | '(' alts ')' {Group(alts)}
+    | NAME {NameLeaf(name.string) }
+    | STRING {StringLeaf(string.string)}
+
+action: action=CURLY_STUFF {action}

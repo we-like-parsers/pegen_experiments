@@ -13,6 +13,21 @@ import ast
 import sys
 import tokenize
 
+from pegen.grammar import (
+    Alt,
+    Group,
+    NameLeaf,
+    NamedItem,
+    NegativeLookahead,
+    Opt,
+    PositiveLookahead,
+    Repeat0,
+    Repeat1,
+    Rhs,
+    Rule,
+    Rules,
+    StringLeaf,
+)
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
 """
