@@ -13,10 +13,10 @@ from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import Tokenizer, grammar_tokenizer
 
 
-def generate_parser(rules):
+def generate_parser(grammar):
     # Generate a parser.
     out = io.StringIO()
-    genr = PythonParserGenerator(rules, out)
+    genr = PythonParserGenerator(grammar, out)
     genr.generate("<string>")
 
     # Load the generated parser class.
