@@ -1,4 +1,37 @@
-start: rules ENDMARKER {Grammar(rules)}
+@subheader """\
+from ast import literal_eval
+
+from pegen.grammar import (
+    Alt,
+    Group,
+    NameLeaf,
+    NamedItem,
+    NegativeLookahead,
+    Opt,
+    PositiveLookahead,
+    Repeat0,
+    Repeat1,
+    Rhs,
+    Rule,
+    Grammar,
+    StringLeaf,
+)
+"""
+
+start: grammar ENDMARKER { grammar }
+
+grammar:
+    | metas rules { Grammar(rules, metas) }
+    | rules { Grammar(rules, []) }
+
+metas:
+    | meta metas { [meta] + metas }
+    | meta { [meta] }
+
+meta:
+    | "@" NAME NEWLINE { (name.string, None) }
+    | "@" a=NAME b=NAME NEWLINE { (a.string, b.string) }
+    | "@" NAME STRING NEWLINE { (name.string, literal_eval(string.string)) }
 
 rules:
     | rule rules { [rule] + rules }

@@ -36,8 +36,9 @@ class GrammarVisitor:
 
 class Grammar:
 
-    def __init__(self, rules):
+    def __init__(self, rules, metas):
         self.rules = {rule.name: rule for rule in rules}
+        self.metas = dict(metas)
 
     def __str__(self):
         return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
