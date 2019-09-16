@@ -46,7 +46,7 @@ def parse_string(source, parser_class, *, dedent=True, verbose=False):
 
 def make_parser(source):
     # Combine parse_string() and generate_parser().
-    rules = parse_string(source, GrammarParser).rules
+    rules = parse_string(source, GrammarParser)
     return generate_parser(rules)
 
 

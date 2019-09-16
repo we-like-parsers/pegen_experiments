@@ -144,8 +144,8 @@ class CCallMakerVisitor(GrammarVisitor):
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
-    def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
-        super().__init__(rules, file)
+    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]]):
+        super().__init__(grammar, file)
         self.callmakervisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
 

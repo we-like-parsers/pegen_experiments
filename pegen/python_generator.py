@@ -25,7 +25,7 @@ from pegen.grammar import (
     Repeat1,
     Rhs,
     Rule,
-    Rules,
+    Grammar,
     StringLeaf,
 )
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
@@ -110,8 +110,8 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
 
 class PythonParserGenerator(ParserGenerator, GrammarVisitor):
-    def __init__(self, rules: Dict[str, grammar.Rule], file: Optional[IO[Text]]):
-        super().__init__(rules, file)
+    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]]):
+        super().__init__(grammar, file)
         self.callmakervisitor = PythonCallMakerVisitor(self)
 
     def generate(self, filename: str) -> None:

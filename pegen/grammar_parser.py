@@ -18,7 +18,7 @@ from pegen.grammar import (
     Repeat1,
     Rhs,
     Rule,
-    Rules,
+    Grammar,
     StringLeaf,
 )
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
@@ -28,7 +28,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def start(self):
-        # start: rules $ { Rules ( rules ) }
+        # start: rules $ { Grammar ( rules ) }
         mark = self.mark()
         cut = False
         if (
@@ -36,7 +36,7 @@ class GeneratedParser(Parser):
             and
             (endmarker := self.expect('ENDMARKER'))
         ):
-            return Rules ( rules )
+            return Grammar ( rules )
         self.reset(mark)
         if cut: return None
         return None

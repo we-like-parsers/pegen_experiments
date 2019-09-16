@@ -79,9 +79,9 @@ def build_generator(
     with open(output_file, "w") as file:
         gen: ParserGenerator
         if output_file.endswith(".c"):
-            gen = CParserGenerator(rules.rules, file)
+            gen = CParserGenerator(rules, file)
         elif output_file.endswith(".py"):
-            gen = PythonParserGenerator(rules.rules, file)
+            gen = PythonParserGenerator(rules, file)
         else:
             raise Exception("Your output file must either be a .c or .py file")
         gen.generate(grammar_file)

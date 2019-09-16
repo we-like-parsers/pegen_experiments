@@ -1,4 +1,4 @@
-start: rules ENDMARKER {Rules(rules)}
+start: rules ENDMARKER {Grammar(rules)}
 
 rules:
     | rule rules { [rule] + rules }

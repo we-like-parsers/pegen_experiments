@@ -34,7 +34,7 @@ class GrammarVisitor:
                 self.visit(value, *args, **kwargs)
 
 
-class Rules:
+class Grammar:
 
     def __init__(self, rules):
         self.rules = {rule.name: rule for rule in rules}
@@ -43,7 +43,7 @@ class Rules:
         return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
 
     def __repr__(self):
-        return f"Rules({self.rules!r})"
+        return f"Grammar({self.rules!r})"
 
     def __iter__(self):
         yield from self.rules.values()
