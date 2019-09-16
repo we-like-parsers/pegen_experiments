@@ -46,7 +46,7 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
     def visit_NameLeaf(self, node):
         name = node.value
-        if name in ("NAME", "NUMBER", "STRING", "CUT", "CURLY_STUFF"):
+        if name in ("NAME", "NUMBER", "STRING", "OP", "CUT", "CURLY_STUFF"):
             name = name.lower()
             return name, f"self.{name}()"
         if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
@@ -188,9 +188,6 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             action = node.action
             if not action:
                 action = f"[{', '.join(names)}]"
-            else:
-                assert action[0] == "{" and action[-1] == "}", repr(action)
-                action = action[1:-1].strip()
             if is_loop:
                 self.print(f"children.append({action})")
                 self.print(f"mark = self.mark()")

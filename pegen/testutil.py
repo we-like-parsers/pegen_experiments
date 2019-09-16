@@ -10,7 +10,7 @@ from pegen.build import compile_c_extension
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.c_generator import CParserGenerator
 from pegen.python_generator import PythonParserGenerator
-from pegen.tokenizer import Tokenizer, grammar_tokenizer
+from pegen.tokenizer import Tokenizer
 
 
 def generate_parser(grammar):
@@ -28,7 +28,7 @@ def generate_parser(grammar):
 def run_parser(file, parser_class, *, verbose=False):
     # Run a parser on a file (stream).
     # Note that this always recognizes {...} as CURLY_STUFF.
-    tokenizer = Tokenizer(grammar_tokenizer(tokenize.generate_tokens(file.readline)))
+    tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
     parser = parser_class(tokenizer, verbose=verbose)
     result = parser.start()
     if result is None:

@@ -11,7 +11,6 @@ from pegen.parser_generator import ParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
-from pegen.tokenizer import grammar_tokenizer
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 
 MOD_DIR = pathlib.Path(__file__)
@@ -62,7 +61,7 @@ def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
 def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
     with open(grammar_file) as file:
         tokenizer = Tokenizer(
-            grammar_tokenizer(tokenize.generate_tokens(file.readline)), verbose=verbose_tokenizer
+            tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer
         )
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
         grammar = parser.start()
