@@ -70,7 +70,7 @@ def generate_parser_c_extension(rules, path):
 
 
 def print_memstats() -> bool:
-    MiB: Final = 2 ** 20
+    MiB= 2 ** 20
     try:
         import psutil  # type: ignore
     except ImportError:
