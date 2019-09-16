@@ -58,4 +58,4 @@ However these times are on a faster machine.  Likely the majority of
 this time is spent converting the internal AST to the public AST.)
 
 __________
-PS. It's pronounced "pagan".
+PS. It's pronounced "peggen".
