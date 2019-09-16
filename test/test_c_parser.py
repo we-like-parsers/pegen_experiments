@@ -1,7 +1,7 @@
 import ast
 import pytest
 
-from pegen.grammar import GrammarParser
+from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
 

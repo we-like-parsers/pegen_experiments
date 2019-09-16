@@ -12,7 +12,7 @@ from pegen.python_generator import PythonParserGenerator
 from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
 from pegen.tokenizer import grammar_tokenizer
-from pegen.grammar import GrammarParser
+from pegen.grammar_parser import GeneratedParser as GrammarParser
 
 MOD_DIR = pathlib.Path(__file__)
 

@@ -6,7 +6,7 @@ Grammar features:
 - [ ] Stop using CURLY_STUFF hack and instead design a mini-grammar for what goes between { and }
 - [ ] Report static bugs in the grammar,
       see https://github.com/PhilippeSigaud/Pegged/blob/master/pegged/introspection.d
-- [ ] Make grammar parser bootstrappable
+- [x] Make grammar parser bootstrappable
 
 Refactoring:
 

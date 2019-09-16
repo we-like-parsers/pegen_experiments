@@ -4,8 +4,10 @@ import sys
 import textwrap
 import tokenize
 
+from typing_extensions import Final
+
 from pegen.build import compile_c_extension
-from pegen.grammar import GrammarParser
+from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.c_generator import CParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import Tokenizer, grammar_tokenizer

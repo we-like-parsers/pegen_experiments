@@ -37,7 +37,7 @@ class GrammarVisitor:
 class Rules:
 
     def __init__(self, rules):
-        self.rules = rules
+        self.rules = {rule.name: rule for rule in rules}
 
     def __str__(self):
         return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
@@ -386,192 +386,22 @@ class Group:
         return self.rhs.initial_names()
 
 
+class Cut:
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return f"Cut()"
+
+    def __str__(self):
+        return f"~"
+
+    def __eq__(self, other):
+        if not isinstance(other, Cut):
+            return NotImplemented
+        return True
+
+
 Plain = Union[Leaf, Group]
 Item = Union[Plain, Opt, Repeat, Lookahead, Rhs]
-
-
-class GrammarParser(Parser):
-    """Hand-written parser for Grammar files."""
-
-    @memoize
-    def start(self) -> Optional[Rules]:
-        """
-        start: rule+ ENDMARKER
-        """
-        mark = self.mark()
-        rules = {}
-        while rule := self.rule():
-            assert rule
-            rules[rule.name] = rule
-            mark = self.mark()
-        if self.expect('ENDMARKER'):
-            return Rules(rules)
-        return None
-
-    @memoize
-    def rule(self) -> Optional[Rule]:
-        """
-        rule: NAME [ '[' NAME ['*'] ']' ] ':' alternatives NEWLINE
-        """
-        mark = self.mark()
-        if ((name := self.name()) and
-                self.expect(':') and
-                (alts := self.alternatives()) and
-                self.expect('NEWLINE')):
-            assert name
-            assert alts
-            return Rule(name.string, None, alts)
-        self.reset(mark)
-        if ((name := self.name()) and
-                self.expect('[') and
-                (type := self.name()) and
-                self.expect(']') and
-                self.expect(':') and
-                (alts := self.alternatives()) and
-                self.expect('NEWLINE')):
-            assert name
-            assert type
-            assert alts
-            return Rule(name.string, type.string, alts)
-        self.reset(mark)
-        if ((name := self.name()) and
-                self.expect('[') and
-                (type := self.name()) and
-                self.expect('*') and
-                self.expect(']') and
-                self.expect(':') and
-                (alts := self.alternatives()) and
-                self.expect('NEWLINE')):
-            assert name
-            assert type
-            assert alts
-            return Rule(name.string, type.string + '*', alts)
-        self.reset(mark)
-        return None
-
-    @memoize
-    def alternatives(self) -> Optional[Rhs]:
-        """
-        alternatives: alternative ('|' alternative)*
-        """
-        mark = self.mark()
-        alts = []
-        if alt := self.alternative():
-            assert alt
-            alts.append(alt)
-        else:
-            return None
-        mark = self.mark()
-        while self.expect('|') and (alt := self.alternative()):
-            alts.append(alt)
-            mark = self.mark()
-        self.reset(mark)
-        if not alts:
-            return None
-        return Rhs(alts)
-
-    @memoize
-    def alternative(self) -> Optional[Alt]:
-        """
-        alternative: named_item+ ('~' (named_item+ ['$'] | '$') | ['$']) [CURLY_STUFF]
-        """
-        mark = ubermark = self.mark()
-        items = []
-        while item := self.named_item():
-            assert item
-            items.append(item)
-            mark = self.mark()
-        if not items:
-            return None
-        icut = -1
-        if self.expect('~'):
-            items.append(NamedItem(None, NameLeaf('CUT')))
-            icut = len(items)
-            mark = self.mark()
-            while item := self.named_item():
-                assert item
-                items.append(item)
-                mark = self.mark()
-        if self.expect('$'):
-            items.append(NamedItem(None, NameLeaf('ENDMARKER')))
-        if icut == len(items):
-            # Can't have "cut" as the last item
-            self.reset(ubermark)
-            return None
-        action = self.curly_stuff()
-        return Alt(items, icut=icut, action=action.string if action else None)
-
-    @memoize
-    def named_item(self) -> Optional[NamedItem]:
-        """
-        named_item: NAME '=' item | item | lookahead
-        """
-        mark = self.mark()
-        if (name := self.name()) and self.expect('=') and (item := self.item()):
-            assert name
-            assert item
-            return NamedItem(name.string, item)
-        self.reset(mark)
-        item = self.item()
-        if not item:
-            self.reset(mark)  # Redundant?
-            item = self.lookahead()
-            if not item:
-                return None
-        return NamedItem(None, item)
-
-    @memoize
-    def lookahead(self) -> Optional[Lookahead]:
-        """
-        lookahead: ('&' | '!') atom
-        """
-        mark = self.mark()
-        if (lookahead := (self.expect('&') or self.expect('!'))) and (atom := self.atom()):
-            assert lookahead
-            assert atom
-            if lookahead.string == '&':
-                return PositiveLookahead(atom)
-            else:
-                return NegativeLookahead(atom)
-        self.reset(mark)
-        return None
-
-    @memoize
-    def item(self) -> Optional[Item]:
-        """
-        item: '[' alternatives ']' | atom ('?' | '*' | '+')?
-        """
-        mark = self.mark()
-        if self.expect('[') and (alts := self.alternatives()) and self.expect(']'):
-            assert alts
-            return Opt(alts)
-        self.reset(mark)
-        if atom := self.atom():
-            assert atom
-            mark = self.mark()
-            if self.expect('?'):
-                return Opt(atom)
-            if self.expect('*'):
-                return Repeat0(atom)
-            if self.expect('+'):
-                return Repeat1(atom)
-            return atom
-        return None
-
-    @memoize
-    def atom(self) -> Optional[Plain]:
-        """
-        atom: '(' alternatives ')' | NAME | STRING
-        """
-        mark = self.mark()
-        if self.expect('(') and (alts := self.alternatives()) and self.expect(')'):
-            assert alts
-            return Group(alts)
-        self.reset(mark)
-        if name := self.name():
-            assert name
-            return NameLeaf(name.string)
-        if string := self.string():
-            assert string
-            return StringLeaf(string.string)
-        return None

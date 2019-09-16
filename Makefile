@@ -18,6 +18,9 @@ dump: pegen/parse.c
 	cat -n $(TESTFILE)
 	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)'); print(ast.dump(t))"
 
+regen-metaparser: pegen/metagrammar.gram
+	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py -v
+
 # Note: These targets really depend on the generated shared object in pegen/parse.*.so but
 # this has different names in different systems so we are abusing the implicit dependency on
 # parse.c by the use of --compile-extension.
