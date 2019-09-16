@@ -65,23 +65,23 @@ def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
             grammar_tokenizer(tokenize.generate_tokens(file.readline)), verbose=verbose_tokenizer
         )
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
-        rules = parser.start()
+        grammar = parser.start()
 
-        if not rules:
+        if not grammar:
             raise parser.make_syntax_error(grammar_file)
 
-    return rules, parser, tokenizer
+    return grammar, parser, tokenizer
 
 
 def build_generator(
-    tokenizer, rules, grammar_file, output_file, compile_extension=False, verbose_c_extension=False
+    tokenizer, grammar, grammar_file, output_file, compile_extension=False, verbose_c_extension=False
 ):
     with open(output_file, "w") as file:
         gen: ParserGenerator
         if output_file.endswith(".c"):
-            gen = CParserGenerator(rules, file)
+            gen = CParserGenerator(grammar, file)
         elif output_file.endswith(".py"):
-            gen = PythonParserGenerator(rules, file)
+            gen = PythonParserGenerator(grammar, file)
         else:
             raise Exception("Your output file must either be a .c or .py file")
         gen.generate(grammar_file)
@@ -114,9 +114,9 @@ def build_parser_and_generator(
         verbose_c_extension (bool, optional): Whether to display additional
           output when compiling the C extension . Defaults to False.
     """
-    rules, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
+    grammar, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
     gen = build_generator(
-        tokenizer, rules, grammar_file, output_file, compile_extension, verbose_c_extension
+        tokenizer, grammar, grammar_file, output_file, compile_extension, verbose_c_extension
     )
 
-    return rules, parser, tokenizer, gen
+    return grammar, parser, tokenizer, gen

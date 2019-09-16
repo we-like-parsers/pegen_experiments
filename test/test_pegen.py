@@ -536,9 +536,9 @@ class TestGrammarVisitor:
         visitor.visit(rules)
 
         # Grammar/Rule/Rhs/Alt/NamedItem/NameLeaf   -> 6
-        #       Rule/Rhs/                         -> 2
-        #                Alt/NamedItem/StringLeaf -> 3
-        #                Alt/NamedItem/StringLeaf -> 3
+        #         Rule/Rhs/                         -> 2
+        #                  Alt/NamedItem/StringLeaf -> 3
+        #                  Alt/NamedItem/StringLeaf -> 3
 
         assert visitor.n_nodes == 14
 
@@ -552,7 +552,6 @@ class TestGrammarVisitor:
         visitor.visit(rules)
 
         # Grammar/Rule/Rhs/Alt/NamedItem/Repeat1/StringLeaf -> 6
-
         assert visitor.n_nodes == 7
 
     def test_parse_repeat0_grammar(self):
@@ -578,7 +577,7 @@ class TestGrammarVisitor:
         visitor.visit(rules)
 
         # Grammar/Rule/Rhs/Alt/NamedItem/StringLeaf                       -> 6
-        #                    NamedItem/Opt/Rhs/Alt/NamedItem/Stringleaf -> 6
+        #                      NamedItem/Opt/Rhs/Alt/NamedItem/Stringleaf -> 6
 
         assert visitor.n_nodes == 12
 
