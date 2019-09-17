@@ -56,14 +56,14 @@ atom:
 
 # Mini-grammar for the actions
 
-action: "{" action_items "}" { action_items }
+action: "{" target_atoms "}" { target_atoms }
 
-action_items:
-    | action_item action_items { action_item + " " + action_items }
-    | action_item { action_item }
+target_atoms:
+    | target_atom target_atoms { target_atom + " " + target_atoms }
+    | target_atom { target_atom }
 
-action_item:
-    | "{" action_items "}" { "{" + action_items + "}" }
+target_atom:
+    | "{" target_atoms "}" { "{" + target_atoms + "}" }
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }

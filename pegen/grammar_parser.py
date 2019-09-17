@@ -423,56 +423,56 @@ class GeneratedParser(Parser):
 
     @memoize
     def action(self):
-        # action: "{" action_items "}" { action_items }
+        # action: "{" target_atoms "}" { target_atoms }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
             and
-            (action_items := self.action_items())
+            (target_atoms := self.target_atoms())
             and
             (literal_1 := self.expect("}"))
         ):
-            return action_items
+            return target_atoms
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def action_items(self):
-        # action_items: action_item action_items { action_item + " " + action_items } | action_item { action_item }
+    def target_atoms(self):
+        # target_atoms: target_atom target_atoms { target_atom + " " + target_atoms } | target_atom { target_atom }
         mark = self.mark()
         cut = False
         if (
-            (action_item := self.action_item())
+            (target_atom := self.target_atom())
             and
-            (action_items := self.action_items())
+            (target_atoms := self.target_atoms())
         ):
-            return action_item + " " + action_items
+            return target_atom + " " + target_atoms
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (action_item := self.action_item())
+            (target_atom := self.target_atom())
         ):
-            return action_item
+            return target_atom
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def action_item(self):
-        # action_item: "{" action_items "}" { "{" + action_items + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
+    def target_atom(self):
+        # target_atom: "{" target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
             and
-            (action_items := self.action_items())
+            (target_atoms := self.target_atoms())
             and
             (literal_1 := self.expect("}"))
         ):
-            return "{" + action_items + "}"
+            return "{" + target_atoms + "}"
         self.reset(mark)
         if cut: return None
         cut = False
