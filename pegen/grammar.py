@@ -1,4 +1,4 @@
-from __future__ import annotations  # Requires Python 3.7 or later
+from __future__ import annotations
 
 from abc import abstractmethod
 from typing import AbstractSet, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
@@ -395,7 +395,7 @@ class Cut:
     def __str__(self) -> str:
         return f"~"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cut):
             return NotImplemented
         return True

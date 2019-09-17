@@ -1,5 +1,3 @@
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import token
 import tokenize
 from typing import List, Iterator

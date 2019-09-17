@@ -5,8 +5,6 @@
 Search the web for PEG Parsers for reference.
 """
 
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import argparse
 import sys
 import time

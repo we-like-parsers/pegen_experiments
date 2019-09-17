@@ -1,9 +1,8 @@
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import contextlib
 import token
 from abc import abstractmethod
-from typing import *
+
+from typing import AbstractSet, Dict, IO, Iterator, List, Optional, Set, Text, Tuple
 
 from pegen import sccutils
 from pegen.grammar import Grammar, Rule, Rhs, Alt, NamedItem, Plain, NameLeaf
@@ -55,7 +54,7 @@ class ParserGenerator:
         finally:
             self.level -= 1
 
-    def print(self, *args: Any) -> None:
+    def print(self, *args: object) -> None:
         if not args:
             print(file=self.file)
         else:

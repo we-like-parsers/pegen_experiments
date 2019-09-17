@@ -1,5 +1,3 @@
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import argparse
 import sys
 import time
@@ -26,7 +24,7 @@ def logger(method: F) -> F:
     """
     method_name = method.__name__
 
-    def logger_wrapper(self: P, *args: Any) -> T:
+    def logger_wrapper(self: P, *args: object) -> T:
         if not self._verbose:
             return method(self, *args)
         argsr = ",".join(repr(arg) for arg in args)
@@ -46,7 +44,7 @@ def memoize(method: F) -> F:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def memoize_wrapper(self: P, *args: Any) -> T:
+    def memoize_wrapper(self: P, *args: object) -> T:
         mark = self.mark()
         key = mark, method_name, args
         # Fast path: cache hit, and not verbose.
@@ -227,13 +225,13 @@ class Parser:
             return self._tokenizer.getnext()
         return None
 
-    def positive_lookahead(self, func: Callable[..., T], *args: Any) -> T:
+    def positive_lookahead(self, func: Callable[..., T], *args: object) -> T:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
         return ok
 
-    def negative_lookahead(self, func: Callable[..., Any], *args: Any) -> bool:
+    def negative_lookahead(self, func: Callable[..., object], *args: object) -> bool:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)

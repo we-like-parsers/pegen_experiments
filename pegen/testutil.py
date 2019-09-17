@@ -70,7 +70,11 @@ def import_file(full_name: str, path: str) -> Any:
 
 
 def generate_parser_c_extension(grammar: Grammar, path: pathlib.PurePath) -> Any:
-    """Generate a parser c extension for the given grammar in the given path"""
+    """Generate a parser c extension for the given grammar in the given path
+
+    Returns a module object with a parse_string() method.
+    TODO: express that using a Protocol.
+    """
     source = path / "parse.c"
     with open(source, "w") as file:
         genr = CParserGenerator(grammar, file)

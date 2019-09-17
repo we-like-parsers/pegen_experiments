@@ -8,8 +8,11 @@ TESTDIR = .
 
 build: pegen/parse.c
 
-pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h
+pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h pegen/grammar_parser.py
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
+
+pegen/grammar_parser.py: pegen/metagrammar.gram
+	$(PYTHON) -m pegen -q pegen/metagrammar.gram -o pegen/grammar_parser.py
 
 clean:
 	-rm -f pegen/*.o pegen/*.so pegen/parse.c
