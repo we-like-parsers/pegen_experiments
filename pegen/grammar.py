@@ -201,7 +201,7 @@ class Alt:
     def __str__(self):
         core = " ".join(str(item) for item in self.items)
         if self.action:
-            return f"{core} { {self.action} }"
+            return f"{core} {{ {self.action} }}"
         else:
             return core
 
