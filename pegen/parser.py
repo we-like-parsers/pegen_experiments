@@ -6,7 +6,9 @@ import time
 import token
 import tokenize
 import traceback
-from typing import Any, Callable, cast, Dict, Optional, Tuple, TypeVar
+
+from abc import abstractmethod
+from typing import Any, Callable, cast, Dict, Optional, Tuple, Type, TypeVar
 
 from pegen.tokenizer import exact_token_types
 from pegen.tokenizer import Mark
@@ -158,7 +160,7 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
 class Parser:
     """Parsing base class."""
 
-    def __init__(self, tokenizer: Tokenizer, *, verbose=False):
+    def __init__(self, tokenizer: Tokenizer, *, verbose: bool = False):
         self._tokenizer = tokenizer
         self._verbose = verbose
         self._level = 0
@@ -168,11 +170,15 @@ class Parser:
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
 
-    def showpeek(self):
+    @abstractmethod
+    def start(self) -> Any:
+        pass
+
+    def showpeek(self) -> str:
         tok = self._tokenizer.peek()
         return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
-    def cut(self):
+    def cut(self) -> bool:
         if self._verbose:
             fill = "  " * self._level
             print(f"{fill}CUT ... (looking at {self.showpeek()})")
@@ -221,26 +227,26 @@ class Parser:
             return self._tokenizer.getnext()
         return None
 
-    def positive_lookahead(self, func: Callable[..., T], *args) -> T:
+    def positive_lookahead(self, func: Callable[..., T], *args: Any) -> T:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
         return ok
 
-    def negative_lookahead(self, func: Callable[..., Any], *args) -> bool:
+    def negative_lookahead(self, func: Callable[..., Any], *args: Any) -> bool:
         mark = self.mark()
         ok = func(*args)
         self.reset(mark)
         return not ok
 
-    def make_syntax_error(self, filename="<unknown>") -> SyntaxError:
+    def make_syntax_error(self, filename: str = "<unknown>") -> SyntaxError:
         tok = self._tokenizer.diagnose()
         return SyntaxError(
             "pegen parse failure", (filename, tok.start[0], 1 + tok.start[1], tok.line)
         )
 
 
-def simple_parser_main(parser_class):
+def simple_parser_main(parser_class: Type[Parser]) -> None:
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
         "-v",

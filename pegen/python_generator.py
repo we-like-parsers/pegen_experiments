@@ -1,6 +1,21 @@
-from typing import Any, Dict, List, Optional, IO, Text
+from typing import Any, Dict, List, Optional, IO, Text, Tuple
 
-from pegen.grammar import GrammarVisitor
+from pegen.grammar import (
+    GrammarVisitor,
+    NameLeaf,
+    StringLeaf,
+    Rhs,
+    NamedItem,
+    Lookahead,
+    PositiveLookahead,
+    NegativeLookahead,
+    Opt,
+    Repeat0,
+    Repeat1,
+    Group,
+    Rule,
+    Alt,
+)
 from pegen import grammar
 from pegen.parser_generator import dedupe, ParserGenerator
 
@@ -29,7 +44,7 @@ class PythonCallMakerVisitor(GrammarVisitor):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
 
-    def visit_NameLeaf(self, node):
+    def visit_NameLeaf(self, node: NameLeaf) -> Tuple[Optional[str], str]:
         name = node.value
         if name in ("NAME", "NUMBER", "STRING", "OP", "CUT", "CURLY_STUFF"):
             name = name.lower()
@@ -38,10 +53,10 @@ class PythonCallMakerVisitor(GrammarVisitor):
             return name.lower(), f"self.expect({name!r})"
         return name, f"self.{name}()"
 
-    def visit_StringLeaf(self, node):
+    def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         return "literal", f"self.expect({node.value})"
 
-    def visit_Rhs(self, node):
+    def visit_Rhs(self, node: Rhs) -> Tuple[Optional[str], str]:
         if node in self.cache:
             return self.cache[node]
         if len(node.alts) == 1 and len(node.alts[0].items) == 1:
@@ -51,46 +66,46 @@ class PythonCallMakerVisitor(GrammarVisitor):
             self.cache[node] = name, f"self.{name}()"
         return self.cache[node]
 
-    def visit_NamedItem(self, node):
+    def visit_NamedItem(self, node: NamedItem) -> Tuple[Optional[str], str]:
         name, call = self.visit(node.item)
         if node.name:
             name = node.name
         return name, call
 
-    def lookahead_call_helper(self, node):
+    def lookahead_call_helper(self, node: Lookahead) -> Tuple[str, str]:
         name, call = self.visit(node.node)
         head, tail = call.split("(", 1)
         assert tail[-1] == ")"
         tail = tail[:-1]
         return head, tail
 
-    def visit_PositiveLookahead(self, node):
+    def visit_PositiveLookahead(self, node: PositiveLookahead) -> Tuple[None, str]:
         head, tail = self.lookahead_call_helper(node)
         return None, f"self.positive_lookahead({head}, {tail})"
 
-    def visit_NegativeLookahead(self, node):
+    def visit_NegativeLookahead(self, node: NegativeLookahead) -> Tuple[None, str]:
         head, tail = self.lookahead_call_helper(node)
         return None, f"self.negative_lookahead({head}, {tail})"
 
-    def visit_Opt(self, node):
+    def visit_Opt(self, node: Opt) -> Tuple[str, str]:
         name, call = self.visit(node.node)
         return "opt", f"{call},"  # Note trailing comma!
 
-    def visit_Repeat0(self, node):
+    def visit_Repeat0(self, node: Repeat0) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, False)
         self.cache[node] = name, f"self.{name}(),"  # Also a trailing comma!
         return self.cache[node]
 
-    def visit_Repeat1(self, node):
+    def visit_Repeat1(self, node: Repeat1) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, True)
         self.cache[node] = name, f"self.{name}()"  # But no trailing comma here!
         return self.cache[node]
 
-    def visit_Group(self, node):
+    def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
 
@@ -101,7 +116,8 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
 
     def generate(self, filename: str) -> None:
         header = self.grammar.metas.get("header", MODULE_PREFIX)
-        self.print(header.rstrip("\n").format(filename=filename))
+        if header is not None:
+            self.print(header.rstrip("\n").format(filename=filename))
         subheader = self.grammar.metas.get("subheader", "")
         if subheader:
             self.print(subheader.format(filename=filename))
@@ -113,9 +129,10 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.visit(rule)
         trailer = self.grammar.metas.get("trailer", MODULE_SUFFIX)
-        self.print(trailer.rstrip("\n"))
+        if trailer is not None:
+            self.print(trailer.rstrip("\n"))
 
-    def visit_Rule(self, node):
+    def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
         rhs = node.flatten()
         if node.left_recursive:
@@ -141,7 +158,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             else:
                 self.print("return None")
 
-    def visit_NamedItem(self, node, names):
+    def visit_NamedItem(self, node: NamedItem, names: List[str]) -> None:
         name, call = self.callmakervisitor.visit(node.item)
         if node.name:
             name = node.name
@@ -152,13 +169,13 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 name = dedupe(name, names)
             self.print(f"({name} := {call})")
 
-    def visit_Rhs(self, node, is_loop=False):
+    def visit_Rhs(self, node: Rhs, is_loop: bool = False) -> None:
         if is_loop:
             assert len(node.alts) == 1
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop)
 
-    def visit_Alt(self, node, is_loop):
+    def visit_Alt(self, node: Alt, is_loop: bool) -> None:
         names: List[str] = []
         self.print("cut = False")  # TODO: Only if needed.
         if is_loop:

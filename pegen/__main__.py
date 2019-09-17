@@ -19,7 +19,6 @@ from pegen.build import build_parser_and_generator
 from pegen.testutil import print_memstats
 
 
-
 argparser = argparse.ArgumentParser(
     prog="pegen", description="Experimental PEG-like parser generator"
 )

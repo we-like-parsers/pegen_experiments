@@ -41,7 +41,7 @@ simpy:
 	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
 
 mypy:
-	mypy pegen
+	mypy  # For list of files, see mypy.ini
 
 black:
 	black pegen tatsu test test*.py scripts

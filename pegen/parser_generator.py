@@ -14,7 +14,7 @@ class RuleCheckingVisitor(GrammarVisitor):
     def __init__(self, rules: Dict[str, Rule]):
         self.rules = rules
 
-    def visit_NameLeaf(self, node: NameLeaf):
+    def visit_NameLeaf(self, node: NameLeaf) -> None:
         if (
             node.value not in self.rules
             and node.value not in token.tok_name.values()
@@ -55,14 +55,14 @@ class ParserGenerator:
         finally:
             self.level -= 1
 
-    def print(self, *args):
+    def print(self, *args: Any) -> None:
         if not args:
             print(file=self.file)
         else:
             print("    " * self.level, end="", file=self.file)
             print(*args, file=self.file)
 
-    def printblock(self, lines):
+    def printblock(self, lines: str) -> None:
         for line in lines.splitlines():
             self.print(line)
 
