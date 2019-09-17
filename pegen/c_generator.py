@@ -344,8 +344,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 else:
                     self.print(f"res = {names[0]};")
             else:
-                assert action[0] == "{" and action[-1] == "}", repr(action)
-                action = action[1:-1].strip()
                 self.print(f"res = {action};")
                 ## self.print(f'fprintf(stderr, "Hit with action at %d: {node}, {names}, {action}\\n", p->mark);')
             if is_loop:

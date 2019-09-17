@@ -23,9 +23,9 @@ more_alts:
     | "|" alts NEWLINE { Rhs(alts.alts) }
 
 alt:
-    | items '$' action { Alt(items + [NamedItem(None, NameLeaf('ENDMARKER'))], action=action.string) }
+    | items '$' action { Alt(items + [NamedItem(None, NameLeaf('ENDMARKER'))], action=action) }
     | items '$' { Alt(items + [NamedItem(None, NameLeaf('ENDMARKER'))], action=None) }
-    | items action { Alt(items, action=action.string) }
+    | items action { Alt(items, action=action) }
     | items { Alt(items, action=None) }
 
 items:
@@ -54,4 +54,17 @@ atom:
     | NAME {NameLeaf(name.string) }
     | STRING {StringLeaf(string.string)}
 
-action: action=CURLY_STUFF {action}
+# Mini-grammar for the actions
+
+action: "{" target_atoms "}" { target_atoms }
+
+target_atoms:
+    | target_atom target_atoms { target_atom + " " + target_atoms }
+    | target_atom { target_atom }
+
+target_atom:
+    | "{" target_atoms "}" { "{" + target_atoms + "}" }
+    | NAME { name.string }
+    | NUMBER { number.string }
+    | STRING { string.string }
+    | !"}" OP { op.string }

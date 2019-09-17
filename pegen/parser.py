@@ -8,9 +8,7 @@ import tokenize
 import traceback
 from typing import Any, Callable, cast, Dict, Optional, Tuple, TypeVar
 
-from pegen.tokenizer import CURLY_STUFF
 from pegen.tokenizer import exact_token_types
-from pegen.tokenizer import grammar_tokenizer
 from pegen.tokenizer import Mark
 from pegen.tokenizer import Tokenizer
 
@@ -202,9 +200,9 @@ class Parser:
         return None
 
     @memoize
-    def curly_stuff(self) -> Optional[tokenize.TokenInfo]:
+    def op(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
-        if tok.type == CURLY_STUFF:
+        if tok.type == token.OP:
             return self._tokenizer.getnext()
         return None
 
@@ -254,12 +252,6 @@ def simple_parser_main(parser_class):
     argparser.add_argument(
         "-q", "--quiet", action="store_true", help="Don't print the parsed program"
     )
-    argparser.add_argument(
-        "-G",
-        "--grammar-parser",
-        action="store_true",
-        help="Recognize { ... } stuff; use for meta-grammar",
-    )
     argparser.add_argument("filename", help="Input file ('-' to use stdin)")
 
     args = argparser.parse_args()
@@ -277,8 +269,6 @@ def simple_parser_main(parser_class):
         file = open(args.filename)
     try:
         tokengen = tokenize.generate_tokens(file.readline)
-        if args.grammar_parser:
-            tokengen = grammar_tokenizer(tokengen)
         tokenizer = Tokenizer(tokengen, verbose=verbose_tokenizer)
         parser = parser_class(tokenizer, verbose=verbose_parser)
         tree = parser.start()

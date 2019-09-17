@@ -215,7 +215,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def alt(self):
-        # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action . string ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action . string ) } | items { Alt ( items , action = None ) }
+        # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action ) } | items { Alt ( items , action = None ) }
         mark = self.mark()
         cut = False
         if (
@@ -225,7 +225,7 @@ class GeneratedParser(Parser):
             and
             (action := self.action())
         ):
-            return Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action . string )
+            return Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -243,7 +243,7 @@ class GeneratedParser(Parser):
             and
             (action := self.action())
         ):
-            return Alt ( items , action = action . string )
+            return Alt ( items , action = action )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -423,13 +423,86 @@ class GeneratedParser(Parser):
 
     @memoize
     def action(self):
-        # action: action=CURLY_STUFF { action }
+        # action: "{" target_atoms "}" { target_atoms }
         mark = self.mark()
         cut = False
         if (
-            (action := self.curly_stuff())
+            (literal := self.expect("{"))
+            and
+            (target_atoms := self.target_atoms())
+            and
+            (literal_1 := self.expect("}"))
         ):
-            return action
+            return target_atoms
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def target_atoms(self):
+        # target_atoms: target_atom target_atoms { target_atom + " " + target_atoms } | target_atom { target_atom }
+        mark = self.mark()
+        cut = False
+        if (
+            (target_atom := self.target_atom())
+            and
+            (target_atoms := self.target_atoms())
+        ):
+            return target_atom + " " + target_atoms
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (target_atom := self.target_atom())
+        ):
+            return target_atom
+        self.reset(mark)
+        if cut: return None
+        return None
+
+    @memoize
+    def target_atom(self):
+        # target_atom: "{" target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
+        mark = self.mark()
+        cut = False
+        if (
+            (literal := self.expect("{"))
+            and
+            (target_atoms := self.target_atoms())
+            and
+            (literal_1 := self.expect("}"))
+        ):
+            return "{" + target_atoms + "}"
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (name := self.name())
+        ):
+            return name . string
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (number := self.number())
+        ):
+            return number . string
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (string := self.string())
+        ):
+            return string . string
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            self.negative_lookahead(self.expect, "}")
+            and
+            (op := self.op())
+        ):
+            return op . string
         self.reset(mark)
         if cut: return None
         return None
