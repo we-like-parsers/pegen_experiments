@@ -5,8 +5,6 @@
 Search the web for PEG Parsers for reference.
 """
 
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import argparse
 import sys
 import time
@@ -17,7 +15,6 @@ from typing import Final
 
 from pegen.build import build_parser_and_generator
 from pegen.testutil import print_memstats
-
 
 
 argparser = argparse.ArgumentParser(

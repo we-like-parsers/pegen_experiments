@@ -2,21 +2,27 @@ import pathlib
 import shutil
 import tokenize
 
+from typing import Optional, Tuple
+
 import distutils.log
 from distutils.core import Distribution, Extension
 from distutils.command.clean import clean  # type: ignore
 from distutils.command.build_ext import build_ext  # type: ignore
 
+from pegen.c_generator import CParserGenerator
+from pegen.grammar import Grammar
+from pegen.grammar_parser import GeneratedParser as GrammarParser
+from pegen.parser import Parser
 from pegen.parser_generator import ParserGenerator
 from pegen.python_generator import PythonParserGenerator
-from pegen.c_generator import CParserGenerator
 from pegen.tokenizer import Tokenizer
-from pegen.grammar_parser import GeneratedParser as GrammarParser
 
 MOD_DIR = pathlib.Path(__file__)
 
 
-def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
+def compile_c_extension(
+    generated_source_path: str, build_dir: Optional[str] = None, verbose: bool = False
+) -> str:
     """Compile the generated source for a parser generator into an extension module.
 
     The extension module will be generated in the same directory as the provided path
@@ -58,11 +64,11 @@ def compile_c_extension(generated_source_path, build_dir=None, verbose=False):
     return extension_path
 
 
-def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
+def build_parser(
+    grammar_file: str, verbose_tokenizer: bool = False, verbose_parser: bool = False
+) -> Tuple[Grammar, Parser, Tokenizer]:
     with open(grammar_file) as file:
-        tokenizer = Tokenizer(
-            tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer
-        )
+        tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
         grammar = parser.start()
 
@@ -73,8 +79,13 @@ def build_parser(grammar_file, verbose_tokenizer=False, verbose_parser=False):
 
 
 def build_generator(
-    tokenizer, grammar, grammar_file, output_file, compile_extension=False, verbose_c_extension=False
-):
+    tokenizer: Tokenizer,
+    grammar: Grammar,
+    grammar_file: str,
+    output_file: str,
+    compile_extension: bool = False,
+    verbose_c_extension: bool = False,
+) -> ParserGenerator:
     with open(output_file, "w") as file:
         gen: ParserGenerator
         if output_file.endswith(".c"):
@@ -92,13 +103,13 @@ def build_generator(
 
 
 def build_parser_and_generator(
-    grammar_file,
-    output_file,
-    compile_extension=False,
-    verbose_tokenizer=False,
-    verbose_parser=False,
-    verbose_c_extension=False,
-):
+    grammar_file: str,
+    output_file: str,
+    compile_extension: bool = False,
+    verbose_tokenizer: bool = False,
+    verbose_parser: bool = False,
+    verbose_c_extension: bool = False,
+) -> Tuple[Grammar, Parser, Tokenizer, ParserGenerator]:
     """Generate rules, parser, tokenizer, parser generator for a given grammar
 
     Args:

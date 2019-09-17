@@ -1,5 +1,3 @@
-from __future__ import annotations  # Requires Python 3.7 or later
-
 import token
 import tokenize
 from typing import List, Iterator
@@ -21,7 +19,7 @@ class Tokenizer:
 
     _tokens: List[tokenize.TokenInfo]
 
-    def __init__(self, tokengen: Iterator[tokenize.TokenInfo], *, verbose=False):
+    def __init__(self, tokengen: Iterator[tokenize.TokenInfo], *, verbose: bool = False):
         self._tokengen = tokengen
         self._tokens = []
         self._index = 0
@@ -74,7 +72,7 @@ class Tokenizer:
         if self._verbose:
             self.report(True, index < old_index)
 
-    def report(self, cached, back):
+    def report(self, cached: bool, back: bool) -> None:
         if back:
             fill = "-" * self._index + "-"
         elif cached:

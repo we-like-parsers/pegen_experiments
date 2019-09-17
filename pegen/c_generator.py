@@ -1,9 +1,24 @@
 import ast
 import itertools
 import re
-from typing import Any, Optional, IO, Text, List, Dict, Tuple
+from typing import Any, cast, Dict, IO, Optional, List, Text, Tuple
 
-from pegen.grammar import GrammarVisitor
+from pegen.grammar import (
+    GrammarVisitor,
+    Rhs,
+    Alt,
+    NamedItem,
+    NameLeaf,
+    StringLeaf,
+    Lookahead,
+    PositiveLookahead,
+    NegativeLookahead,
+    Opt,
+    Repeat0,
+    Repeat1,
+    Group,
+    Rule,
+)
 from pegen import grammar
 from pegen.parser_generator import dedupe, ParserGenerator
 from pegen.tokenizer import exact_token_types
@@ -68,7 +83,7 @@ class CCallMakerVisitor(GrammarVisitor):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
 
-    def visit_NameLeaf(self, node):
+    def visit_NameLeaf(self, node: NameLeaf) -> Tuple[str, str]:
         name = node.value
         if name in ("NAME", "NUMBER", "STRING", "CUT", "CURLY_STUFF"):
             name = name.lower()
@@ -78,7 +93,7 @@ class CCallMakerVisitor(GrammarVisitor):
             return f"{name}_var", f"{name}_token(p)"
         return f"{name}_var", f"{name}_rule(p)"
 
-    def visit_StringLeaf(self, node):
+    def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
         if re.match(r"[a-zA-Z_]\w*\Z", val):
             return "keyword", f'keyword_token(p, "{val}")'
@@ -87,7 +102,7 @@ class CCallMakerVisitor(GrammarVisitor):
             type = exact_token_types[val]
             return "literal", f"expect_token(p, {type})"
 
-    def visit_Rhs(self, node):
+    def visit_Rhs(self, node: Rhs) -> Tuple[Optional[str], str]:
         if node in self.cache:
             return self.cache[node]
         if len(node.alts) == 1 and len(node.alts[0].items) == 1:
@@ -97,13 +112,13 @@ class CCallMakerVisitor(GrammarVisitor):
             self.cache[node] = f"{name}_var", f"{name}_rule(p)"
         return self.cache[node]
 
-    def visit_NamedItem(self, node):
+    def visit_NamedItem(self, node: NamedItem) -> Tuple[Optional[str], str]:
         name, call = self.visit(node.item)
         if node.name:
             name = node.name
         return name, call
 
-    def lookahead_call_helper(self, node, positive):
+    def lookahead_call_helper(self, node: Lookahead, positive: int) -> Tuple[None, str]:
         name, call = self.visit(node.node)
         func, args = call.split("(", 1)
         assert args[-1] == ")"
@@ -115,31 +130,31 @@ class CCallMakerVisitor(GrammarVisitor):
         else:
             return None, f"lookahead_with_string({positive}, {func}, {args})"
 
-    def visit_PositiveLookahead(self, node):
+    def visit_PositiveLookahead(self, node: PositiveLookahead) -> Tuple[None, str]:
         return self.lookahead_call_helper(node, 1)
 
-    def visit_NegativeLookahead(self, node):
+    def visit_NegativeLookahead(self, node: NegativeLookahead) -> Tuple[None, str]:
         return self.lookahead_call_helper(node, 0)
 
-    def visit_Opt(self, node):
+    def visit_Opt(self, node: Opt) -> Tuple[str, str]:
         name, call = self.visit(node.node)
         return "opt_var", f"{call}, 1"  # Using comma operator!
 
-    def visit_Repeat0(self, node):
+    def visit_Repeat0(self, node: Repeat0) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, False)
         self.cache[node] = f"{name}_var", f"{name}_rule(p)"
         return self.cache[node]
 
-    def visit_Repeat1(self, node):
+    def visit_Repeat1(self, node: Repeat1) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, True)
         self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # But not here!
         return self.cache[node]
 
-    def visit_Group(self, node):
+    def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
 
@@ -149,12 +164,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.callmakervisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
 
-    def unique_varname(self, name="tmpvar"):
+    def unique_varname(self, name: str = "tmpvar") -> str:
         new_var = name + "_" + str(self._varname_counter)
         self._varname_counter += 1
         return new_var
 
-    def call_with_errorcheck_return(self, call_text, returnval):
+    def call_with_errorcheck_return(self, call_text: str, returnval: str) -> None:
         error_var = self.unique_varname()
         self.print(f"int {error_var} = {call_text};")
         self.print(f"if ({error_var}) {{")
@@ -162,7 +177,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"return {returnval};")
         self.print(f"}}")
 
-    def call_with_errorcheck_goto(self, call_text, goto_target):
+    def call_with_errorcheck_goto(self, call_text: str, goto_target: str) -> None:
         error_var = self.unique_varname()
         self.print(f"int {error_var} = {call_text};")
         self.print(f"if ({error_var}) {{")
@@ -170,14 +185,18 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"goto {goto_target};")
         self.print(f"}}")
 
-    def out_of_memory_return(self, expr, returnval, message="Parser out of memory"):
+    def out_of_memory_return(
+        self, expr: str, returnval: str, message: str = "Parser out of memory"
+    ) -> None:
         self.print(f"if ({expr}) {{")
         with self.indent():
             self.print(f'PyErr_Format(PyExc_MemoryError, "{message}");')
             self.print(f"return {returnval};")
         self.print(f"}}")
 
-    def out_of_memory_goto(self, expr, goto_target, message="Parser out of memory"):
+    def out_of_memory_goto(
+        self, expr: str, goto_target: str, message: str = "Parser out of memory"
+    ) -> None:
         self.print(f"if ({expr}) {{")
         with self.indent():
             self.print(f'PyErr_Format(PyExc_MemoryError, "{message}");')
@@ -207,7 +226,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         mode = int(self.rules["start"].type == "mod_ty")
         self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
-    def visit_Rule(self, node):
+    def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
         is_repeat1 = node.name.startswith("_loop1")
         memoize = not node.left_recursive
@@ -295,7 +314,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("return res;")
         self.print("}")
 
-    def visit_NamedItem(self, node, names: List[str]):
+    def visit_NamedItem(self, node: NamedItem, names: List[str]) -> None:
         name, call = self.callmakervisitor.visit(node)
         if not name:
             self.print(call)
@@ -304,7 +323,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 name = dedupe(name, names)
             self.print(f"({name} = {call})")
 
-    def visit_Rhs(self, node, is_loop: bool, rulename: Optional[str]):
+    def visit_Rhs(self, node: Rhs, is_loop: bool, rulename: Optional[str]) -> None:
         if is_loop:
             assert len(node.alts) == 1
         vars = {}
@@ -319,7 +338,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, rulename=rulename)
 
-    def visit_Alt(self, node, is_loop: bool, rulename: Optional[str]):
+    def visit_Alt(self, node: Alt, is_loop: bool, rulename: Optional[str]) -> None:
         self.print(f"// {node}")
         names: List[str] = []
         if is_loop:
@@ -360,7 +379,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         if "cut_var" in names:
             self.print("if (cut_var) return NULL;")
 
-    def collect_vars(self, node) -> Dict[str, Optional[str]]:
+    def collect_vars(self, node: Alt) -> Dict[str, Optional[str]]:
         names: List[str] = []
         types = {}
         for item in node.items:
@@ -368,7 +387,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             types[name] = type
         return types
 
-    def add_var(self, node, names: List[str]) -> Tuple[str, Optional[str]]:
+    def add_var(self, node: NamedItem, names: List[str]) -> Tuple[str, Optional[str]]:
         name: str
         call: str
         name, call = self.callmakervisitor.visit(node.item)

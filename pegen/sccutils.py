@@ -117,7 +117,7 @@ def find_cycles_in_scc(
     assert start in graph
 
     # Recursive helper that yields cycles.
-    def dfs(node: str, path: List[str]):
+    def dfs(node: str, path: List[str]) -> Iterator[List[str]]:
         if node in path:
             yield path + [node]
             return

@@ -8,6 +8,8 @@ import traceback
 from glob import glob
 from pathlib import PurePath
 
+from typing import Optional
+
 from pegen.build import build_parser_and_generator
 from pegen.testutil import print_memstats
 
@@ -32,7 +34,13 @@ argparser.add_argument(
 )
 
 
-def report_status(succeeded, file, verbose, error=None, short=False):
+def report_status(
+    succeeded: bool,
+    file: str,
+    verbose: bool,
+    error: Optional[Exception] = None,
+    short: bool = False,
+) -> None:
     if short and succeeded:
         return
 
@@ -60,7 +68,7 @@ def report_status(succeeded, file, verbose, error=None, short=False):
             print(f"  {str(error.__class__.__name__)}: {error}")
 
 
-def main():
+def main() -> None:
     args = argparser.parse_args()
     directory = args.directory
     grammar_file = args.grammar_file
@@ -91,7 +99,7 @@ def main():
         print("A grammar file was not provided - attempting to use existing file...\n")
 
     try:
-        from pegen import parse
+        from pegen import parse  # type: ignore [attr-defined]
     except:
         print(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",

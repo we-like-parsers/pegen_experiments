@@ -1,7 +1,7 @@
-from __future__ import annotations  # Requires Python 3.7 or later
+from __future__ import annotations
 
 from abc import abstractmethod
-from typing import AbstractSet, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
+from typing import AbstractSet, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
 
 from pegen.parser import memoize, Parser
 
@@ -15,16 +15,13 @@ class GrammarError(Exception):
 
 class GrammarVisitor:
 
-    def visit(self, node, *args, **kwargs):
+    def visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         """Visit a node."""
         method = 'visit_' + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node, *args, **kwargs)
 
-    def visit_TokenInfo(self):
-        pass
-
-    def generic_visit(self, node, *args, **kwargs):
+    def generic_visit(self, node: Iterable[Any], *args: Any, **kwargs: Any) -> None:
         """Called if no explicit visitor function exists for a node."""
         for value in node:
             if isinstance(value, list):
@@ -36,17 +33,17 @@ class GrammarVisitor:
 
 class Grammar:
 
-    def __init__(self, rules, metas):
+    def __init__(self, rules: Iterable[Rule], metas: Iterable[Tuple[str, Optional[str]]]):
         self.rules = {rule.name: rule for rule in rules}
         self.metas = dict(metas)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Grammar({self.rules!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rule]:
         yield from self.rules.values()
 
 
@@ -61,19 +58,19 @@ class Rule:
         self.left_recursive = False
         self.leader = False
 
-    def is_loop(self):
+    def is_loop(self) -> bool:
         return self.name.startswith('_loop')
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.type is None:
             return f"{self.name}: {self.rhs}"
         else:
             return f"{self.name}[{self.type}]: {self.rhs}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Rule({self.name!r}, {self.type!r}, {self.rhs!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rhs]:
         yield self.rhs
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -107,12 +104,12 @@ class Leaf:
     def __init__(self, value: str):
         self.value = value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
-    def __iter__(self):
-        return
-        yield
+    def __iter__(self) -> Iterable[str]:
+        if False:
+            yield
 
     @abstractmethod
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -126,14 +123,14 @@ class Leaf:
 class NameLeaf(Leaf):
     """The value is the name."""
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.value == 'ENDMARKER':
             return '$'
         if self.value == 'CUT':
             return '~'
         return super().__str__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"NameLeaf({self.value!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -149,7 +146,7 @@ class NameLeaf(Leaf):
 class StringLeaf(Leaf):
     """The value is a string literal, including quotes."""
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"StringLeaf({self.value!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -166,13 +163,13 @@ class Rhs:
         self.alts = alts
         self.memo: Optional[Tuple[Optional[str], str]] = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return " | ".join(str(alt) for alt in self.alts)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Rhs({self.alts!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[List[Alt]]:
         yield self.alts
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -199,14 +196,14 @@ class Alt:
         self.icut = icut
         self.action = action
 
-    def __str__(self):
+    def __str__(self) -> str:
         core = " ".join(str(item) for item in self.items)
         if self.action:
             return f"{core} {{ {self.action} }}"
         else:
             return core
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         args = [repr(self.items)]
         if self.icut >= 0:
             args.append(f"icut={self.icut}")
@@ -214,7 +211,7 @@ class Alt:
             args.append(f"action={self.action!r}")
         return f"Alt({', '.join(args)})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[List[NamedItem]]:
         yield self.items
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -243,16 +240,16 @@ class NamedItem:
         self.item = item
         self.nullable = False
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.name:
             return f"{self.name}={self.item}"
         else:
             return str(self.item)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"NamedItem({self.name!r}, {self.item!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Item]:
         yield self.item
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -272,10 +269,10 @@ class Lookahead:
         self.node = node
         self.sign = sign
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.sign}{self.node}"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Plain]:
         yield self.node
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -290,7 +287,7 @@ class PositiveLookahead(Lookahead):
     def __init__(self, node: Plain):
         super().__init__(node, '&')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PositiveLookahead({self.node!r})"
 
 
@@ -299,7 +296,7 @@ class NegativeLookahead(Lookahead):
     def __init__(self, node: Plain):
         super().__init__(node, '!')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"NegativeLookahead({self.node!r})"
 
 
@@ -308,13 +305,13 @@ class Opt:
     def __init__(self, node: Item):
         self.node = node
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.node}?"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Opt({self.node!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Item]:
         yield self.node
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -335,7 +332,7 @@ class Repeat:
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         raise NotImplementedError
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Plain]:
         yield self.node
 
     def initial_names(self) -> AbstractSet[str]:
@@ -344,10 +341,10 @@ class Repeat:
 
 class Repeat0(Repeat):
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.node})*"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Repeat0({self.node!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -356,10 +353,10 @@ class Repeat0(Repeat):
 
 class Repeat1(Repeat):
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.node})+"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Repeat1({self.node!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -371,13 +368,13 @@ class Group:
     def __init__(self, rhs: Rhs):
         self.rhs = rhs
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.rhs})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Group({self.rhs!r})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rhs]:
         yield self.rhs
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
@@ -389,16 +386,16 @@ class Group:
 
 class Cut:
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Cut()"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"~"
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cut):
             return NotImplemented
         return True
