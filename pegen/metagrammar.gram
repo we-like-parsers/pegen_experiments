@@ -56,14 +56,14 @@ atom:
 
 # Mini-grammar for the actions
 
-action: "{" stuffs "}" { stuffs }
+action: "{" action_items "}" { action_items }
 
-stuffs:
-    | stuff stuffs { stuff + " " + stuffs }
-    | stuff { stuff }
+action_items:
+    | action_item action_items { action_item + " " + action_items }
+    | action_item { action_item }
 
-stuff:
-    | "{" stuffs "}" { "{" + stuffs + "}" } 
+action_item:
+    | "{" action_items "}" { "{" + action_items + "}" }
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }

@@ -28,7 +28,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def start(self):
-        # start: rules $ {'Grammar ( rules )'}
+        # start: rules $ { Grammar ( rules ) }
         mark = self.mark()
         cut = False
         if (
@@ -43,7 +43,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rules(self):
-        # rules: rule rules {'[ rule ] + rules'} | rule {'[ rule ]'}
+        # rules: rule rules { [ rule ] + rules } | rule { [ rule ] }
         mark = self.mark()
         cut = False
         if (
@@ -65,7 +65,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rule(self):
-        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT {'Rule ( * rulename , alts . alts + more_alts . alts )'} | rulename ":" NEWLINE INDENT more_alts DEDENT {'Rule ( * rulename , more_alts )'} | rulename ":" alts NEWLINE {'Rule ( * rulename , alts )'}
+        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , alts . alts + more_alts . alts ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , more_alts ) } | rulename ":" alts NEWLINE { Rule ( * rulename , alts ) }
         mark = self.mark()
         cut = False
         if (
@@ -120,7 +120,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rulename(self):
-        # rulename: NAME '[' type=NAME '*' ']' {'( name . string , type . string + "*" )'} | NAME '[' type=NAME ']' {'( name . string , type . string )'} | NAME {'( name . string , None )'}
+        # rulename: NAME '[' type=NAME '*' ']' { ( name . string , type . string + "*" ) } | NAME '[' type=NAME ']' { ( name . string , type . string ) } | NAME { ( name . string , None ) }
         mark = self.mark()
         cut = False
         if (
@@ -161,7 +161,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def alts(self):
-        # alts: alt "|" alts {'Rhs ( [ alt ] + alts . alts )'} | alt {'Rhs ( [ alt ] )'}
+        # alts: alt "|" alts { Rhs ( [ alt ] + alts . alts ) } | alt { Rhs ( [ alt ] ) }
         mark = self.mark()
         cut = False
         if (
@@ -185,7 +185,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def more_alts(self):
-        # more_alts: "|" alts NEWLINE more_alts {'Rhs ( alts . alts + more_alts . alts )'} | "|" alts NEWLINE {'Rhs ( alts . alts )'}
+        # more_alts: "|" alts NEWLINE more_alts { Rhs ( alts . alts + more_alts . alts ) } | "|" alts NEWLINE { Rhs ( alts . alts ) }
         mark = self.mark()
         cut = False
         if (
@@ -215,7 +215,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def alt(self):
-        # alt: items '$' action {"Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action )"} | items '$' {"Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None )"} | items action {'Alt ( items , action = action )'} | items {'Alt ( items , action = None )'}
+        # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action ) } | items { Alt ( items , action = None ) }
         mark = self.mark()
         cut = False
         if (
@@ -257,7 +257,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def items(self):
-        # items: named_item items {'[ named_item ] + items'} | named_item {'[ named_item ]'}
+        # items: named_item items { [ named_item ] + items } | named_item { [ named_item ] }
         mark = self.mark()
         cut = False
         if (
@@ -279,7 +279,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def named_item(self):
-        # named_item: NAME '=' item {'NamedItem ( name . string , item )'} | item {'NamedItem ( None , item )'} | item=lookahead {'NamedItem ( None , item )'}
+        # named_item: NAME '=' item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | item=lookahead { NamedItem ( None , item ) }
         mark = self.mark()
         cut = False
         if (
@@ -310,7 +310,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def lookahead(self):
-        # lookahead: '&' atom {'PositiveLookahead ( atom )'} | '!' atom {'NegativeLookahead ( atom )'} | '~' {"NameLeaf ( 'CUT' )"}
+        # lookahead: '&' atom { PositiveLookahead ( atom ) } | '!' atom { NegativeLookahead ( atom ) } | '~' { NameLeaf ( 'CUT' ) }
         mark = self.mark()
         cut = False
         if (
@@ -341,7 +341,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self):
-        # item: '[' alts ']' {'Opt ( alts )'} | atom '?' {'Opt ( atom )'} | atom '*' {'Repeat0 ( atom )'} | atom '+' {'Repeat1 ( atom )'} | atom {'atom'}
+        # item: '[' alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | atom { atom }
         mark = self.mark()
         cut = False
         if (
@@ -392,7 +392,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def atom(self):
-        # atom: '(' alts ')' {'Group ( alts )'} | NAME {'NameLeaf ( name . string )'} | STRING {'StringLeaf ( string . string )'}
+        # atom: '(' alts ')' { Group ( alts ) } | NAME { NameLeaf ( name . string ) } | STRING { StringLeaf ( string . string ) }
         mark = self.mark()
         cut = False
         if (
@@ -423,56 +423,56 @@ class GeneratedParser(Parser):
 
     @memoize
     def action(self):
-        # action: "{" stuffs "}" {'stuffs'}
+        # action: "{" action_items "}" { action_items }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
             and
-            (stuffs := self.stuffs())
+            (action_items := self.action_items())
             and
             (literal_1 := self.expect("}"))
         ):
-            return stuffs
+            return action_items
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def stuffs(self):
-        # stuffs: stuff stuffs {'stuff + " " + stuffs'} | stuff {'stuff'}
+    def action_items(self):
+        # action_items: action_item action_items { action_item + " " + action_items } | action_item { action_item }
         mark = self.mark()
         cut = False
         if (
-            (stuff := self.stuff())
+            (action_item := self.action_item())
             and
-            (stuffs := self.stuffs())
+            (action_items := self.action_items())
         ):
-            return stuff + " " + stuffs
+            return action_item + " " + action_items
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (stuff := self.stuff())
+            (action_item := self.action_item())
         ):
-            return stuff
+            return action_item
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def stuff(self):
-        # stuff: "{" stuffs "}" {'"{" + stuffs + "}"'} | NAME {'name . string'} | NUMBER {'number . string'} | STRING {'string . string'} | !"}" OP {'op . string'}
+    def action_item(self):
+        # action_item: "{" action_items "}" { "{" + action_items + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
             and
-            (stuffs := self.stuffs())
+            (action_items := self.action_items())
             and
             (literal_1 := self.expect("}"))
         ):
-            return "{" + stuffs + "}"
+            return "{" + action_items + "}"
         self.reset(mark)
         if cut: return None
         cut = False
