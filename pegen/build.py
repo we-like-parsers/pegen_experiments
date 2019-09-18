@@ -70,7 +70,7 @@ def build_parser(
     with open(grammar_file) as file:
         tokenizer = Tokenizer(tokenize.generate_tokens(file.readline), verbose=verbose_tokenizer)
         parser = GrammarParser(tokenizer, verbose=verbose_parser)
-        grammar = parser.start()
+        grammar = parser.start()  # type: ignore[no-untyped-call]
 
         if not grammar:
             raise parser.make_syntax_error(grammar_file)
