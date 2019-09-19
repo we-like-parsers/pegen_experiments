@@ -126,8 +126,6 @@ class NameLeaf(Leaf):
     def __str__(self) -> str:
         if self.value == 'ENDMARKER':
             return '$'
-        if self.value == 'CUT':
-            return '~'
         return super().__str__()
 
     def __repr__(self) -> str:
@@ -400,6 +398,18 @@ class Cut:
             return NotImplemented
         return True
 
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
+        return True
+
+    def initial_names(self) -> AbstractSet[str]:
+        return set()
+
 
 Plain = Union[Leaf, Group]
-Item = Union[Plain, Opt, Repeat, Lookahead, Rhs]
+Item = Union[Plain, Opt, Repeat, Lookahead, Rhs, Cut]
+RuleName = Tuple[str, str]
+MetaTuple = Tuple[str, Optional[str]]
+MetaList = List[MetaTuple]
+RuleList = List[Rule]
+NamedItemList = List[NamedItem]
+LookaheadOrCut = Union[Lookahead, Cut]

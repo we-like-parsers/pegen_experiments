@@ -7,19 +7,30 @@ import tokenize
 
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 from ast import literal_eval
+from typing import Optional, Any
 
 from pegen.grammar import (
     Alt,
+    Cut,
     Group,
+    Item,
+    Lookahead,
+    LookaheadOrCut,
+    MetaTuple,
+    MetaList,
     NameLeaf,
     NamedItem,
+    NamedItemList,
     NegativeLookahead,
     Opt,
+    Plain,
     PositiveLookahead,
     Repeat0,
     Repeat1,
     Rhs,
     Rule,
+    RuleList,
+    RuleName,
     Grammar,
     StringLeaf,
 )
@@ -27,7 +38,7 @@ from pegen.grammar import (
 class GeneratedParser(Parser):
 
     @memoize
-    def start(self):
+    def start(self) -> Optional[Grammar]:
         # start: grammar $ { grammar }
         mark = self.mark()
         cut = False
@@ -42,7 +53,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def grammar(self):
+    def grammar(self) -> Optional[Grammar]:
         # grammar: metas rules { Grammar ( rules , metas ) } | rules { Grammar ( rules , [ ] ) }
         mark = self.mark()
         cut = False
@@ -64,7 +75,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def metas(self):
+    def metas(self) -> Optional[MetaList]:
         # metas: meta metas { [ meta ] + metas } | meta { [ meta ] }
         mark = self.mark()
         cut = False
@@ -86,7 +97,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def meta(self):
+    def meta(self) -> Optional[MetaTuple]:
         # meta: "@" NAME NEWLINE { ( name . string , None ) } | "@" a=NAME b=NAME NEWLINE { ( a . string , b . string ) } | "@" NAME STRING NEWLINE { ( name . string , literal_eval ( string . string ) ) }
         mark = self.mark()
         cut = False
@@ -129,7 +140,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def rules(self):
+    def rules(self) -> Optional[RuleList]:
         # rules: rule rules { [ rule ] + rules } | rule { [ rule ] }
         mark = self.mark()
         cut = False
@@ -151,8 +162,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def rule(self):
-        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , alts . alts + more_alts . alts ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( * rulename , more_alts ) } | rulename ":" alts NEWLINE { Rule ( * rulename , alts ) }
+    def rule(self) -> Optional[Rule]:
+        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts ) } | rulename ":" alts NEWLINE { Rule ( rulename [ 0 ] , rulename [ 1 ] , alts ) }
         mark = self.mark()
         cut = False
         if (
@@ -170,7 +181,7 @@ class GeneratedParser(Parser):
             and
             (dedent := self.expect('DEDENT'))
         ):
-            return Rule ( * rulename , alts . alts + more_alts . alts )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -187,7 +198,7 @@ class GeneratedParser(Parser):
             and
             (dedent := self.expect('DEDENT'))
         ):
-            return Rule ( * rulename , more_alts )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -200,13 +211,13 @@ class GeneratedParser(Parser):
             and
             (newline := self.expect('NEWLINE'))
         ):
-            return Rule ( * rulename , alts )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , alts )
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def rulename(self):
+    def rulename(self) -> Optional[RuleName]:
         # rulename: NAME '[' type=NAME '*' ']' { ( name . string , type . string + "*" ) } | NAME '[' type=NAME ']' { ( name . string , type . string ) } | NAME { ( name . string , None ) }
         mark = self.mark()
         cut = False
@@ -247,7 +258,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def alts(self):
+    def alts(self) -> Optional[Rhs]:
         # alts: alt "|" alts { Rhs ( [ alt ] + alts . alts ) } | alt { Rhs ( [ alt ] ) }
         mark = self.mark()
         cut = False
@@ -271,7 +282,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def more_alts(self):
+    def more_alts(self) -> Optional[Rhs]:
         # more_alts: "|" alts NEWLINE more_alts { Rhs ( alts . alts + more_alts . alts ) } | "|" alts NEWLINE { Rhs ( alts . alts ) }
         mark = self.mark()
         cut = False
@@ -301,7 +312,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def alt(self):
+    def alt(self) -> Optional[Alt]:
         # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action ) } | items { Alt ( items , action = None ) }
         mark = self.mark()
         cut = False
@@ -343,7 +354,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def items(self):
+    def items(self) -> Optional[NamedItemList]:
         # items: named_item items { [ named_item ] + items } | named_item { [ named_item ] }
         mark = self.mark()
         cut = False
@@ -365,8 +376,8 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def named_item(self):
-        # named_item: NAME '=' item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | item=lookahead { NamedItem ( None , item ) }
+    def named_item(self) -> Optional[NamedItem]:
+        # named_item: NAME '=' item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | it=lookahead { NamedItem ( None , it ) }
         mark = self.mark()
         cut = False
         if (
@@ -388,16 +399,16 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (item := self.lookahead())
+            (it := self.lookahead())
         ):
-            return NamedItem ( None , item )
+            return NamedItem ( None , it )
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def lookahead(self):
-        # lookahead: '&' atom { PositiveLookahead ( atom ) } | '!' atom { NegativeLookahead ( atom ) } | '~' { NameLeaf ( 'CUT' ) }
+    def lookahead(self) -> Optional[LookaheadOrCut]:
+        # lookahead: '&' atom { PositiveLookahead ( atom ) } | '!' atom { NegativeLookahead ( atom ) } | '~' { Cut ( ) }
         mark = self.mark()
         cut = False
         if (
@@ -421,13 +432,13 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('~'))
         ):
-            return NameLeaf ( 'CUT' )
+            return Cut ( )
         self.reset(mark)
         if cut: return None
         return None
 
     @memoize
-    def item(self):
+    def item(self) -> Optional[Item]:
         # item: '[' alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | atom { atom }
         mark = self.mark()
         cut = False
@@ -478,7 +489,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def atom(self):
+    def atom(self) -> Optional[Plain]:
         # atom: '(' alts ')' { Group ( alts ) } | NAME { NameLeaf ( name . string ) } | STRING { StringLeaf ( string . string ) }
         mark = self.mark()
         cut = False
@@ -509,7 +520,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def action(self):
+    def action(self) -> Optional[Any]:
         # action: "{" target_atoms "}" { target_atoms }
         mark = self.mark()
         cut = False
@@ -526,7 +537,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def target_atoms(self):
+    def target_atoms(self) -> Optional[Any]:
         # target_atoms: target_atom target_atoms { target_atom + " " + target_atoms } | target_atom { target_atom }
         mark = self.mark()
         cut = False
@@ -548,7 +559,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def target_atom(self):
+    def target_atom(self) -> Optional[Any]:
         # target_atom: "{" target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
         mark = self.mark()
         cut = False

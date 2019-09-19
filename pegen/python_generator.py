@@ -143,7 +143,8 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("@logger")
         else:
             self.print("@memoize")
-        self.print(f"def {node.name}(self):")
+        node_type = node.type or "Any"
+        self.print(f"def {node.name}(self) -> Optional[{node_type}]:")
         with self.indent():
             self.print(f"# {node.name}: {rhs}")
             if node.nullable:

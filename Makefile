@@ -11,9 +11,6 @@ build: pegen/parse.c
 pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/*.h pegen/grammar_parser.py
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
 
-pegen/grammar_parser.py: pegen/metagrammar.gram
-	$(PYTHON) -m pegen -q pegen/metagrammar.gram -o pegen/grammar_parser.py
-
 clean:
 	-rm -f pegen/*.o pegen/*.so pegen/parse.c
 
@@ -21,8 +18,8 @@ dump: pegen/parse.c
 	cat -n $(TESTFILE)
 	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)'); print(ast.dump(t))"
 
-regen-metaparser: pegen/metagrammar.gram
-	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py -v
+regen-metaparser: pegen/metagrammar.gram pegen/*.py
+	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py
 
 # Note: These targets really depend on the generated shared object in pegen/parse.*.so but
 # this has different names in different systems so we are abusing the implicit dependency on
@@ -43,7 +40,7 @@ time_stdlib:
 simpy:
 	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
 
-mypy:
+mypy: regen-metaparser
 	mypy  # For list of files, see mypy.ini
 
 black:
