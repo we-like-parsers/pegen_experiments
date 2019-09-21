@@ -16,7 +16,7 @@ def main():
                 source = file.read()
             tree = ast.parse(source, filename)
         except Exception as err:
-            print("Error:", err, file=sys.stderr)
+            print(f"{filename}: {err.__class__.__name__}: {err}", file=sys.stderr)
     tok = None
     t1 = time.time()
     dt = t1 - t0
