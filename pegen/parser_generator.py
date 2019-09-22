@@ -17,7 +17,6 @@ class RuleCheckingVisitor(GrammarVisitor):
         if (
             node.value not in self.rules
             and node.value not in token.tok_name.values()
-            and node.value != "CUT"
         ):
             # TODO: Add line/col info to (leaf) nodes
             raise GrammarError(f"Dangling reference to rule {node.value!r}")

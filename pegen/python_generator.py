@@ -48,7 +48,7 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
     def visit_NameLeaf(self, node: NameLeaf) -> Tuple[Optional[str], str]:
         name = node.value
-        if name in ("NAME", "NUMBER", "STRING", "OP", "CUT", "CURLY_STUFF"):
+        if name in ("NAME", "NUMBER", "STRING", "OP", "CURLY_STUFF"):
             name = name.lower()
             return name, f"self.{name}()"
         if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
