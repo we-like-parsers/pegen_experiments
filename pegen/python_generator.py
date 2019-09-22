@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, IO, Text, Tuple
 
 from pegen.grammar import (
+    Cut,
     GrammarVisitor,
     NameLeaf,
     StringLeaf,
@@ -26,6 +27,8 @@ MODULE_PREFIX = """\
 import ast
 import sys
 import tokenize
+
+from typing import Any, Optional
 
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
@@ -107,6 +110,9 @@ class PythonCallMakerVisitor(GrammarVisitor):
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
+    def visit_Cut(self, node: Cut) -> Tuple[str, str]:
+        return "cut", "True"
+
 
 class PythonParserGenerator(ParserGenerator, GrammarVisitor):
     def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]]):
@@ -143,7 +149,8 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("@logger")
         else:
             self.print("@memoize")
-        self.print(f"def {node.name}(self):")
+        node_type = node.type or "Any"
+        self.print(f"def {node.name}(self) -> Optional[{node_type}]:")
         with self.indent():
             self.print(f"# {node.name}: {rhs}")
             if node.nullable:

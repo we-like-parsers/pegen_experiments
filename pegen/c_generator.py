@@ -4,6 +4,7 @@ import re
 from typing import Any, cast, Dict, IO, Optional, List, Text, Tuple
 
 from pegen.grammar import (
+    Cut,
     GrammarVisitor,
     Rhs,
     Alt,
@@ -156,6 +157,9 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
+
+    def visit_Cut(self, node: Cut) -> Tuple[str, str]:
+        return "cut_var", "1"
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
