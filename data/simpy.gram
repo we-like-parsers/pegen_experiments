@@ -159,6 +159,6 @@ target: atom t_tail+ | t_atom t_tail*
 t_atom: NAME | '(' [targets] ')' | '[' [targets] ']'
 
 t_tail: call_tail* (attr_tail | index_tail)
-call_tail: '(' [arguments] ')'
+call_tail: '(' ~ [arguments] ')'
 attr_tail: '.' NAME
-index_tail: '[' slices ']'
+index_tail: '[' ~ slices ']'
