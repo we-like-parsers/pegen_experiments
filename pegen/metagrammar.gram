@@ -99,13 +99,13 @@ atom[Plain]:
 
 # Mini-grammar for the actions
 
-action: "{" ~ target_atoms "}" { target_atoms }
+action[str]: "{" ~ target_atoms "}" { target_atoms }
 
-target_atoms:
+target_atoms[str]:
     | target_atom target_atoms { target_atom + " " + target_atoms }
     | target_atom { target_atom }
 
-target_atom:
+target_atom[str]:
     | "{" ~ target_atoms "}" { "{" + target_atoms + "}" }
     | NAME { name.string }
     | NUMBER { number.string }

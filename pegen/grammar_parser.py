@@ -531,7 +531,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def action(self) -> Optional[Any]:
+    def action(self) -> Optional[str]:
         # action: "{" ~ target_atoms "}" { target_atoms }
         mark = self.mark()
         cut = False
@@ -550,7 +550,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def target_atoms(self) -> Optional[Any]:
+    def target_atoms(self) -> Optional[str]:
         # target_atoms: target_atom target_atoms { target_atom + " " + target_atoms } | target_atom { target_atom }
         mark = self.mark()
         cut = False
@@ -572,7 +572,7 @@ class GeneratedParser(Parser):
         return None
 
     @memoize
-    def target_atom(self) -> Optional[Any]:
+    def target_atom(self) -> Optional[str]:
         # target_atom: "{" ~ target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
         mark = self.mark()
         cut = False
