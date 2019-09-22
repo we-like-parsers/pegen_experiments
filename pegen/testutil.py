@@ -31,7 +31,6 @@ def generate_parser(grammar: Grammar) -> Type[Parser]:
 
 def run_parser(file: IO[str], parser_class: Type[Parser], *, verbose: bool = False) -> Any:
     # Run a parser on a file (stream).
-    # Note that this always recognizes {...} as CURLY_STUFF.
     tokenizer = Tokenizer(tokenize.generate_tokens(file.readline))
     parser = parser_class(tokenizer, verbose=verbose)
     result = parser.start()

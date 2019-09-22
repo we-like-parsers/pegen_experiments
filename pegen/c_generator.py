@@ -86,7 +86,7 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def visit_NameLeaf(self, node: NameLeaf) -> Tuple[str, str]:
         name = node.value
-        if name in ("NAME", "NUMBER", "STRING", "CURLY_STUFF"):
+        if name in ("NAME", "NUMBER", "STRING"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
         if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):

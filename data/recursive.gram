@@ -2,9 +2,20 @@ start: rules ENDMARKER
 rules: rules rule | rule
 rule: NAME ':' alternatives NEWLINE
 alternatives: alternatives '|' alt_and_action | alt_and_action
-alt_and_action: alt CURLY_STUFF | alt
+alt_and_action: alt action | alt
 alt: alt item | item
 item: optional | atom '*' | atom '+' | atom '?' | atom
 optional: '[' alternatives ']'
 atom: group | NAME | STRING
 group: '(' alternatives ')'
+
+action: "{" ~ target_atoms "}" { target_atoms }
+target_atoms:
+    | target_atom target_atoms { target_atom + " " + target_atoms }
+    | target_atom { target_atom }
+target_atom:
+    | "{" ~ target_atoms "}" { "{" + target_atoms + "}" }
+    | NAME { name.string }
+    | NUMBER { number.string }
+    | STRING { string.string }
+    | !"}" OP { op.string }
