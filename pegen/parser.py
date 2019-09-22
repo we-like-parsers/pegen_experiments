@@ -176,12 +176,6 @@ class Parser:
         tok = self._tokenizer.peek()
         return f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
-    def cut(self) -> bool:
-        if self._verbose:
-            fill = "  " * self._level
-            print(f"{fill}CUT ... (looking at {self.showpeek()})")
-        return True
-
     @memoize
     def name(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()

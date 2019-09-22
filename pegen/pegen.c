@@ -153,11 +153,6 @@ lookahead(int positive, void *(func)(Parser *), Parser *p)
     return (res != NULL) == positive;
 }
 
-int cut_token(Parser *p)
-{
-    return 1;
-}
-
 Token *
 expect_token(Parser *p, int type)
 {

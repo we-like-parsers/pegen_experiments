@@ -86,7 +86,7 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def visit_NameLeaf(self, node: NameLeaf) -> Tuple[str, str]:
         name = node.value
-        if name in ("NAME", "NUMBER", "STRING", "CUT", "CURLY_STUFF"):
+        if name in ("NAME", "NUMBER", "STRING", "CURLY_STUFF"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
         if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
@@ -323,8 +323,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         if not name:
             self.print(call)
         else:
-            if name != "cut":
-                name = dedupe(name, names)
+            name = dedupe(name, names)
             self.print(f"({name} = {call})")
 
     def visit_Rhs(self, node: Rhs, is_loop: bool, rulename: Optional[str]) -> None:
@@ -338,6 +337,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 type = "void *"
             else:
                 type += " "
+            if v == "cut_var":
+                v += " = 0"  # cut_var must be initialized
             self.print(f"{type}{v};")
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, rulename=rulename)
