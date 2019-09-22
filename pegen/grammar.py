@@ -393,6 +393,10 @@ class Cut:
     def __str__(self) -> str:
         return f"~"
 
+    def __iter__(self) -> Iterator[Tuple[str, str]]:
+        if False:
+            yield
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cut):
             return NotImplemented

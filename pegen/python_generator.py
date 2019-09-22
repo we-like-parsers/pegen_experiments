@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, IO, Text, Tuple
 
 from pegen.grammar import (
+    Cut,
     GrammarVisitor,
     NameLeaf,
     StringLeaf,
@@ -108,6 +109,9 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
+
+    def visit_Cut(self, node: Cut) -> Tuple[str, str]:
+        return "cut", "True"
 
 
 class PythonParserGenerator(ParserGenerator, GrammarVisitor):
