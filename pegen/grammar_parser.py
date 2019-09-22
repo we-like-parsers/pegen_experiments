@@ -378,13 +378,15 @@ class GeneratedParser(Parser):
 
     @memoize
     def named_item(self) -> Optional[NamedItem]:
-        # named_item: NAME '=' item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | it=lookahead { NamedItem ( None , it ) }
+        # named_item: NAME '=' ~ item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | it=lookahead { NamedItem ( None , it ) }
         mark = self.mark()
         cut = False
         if (
             (name := self.name())
             and
             (literal := self.expect('='))
+            and
+            (cut := True)
             and
             (item := self.item())
         ):
@@ -409,11 +411,13 @@ class GeneratedParser(Parser):
 
     @memoize
     def lookahead(self) -> Optional[LookaheadOrCut]:
-        # lookahead: '&' atom { PositiveLookahead ( atom ) } | '!' atom { NegativeLookahead ( atom ) } | '~' { Cut ( ) }
+        # lookahead: '&' ~ atom { PositiveLookahead ( atom ) } | '!' ~ atom { NegativeLookahead ( atom ) } | '~' { Cut ( ) }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect('&'))
+            and
+            (cut := True)
             and
             (atom := self.atom())
         ):
@@ -423,6 +427,8 @@ class GeneratedParser(Parser):
         cut = False
         if (
             (literal := self.expect('!'))
+            and
+            (cut := True)
             and
             (atom := self.atom())
         ):
@@ -440,11 +446,13 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self) -> Optional[Item]:
-        # item: '[' alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | atom { atom }
+        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | atom { atom }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect('['))
+            and
+            (cut := True)
             and
             (alts := self.alts())
             and
@@ -491,11 +499,13 @@ class GeneratedParser(Parser):
 
     @memoize
     def atom(self) -> Optional[Plain]:
-        # atom: '(' alts ')' { Group ( alts ) } | NAME { NameLeaf ( name . string ) } | STRING { StringLeaf ( string . string ) }
+        # atom: '(' ~ alts ')' { Group ( alts ) } | NAME { NameLeaf ( name . string ) } | STRING { StringLeaf ( string . string ) }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect('('))
+            and
+            (cut := True)
             and
             (alts := self.alts())
             and
@@ -522,11 +532,13 @@ class GeneratedParser(Parser):
 
     @memoize
     def action(self) -> Optional[Any]:
-        # action: "{" target_atoms "}" { target_atoms }
+        # action: "{" ~ target_atoms "}" { target_atoms }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
+            and
+            (cut := True)
             and
             (target_atoms := self.target_atoms())
             and
@@ -561,11 +573,13 @@ class GeneratedParser(Parser):
 
     @memoize
     def target_atom(self) -> Optional[Any]:
-        # target_atom: "{" target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
+        # target_atom: "{" ~ target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
         mark = self.mark()
         cut = False
         if (
             (literal := self.expect("{"))
+            and
+            (cut := True)
             and
             (target_atoms := self.target_atoms())
             and
