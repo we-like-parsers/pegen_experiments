@@ -1,6 +1,5 @@
 @subheader """\
 from ast import literal_eval
-from typing import Optional, Any
 
 from pegen.grammar import (
     Alt,

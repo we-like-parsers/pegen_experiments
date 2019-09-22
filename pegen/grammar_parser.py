@@ -5,9 +5,10 @@ import ast
 import sys
 import tokenize
 
+from typing import Any, Optional
+
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 from ast import literal_eval
-from typing import Optional, Any
 
 from pegen.grammar import (
     Alt,
