@@ -1,7 +1,21 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import AbstractSet, Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING, TypeVar, Union
+from typing import (
+    AbstractSet,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TYPE_CHECKING,
+    TypeVar,
+    Union,
+)
 
 from pegen.parser import memoize, Parser
 
@@ -14,10 +28,9 @@ class GrammarError(Exception):
 
 
 class GrammarVisitor:
-
     def visit(self, node: Any, *args: Any, **kwargs: Any) -> Any:
         """Visit a node."""
-        method = 'visit_' + node.__class__.__name__
+        method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node, *args, **kwargs)
 
@@ -32,7 +45,6 @@ class GrammarVisitor:
 
 
 class Grammar:
-
     def __init__(self, rules: Iterable[Rule], metas: Iterable[Tuple[str, Optional[str]]]):
         self.rules = {rule.name: rule for rule in rules}
         self.metas = dict(metas)
@@ -48,7 +60,6 @@ class Grammar:
 
 
 class Rule:
-
     def __init__(self, name: str, type: Optional[str], rhs: Rhs):
         self.name = name
         self.type = type
@@ -59,7 +70,7 @@ class Rule:
         self.leader = False
 
     def is_loop(self) -> bool:
-        return self.name.startswith('_loop')
+        return self.name.startswith("_loop")
 
     def __str__(self) -> str:
         if self.type is None:
@@ -87,10 +98,12 @@ class Rule:
     def flatten(self) -> Rhs:
         # If it's a single parenthesized group, flatten it.
         rhs = self.rhs
-        if (not self.is_loop()
+        if (
+            not self.is_loop()
             and len(rhs.alts) == 1
             and len(rhs.alts[0].items) == 1
-            and isinstance(rhs.alts[0].items[0].item, Group)):
+            and isinstance(rhs.alts[0].items[0].item, Group)
+        ):
             rhs = rhs.alts[0].items[0].item.rhs
         return rhs
 
@@ -100,7 +113,6 @@ class Rule:
 
 
 class Leaf:
-
     def __init__(self, value: str):
         self.value = value
 
@@ -124,8 +136,8 @@ class NameLeaf(Leaf):
     """The value is the name."""
 
     def __str__(self) -> str:
-        if self.value == 'ENDMARKER':
-            return '$'
+        if self.value == "ENDMARKER":
+            return "$"
         return super().__str__()
 
     def __repr__(self) -> str:
@@ -156,7 +168,6 @@ class StringLeaf(Leaf):
 
 
 class Rhs:
-
     def __init__(self, alts: List[Alt]):
         self.alts = alts
         self.memo: Optional[Tuple[Optional[str], str]] = None
@@ -188,7 +199,6 @@ class Rhs:
 
 
 class Alt:
-
     def __init__(self, items: List[NamedItem], *, icut: int = -1, action: Optional[str] = None):
         self.items = items
         self.icut = icut
@@ -232,7 +242,6 @@ class Alt:
 
 
 class NamedItem:
-
     def __init__(self, name: Optional[str], item: Item):
         self.name = name
         self.item = item
@@ -262,7 +271,6 @@ class NamedItem:
 
 
 class Lookahead:
-
     def __init__(self, node: Plain, sign: str):
         self.node = node
         self.sign = sign
@@ -281,25 +289,22 @@ class Lookahead:
 
 
 class PositiveLookahead(Lookahead):
-
     def __init__(self, node: Plain):
-        super().__init__(node, '&')
+        super().__init__(node, "&")
 
     def __repr__(self) -> str:
         return f"PositiveLookahead({self.node!r})"
 
 
 class NegativeLookahead(Lookahead):
-
     def __init__(self, node: Plain):
-        super().__init__(node, '!')
+        super().__init__(node, "!")
 
     def __repr__(self) -> str:
         return f"NegativeLookahead({self.node!r})"
 
 
 class Opt:
-
     def __init__(self, node: Item):
         self.node = node
 
@@ -338,7 +343,6 @@ class Repeat:
 
 
 class Repeat0(Repeat):
-
     def __str__(self) -> str:
         return f"({self.node})*"
 
@@ -350,7 +354,6 @@ class Repeat0(Repeat):
 
 
 class Repeat1(Repeat):
-
     def __str__(self) -> str:
         return f"({self.node})+"
 
@@ -362,7 +365,6 @@ class Repeat1(Repeat):
 
 
 class Group:
-
     def __init__(self, rhs: Rhs):
         self.rhs = rhs
 
@@ -383,7 +385,6 @@ class Group:
 
 
 class Cut:
-
     def __init__(self) -> None:
         pass
 
