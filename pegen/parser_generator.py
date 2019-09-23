@@ -14,10 +14,7 @@ class RuleCheckingVisitor(GrammarVisitor):
         self.rules = rules
 
     def visit_NameLeaf(self, node: NameLeaf) -> None:
-        if (
-            node.value not in self.rules
-            and node.value not in token.tok_name.values()
-        ):
+        if node.value not in self.rules and node.value not in token.tok_name.values():
             # TODO: Add line/col info to (leaf) nodes
             raise GrammarError(f"Dangling reference to rule {node.value!r}")
 
