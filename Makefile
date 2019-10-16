@@ -1,5 +1,5 @@
 TOP = /usr/local
-PYTHON ?= $(TOP)/bin/python3.8
+PYTHON ?= `which python3.8`
 
 GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
