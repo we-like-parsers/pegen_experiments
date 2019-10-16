@@ -40,7 +40,7 @@ matrix:
     - name: "simpy_cpython"
       python: 3.8
       script:
-          - git clone git@github.com:python/cpython.git
+          - time git clone git@github.com:python/cpython.git
           - make clean
           - make
           - make simpy_cpython
