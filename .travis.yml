@@ -27,6 +27,7 @@ matrix:
 
     - name: "makefile_targets"
       python: 3.8
+      env:
           - PYTHON="python"
       script:
           - make clean
