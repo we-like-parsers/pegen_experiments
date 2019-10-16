@@ -1,35 +1,35 @@
 language: python
 python: 3.8
-cache: pip
-
-install:
-    pip install -r requirements-dev.pip
-
-env:
-- PYTHON="python"
-- TEST_CMD="python -m pytest -v --cov=pegen --cov-report term"
-
-script:
-- $TEST_CMD
-
-after_success:
-- coveralls
 
 notifications:
   on_success: change
   on_failure: always
 
+install:
+    pip install -r requirements-dev.pip
+cache: pip
+
+env:
+- PYTHON="python"
+- CPYTHON="./cpython"
+
+script:
+- mypy pegen
+
 matrix:
   include:
     - name: "mypy"
-      python: 3.8
       script:
           - mypy pegen
 
+    - name: "pytest"
+      script:
+          - python -m pytest -v --cov=pegen --cov-report term
+      after_success:
+          - coveralls
+
+
     - name: "makefile_targets"
-      python: 3.8
-      env:
-          - PYTHON="python"
       script:
           - make clean
           - make dump
@@ -38,12 +38,8 @@ matrix:
           - make regen-metaparser
 
     - name: "simpy_cpython"
-      python: 3.8
-      env:
-          - PYTHON="python"
-          - CPYTHON="./cpython"
       script:
-          - time git clone https://github.com/python/cpython.git
+          - time git clone --quiet https://github.com/python/cpython.git
           - make clean
           - make
           - make simpy_cpython
