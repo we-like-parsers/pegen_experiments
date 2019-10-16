@@ -38,7 +38,13 @@ time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
 simpy:
-	$(PYTHON) scripts/test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
+	$(PYTHON) scripts/test_parse_directory.py \
+		-g data/simpy.gram \
+		-d $(TESTDIR) \
+		--short \
+		--exclude "*/failset/*" \
+		--exclude "*/failset/**" \
+		--exclude "*/failset/**/*"
 
 simpy_cpython:
 	$(PYTHON) scripts/test_parse_directory.py \
