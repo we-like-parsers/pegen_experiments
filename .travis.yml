@@ -1,34 +1,32 @@
-dist: xenial
 language: python
 cache: pip
-env:
-- TEST_CMD="python -m pytest -v --cov=pegen --cov-report term"
 install:
-- pip install pytest
-- pip install pytest-cov
-- pip install coveralls
-- pip install git+https://github.com/python/mypy.git
-script:
-- $TEST_CMD
-after_success:
-- coveralls
+    pip install -r requirements-dev.pip
+
 notifications:
   on_success: change
   on_failure: always
+
 matrix:
   include:
-    - name: "3.8-dev"
-      python: 3.8-dev
     - name: "mypy"
-      python: 3.8-dev
-      env:
-          - TEST_CMD="mypy pegen"
+      python: 3.8
+      script:
+          - mypy pegen
+
+    - name: "pytest"
+      python: 3.8
+      script:
+        - pytest -v --cov=pegen --cov-report term
+    - after_success:
+        - coveralls
+
 
     - name: "makefile_targets"
-      python: 3.8-dev
-      env:
+      python: 3.8
           - PYTHON="python"
       script:
+          - make clean
           - make dump
           - make test
           - make simpy
