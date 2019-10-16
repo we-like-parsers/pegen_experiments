@@ -9,3 +9,5 @@ parse.py
 .dmypy.json
 .mypy_cache
 .pytest_cache
+.envrc
+requirements-local.*
