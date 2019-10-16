@@ -10,3 +10,4 @@ parse.py
 .mypy_cache
 .pytest_cache
 .envrc
+requirements-local.*
