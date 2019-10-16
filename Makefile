@@ -1,4 +1,5 @@
 PYTHON ?= `/usr/bin/which python3.8`
+CPYTHON ?= "~/cpython"
 
 GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
@@ -37,7 +38,17 @@ time_stdlib:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
 simpy:
-	$(PYTHON) test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
+	$(PYTHON) scripts/test_parse_directory.py -g data/simpy.gram -d $(TESTDIR) --short
+
+simpy_cpython:
+	$(PYTHON) scripts/test_parse_directory.py \
+		-g data/simpy.gram \
+		-d $(CPYTHON) \
+		--short \
+		--exclude "*/test2to3/*" \
+		--exclude "*/test2to3/**/*" \
+		--exclude "*/bad*" \
+		--exclude "*/lib2to3/tests/data/*"
 
 mypy: regen-metaparser
 	mypy  # For list of files, see mypy.ini
