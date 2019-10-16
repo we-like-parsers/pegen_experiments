@@ -307,7 +307,7 @@ keyword_token(Parser *p, const char *val)
 }
 
 PyObject *
-run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *, int *), int mode)
 {
     PyObject* result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -338,7 +338,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
     PyErr_Clear();
 
-    void *res = (*start_rule_func)(p);
+    int cut_var = 0;
+    void *res = (*start_rule_func)(p, &cut_var);
     if (res == NULL) {
         if (PyErr_Occurred()) {
             goto exit;
@@ -376,7 +377,7 @@ exit:
 }
 
 PyObject *
-run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *, int *), int mode)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
@@ -410,7 +411,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
 }
 
 PyObject *
-run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_string(const char* str, void *(start_rule_func)(Parser *, int *), int mode)
 {
     struct tok_state* tok = PyTokenizer_FromString(str, 1);
 

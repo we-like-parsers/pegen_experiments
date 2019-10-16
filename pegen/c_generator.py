@@ -92,7 +92,7 @@ class CCallMakerVisitor(GrammarVisitor):
         if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        return f"{name}_var", f"{name}_rule(p)"
+        return f"{name}_var", f"{name}_rule(p, cut)"
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
@@ -110,7 +110,7 @@ class CCallMakerVisitor(GrammarVisitor):
             self.cache[node] = self.visit(node.alts[0].items[0])
         else:
             name = self.gen.name_node(node)
-            self.cache[node] = f"{name}_var", f"{name}_rule(p)"
+            self.cache[node] = f"{name}_var", f"{name}_rule(p, cut)"
         return self.cache[node]
 
     def visit_NamedItem(self, node: NamedItem) -> Tuple[Optional[str], str]:
@@ -145,21 +145,21 @@ class CCallMakerVisitor(GrammarVisitor):
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, False)
-        self.cache[node] = f"{name}_var", f"{name}_rule(p)"
+        self.cache[node] = f"{name}_var", f"{name}_rule(p, cut)"
         return self.cache[node]
 
     def visit_Repeat1(self, node: Repeat1) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, True)
-        self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # But not here!
+        self.cache[node] = f"{name}_var", f"{name}_rule(p, cut)"  # But not here!
         return self.cache[node]
 
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
     def visit_Cut(self, node: Cut) -> Tuple[str, str]:
-        return "cut_var", "1"
+        return "*cut", "1"
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
@@ -220,7 +220,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 type = rule.type + " "
             else:
                 type = "void *"
-            self.print(f"static {type}{rulename}_rule(Parser *p);")
+            self.print(f"static {type}{rulename}_rule(Parser *p, int *cut);")
         self.print()
         while self.todo:
             for rulename, rule in list(self.todo.items()):
@@ -244,10 +244,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
         self.print(f"// {node}")
         if node.left_recursive and node.leader:
-            self.print(f"static {type} {node.name}_raw(Parser *);")
+            self.print(f"static {type} {node.name}_raw(Parser *, int *cut);")
 
         self.print(f"static {type}")
-        self.print(f"{node.name}_rule(Parser *p)")
+        self.print(f"{node.name}_rule(Parser *p, int *cut)")
 
         if node.left_recursive and node.leader:
             self.print("{")
@@ -264,7 +264,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                         f"update_memo(p, mark, {node.name}_type, res)", "res"
                     )
                     self.print("p->mark = mark;")
-                    self.print(f"void *raw = {node.name}_raw(p);")
+                    self.print(f"void *raw = {node.name}_raw(p, cut);")
                     self.print("if (raw == NULL || p->mark <= resmark)")
                     with self.indent():
                         self.print("break;")
@@ -275,7 +275,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("return res;")
             self.print("}")
             self.print(f"static {type}")
-            self.print(f"{node.name}_raw(Parser *p)")
+            self.print(f"{node.name}_raw(Parser *p, int *cut)")
 
         self.print("{")
         with self.indent():
@@ -333,13 +333,16 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         for alt in node.alts:
             vars.update(self.collect_vars(alt))
         for v, type in sorted(item for item in vars.items() if item[0] is not None):
+            if v == '*cut':
+                continue
             if not type:
                 type = "void *"
             else:
                 type += " "
-            if v == "cut_var":
-                v += " = 0"  # cut_var must be initialized
             self.print(f"{type}{v};")
+        if len(node.alts) > 1:
+            self.print("int cut_var = 0;")
+            self.print("cut = &cut_var;")
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, rulename=rulename)
 
@@ -347,16 +350,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"// {node}")
         names: List[str] = []
         if is_loop:
-            self.print("while (")
+            self.print("while (!*cut")
         else:
-            self.print("if (")
+            self.print("if (!*cut")
         with self.indent():
-            first = True
             for item in node.items:
-                if first:
-                    first = False
-                else:
-                    self.print("&&")
+                self.print("&&")
                 self.visit(item, names=names)
         self.print(") {")
         with self.indent():
@@ -381,8 +380,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print(f"goto done;")
         self.print("}")
         self.print("p->mark = mark;")
-        if "cut_var" in names:
-            self.print("if (cut_var) return NULL;")
 
     def collect_vars(self, node: Alt) -> Dict[str, Optional[str]]:
         names: List[str] = []

@@ -1,14 +1,14 @@
 start[mod_ty]: a=stmt* ENDMARKER { Module(a, NULL, p->arena) }
 stmt[stmt_ty]: compound_stmt | simple_stmt
-compound_stmt[stmt_ty]: pass_stmt | if_stmt
+compound_stmt[stmt_ty]: if_stmt | pass_stmt
 
-pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, a)) }
+pass_stmt[stmt_ty]: a='pass' ~ NEWLINE { _Py_Pass(EXTRA(a, a)) }
 
 if_stmt[stmt_ty]:
     | 'if' ~ c=expr ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA(c, c)) }
 else_clause[asdl_seq*]:
-    | 'elif' c=expr ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA(c, c))) }
-    | 'else' ':' s=suite { s }
+    | 'elif' ~ c=expr ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA(c, c))) }
+    | 'else' ~ ':' s=suite { s }
 
 suite[asdl_seq*]:
     | a=simple_stmt { singleton_seq(p, a) }
