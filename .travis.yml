@@ -6,6 +6,7 @@ install:
     pip install -r requirements-dev.pip
 
 env:
+- PYTHON="python"
 - TEST_CMD="python -m pytest -v --cov=pegen --cov-report term"
 
 script:
@@ -35,3 +36,11 @@ matrix:
           - make test
           - make simpy
           - make regen-metaparser
+
+    - name: "simpy_cpython"
+      python: 3.8
+      script:
+          - git clone git@github.com:python/cpython.git
+          - make clean
+          - make
+          - make simpy_cpython
