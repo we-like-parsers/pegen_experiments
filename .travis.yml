@@ -1,7 +1,18 @@
 language: python
+python: 3.8
 cache: pip
+
 install:
     pip install -r requirements-dev.pip
+
+env:
+- TEST_CMD="python -m pytest -v --cov=pegen --cov-report term"
+
+script:
+- $TEST_CMD
+
+after_success:
+- coveralls
 
 notifications:
   on_success: change
@@ -13,14 +24,6 @@ matrix:
       python: 3.8
       script:
           - mypy pegen
-
-    - name: "pytest"
-      python: 3.8
-      script:
-        - pytest -v --cov=pegen --cov-report term
-    - after_success:
-        - coveralls
-
 
     - name: "makefile_targets"
       python: 3.8
