@@ -1,5 +1,5 @@
 PYTHON ?= `/usr/bin/which python3.8`
-CPYTHON ?= "~/cpython"
+CPYTHON ?= "./cpython"
 
 GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
