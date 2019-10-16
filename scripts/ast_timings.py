@@ -7,7 +7,7 @@ import tokenize
 from pegen.testutil import print_memstats
 
 
-def main():
+def main() -> None:
     t0 = time.time()
     for filename in sys.argv[1:]:
         print(filename, end="\r")
