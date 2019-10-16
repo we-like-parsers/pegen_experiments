@@ -6,7 +6,7 @@ notifications:
   on_failure: always
 
 install:
-    pip install -r requirements-dev.pip
+    pip install -r requirements-test.pip
 cache: pip
 
 env:
