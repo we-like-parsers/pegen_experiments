@@ -60,7 +60,10 @@ mypy: regen-metaparser
 	mypy  # For list of files, see mypy.ini
 
 black:
-	black pegen tatsu test test*.py scripts
+	black pegen tatsu test scripts
+
+find_max_nesting:
+	$(PYTHON) scripts/find_max_nesting.py
 
 tags: TAGS
 

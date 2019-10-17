@@ -17,8 +17,9 @@ import os
 import sys
 from tempfile import TemporaryDirectory
 from pathlib import Path
+from typing import Any
 
-from pegen.grammar import GrammarParser
+sys.path.insert(0, ".")
 from pegen.build import build_parser
 from pegen.testutil import generate_parser, generate_parser_c_extension, make_parser, parse_string
 
@@ -31,7 +32,7 @@ FAIL = "\033[91m"
 ENDC = "\033[0m"
 
 
-def check_nested_expr(nesting_depth, parser, language):
+def check_nested_expr(nesting_depth: int, parser: Any, language: str) -> bool:
     expr = f"{'(' * nesting_depth}0{')' * nesting_depth}"
 
     try:
@@ -49,14 +50,14 @@ def check_nested_expr(nesting_depth, parser, language):
         return False
 
 
-def main():
+def main() -> None:
     print(f"Testing {GRAMMAR_FILE} starting at nesting depth of {INITIAL_NESTING_DEPTH}...")
 
     with TemporaryDirectory() as tmp_dir:
         nesting_depth = INITIAL_NESTING_DEPTH
         rules, parser, tokenizer = build_parser(GRAMMAR_FILE)
-        python_parser = generate_parser(rules.rules)
-        c_parser = generate_parser_c_extension(rules.rules, Path(tmp_dir))
+        python_parser = generate_parser(rules)
+        c_parser = generate_parser_c_extension(rules, Path(tmp_dir))
 
         c_succeeded = True
         python_succeeded = True
