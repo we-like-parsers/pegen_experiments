@@ -1,9 +1,11 @@
+# mypy: allow-untyped-defs
+
 import io
 import textwrap
 
 from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
-import pytest
+import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.grammar import GrammarVisitor, GrammarError

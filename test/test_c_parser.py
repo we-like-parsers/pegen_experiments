@@ -1,12 +1,16 @@
 import ast
-import pytest
+from pathlib import PurePath
+from typing import Optional, Sequence
+
+import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
 
-def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=None, invalid_cases=None):
-    grammar = parse_string(grammar, GrammarParser)
+def check_input_strings_for_grammar(source: str, tmp_path: PurePath,
+                                    valid_cases: Sequence[str] = (), invalid_cases: Sequence[str] = ()) -> None:
+    grammar = parse_string(source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
 
     if valid_cases:
@@ -19,8 +23,8 @@ def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=None, invalid
                 extension.parse_string(case)
 
 
-def verify_ast_generation(grammar, stmt, tmp_path):
-    grammar = parse_string(grammar, GrammarParser)
+def verify_ast_generation(source: str, stmt: str, tmp_path: PurePath) -> None:
+    grammar = parse_string(source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
 
     expected_ast = ast.parse(stmt)
@@ -28,8 +32,8 @@ def verify_ast_generation(grammar, stmt, tmp_path):
     assert ast.dump(expected_ast) == ast.dump(actual_ast)
 
 
-def test_c_parser(tmp_path):
-    grammar = """
+def test_c_parser(tmp_path: PurePath) -> None:
+    grammar_source = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
     stmt[stmt_ty]: a=expr_stmt { a }
     expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
@@ -49,7 +53,7 @@ def test_c_parser(tmp_path):
                    | s=STRING { s }
                    )
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
 
     expressions = [
@@ -70,7 +74,7 @@ def test_c_parser(tmp_path):
         assert ast.dump(the_ast) == ast.dump(expected_ast)
 
 
-def test_lookahead(tmp_path):
+def test_lookahead(tmp_path: PurePath) -> None:
     grammar = """
     start: NAME &NAME expr NEWLINE? ENDMARKER
     expr: NAME | NUMBER
@@ -80,7 +84,7 @@ def test_lookahead(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
 
 
-def test_negative_lookahead(tmp_path):
+def test_negative_lookahead(tmp_path: PurePath) -> None:
     grammar = """
     start: NAME !NAME expr NEWLINE? ENDMARKER
     expr: NAME | NUMBER
@@ -90,7 +94,7 @@ def test_negative_lookahead(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
 
 
-def test_cut(tmp_path):
+def test_cut(tmp_path: PurePath) -> None:
     grammar = """
     start: X ~ Y Z | X Q S
     X: 'x'
@@ -104,7 +108,7 @@ def test_cut(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
 
 
-def test_left_recursion(tmp_path):
+def test_left_recursion(tmp_path: PurePath) -> None:
     grammar = """
     start: expr NEWLINE
     expr: ('-' term | expr '+' term | term)
@@ -114,7 +118,7 @@ def test_left_recursion(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
-def test_advanced_left_recursive(tmp_path):
+def test_advanced_left_recursive(tmp_path: PurePath) -> None:
     grammar = """
     start: NUMBER | sign start
     sign: ['-']
@@ -123,7 +127,7 @@ def test_advanced_left_recursive(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
-def test_mutually_left_recursive(tmp_path):
+def test_mutually_left_recursive(tmp_path: PurePath) -> None:
     grammar = """
     start: foo 'E'
     foo: bar 'A' | 'B'
@@ -133,7 +137,7 @@ def test_mutually_left_recursive(tmp_path):
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
-def test_return_stmt_noexpr_action(tmp_path):
+def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
     statements[asdl_seq*]: a=statement+ { a }
@@ -146,7 +150,7 @@ def test_return_stmt_noexpr_action(tmp_path):
     verify_ast_generation(grammar, stmt, tmp_path)
 
 
-def test_pass_stmt_action(tmp_path):
+def test_pass_stmt_action(tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
     statements[asdl_seq*]: a=statement+ { a }
