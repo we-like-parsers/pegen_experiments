@@ -19,6 +19,15 @@ def check_input_strings_for_grammar(grammar, tmp_path, valid_cases=None, invalid
                 extension.parse_string(case)
 
 
+def verify_ast_generation(grammar, stmt, tmp_path):
+    grammar = parse_string(grammar, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+
+    expected_ast = ast.parse(stmt)
+    actual_ast = extension.parse_string(stmt)
+    assert ast.dump(expected_ast) == ast.dump(actual_ast)
+
+
 def test_c_parser(tmp_path):
     grammar = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
@@ -122,3 +131,29 @@ def test_mutually_left_recursive(tmp_path):
     """
     valid_cases = ["B E", "D A C A E"]
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
+
+
+def test_return_stmt_noexpr_action(tmp_path):
+    grammar = """
+    start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+    statements[asdl_seq*]: a=statement+ { a }
+    statement[stmt_ty]: simple_stmt
+    simple_stmt[stmt_ty]: small_stmt
+    small_stmt[stmt_ty]: return_stmt
+    return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA(a, a)) }
+    """
+    stmt = "return"
+    verify_ast_generation(grammar, stmt, tmp_path)
+
+
+def test_pass_stmt_action(tmp_path):
+    grammar = """
+    start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+    statements[asdl_seq*]: a=statement+ { a }
+    statement[stmt_ty]: simple_stmt
+    simple_stmt[stmt_ty]: small_stmt
+    small_stmt[stmt_ty]: pass_stmt
+    pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, a)) }
+    """
+    stmt = "pass"
+    verify_ast_generation(grammar, stmt, tmp_path)
