@@ -2,11 +2,13 @@ import sys
 import time
 import token
 import tokenize
+from typing import Optional
 
-import pegen
+from pegen.testutil import print_memstats
 
 
-def main():
+def main() -> None:
+    tok: Optional[tokenize.TokenInfo]
     t0 = time.time()
     ntoks = 0
     nlines = 0
@@ -28,7 +30,7 @@ def main():
     print(f"{ntoks} tokens, {nlines} lines in {dt:.3f} secs", file=sys.stderr)
     if dt:
         print(f"{ntoks/dt:.0f} tokens/sec, {nlines/dt:.0f} lines/sec", file=sys.stderr)
-    pegen.print_memstats()
+    print_memstats()
 
 
 if __name__ == "__main__":

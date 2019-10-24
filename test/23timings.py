@@ -4,10 +4,10 @@ from lib2to3 import pytree, pygram
 from lib2to3.pgen2 import driver, token, tokenize
 
 
-import pegen
+from pegen.testutil import print_memstats
 
 
-def main():
+def main() -> None:
     filename = sys.argv[1]
     t0 = time.time()
     drv = driver.Driver(pygram.python_grammar, convert=pytree.convert)
@@ -17,7 +17,7 @@ def main():
     with open(filename) as file:
         nlines = len(file.readlines())
     print("%.3f seconds for %d lines; %.0f lines/sec" % (dt, nlines, nlines / (dt or 1e-9)))
-    pegen.print_memstats()
+    print_memstats()
 
 
 if __name__ == "__main__":
