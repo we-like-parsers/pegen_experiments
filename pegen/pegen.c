@@ -432,3 +432,53 @@ singleton_seq(Parser *p, void *a)
     asdl_seq_SET(seq, 0, a);
     return seq;
 }
+
+asdl_seq *
+seq_insert_in_front(Parser *p, void *a, asdl_seq *seq)
+{
+    if (!seq) {
+        return singleton_seq(p, a);
+    }
+
+    asdl_seq *new_seq = _Py_asdl_seq_new(asdl_seq_LEN(seq) + 1, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+
+    asdl_seq_SET(new_seq, 0, a);
+    for (int i = 1, l = asdl_seq_LEN(new_seq); i < l; i++) {
+        asdl_seq_SET(new_seq, i, asdl_seq_GET(seq, i-1));
+    }
+    return new_seq;
+}
+
+int
+get_flattened_seq_size(asdl_seq *seqs)
+{
+    int size = 0;
+    for (int i = 0, l = asdl_seq_LEN(seqs); i < l; i++) {
+        asdl_seq *inner_seq = asdl_seq_GET(seqs, i);
+        size += asdl_seq_LEN(inner_seq);
+    }
+    return size;
+}
+
+asdl_seq *
+seq_flatten(Parser *p, asdl_seq *seqs)
+{
+    int flattened_seq_size = get_flattened_seq_size(seqs);
+    asdl_seq *flattened_seq = _Py_asdl_seq_new(flattened_seq_size, p->arena);
+    if (!flattened_seq) {
+        return NULL;
+    }
+
+    int flattened_seq_idx = 0;
+    for (int i = 0, l = asdl_seq_LEN(seqs); i < l; i++) {
+        asdl_seq *inner_seq = asdl_seq_GET(seqs, i);
+        for (int j = 0, li = asdl_seq_LEN(inner_seq); j < li; j++) {
+            asdl_seq_SET(flattened_seq, flattened_seq_idx++, asdl_seq_GET(inner_seq, j));
+        }
+    }
+
+    return flattened_seq;
+}
