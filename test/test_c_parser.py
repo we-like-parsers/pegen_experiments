@@ -8,8 +8,12 @@ from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
 
-def check_input_strings_for_grammar(source: str, tmp_path: PurePath,
-                                    valid_cases: Sequence[str] = (), invalid_cases: Sequence[str] = ()) -> None:
+def check_input_strings_for_grammar(
+    source: str,
+    tmp_path: PurePath,
+    valid_cases: Sequence[str] = (),
+    invalid_cases: Sequence[str] = (),
+) -> None:
     grammar = parse_string(source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
 
