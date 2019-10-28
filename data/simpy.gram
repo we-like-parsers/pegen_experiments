@@ -1,15 +1,16 @@
 # Simplified grammar for Python
 
-start: [statements] ENDMARKER
-statements: statement+
+start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
-statement:  compound_stmt | simple_stmt
-simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
+statement[asdl_seq*]:  a=compound_stmt { singleton_seq(p, a) } | simple_stmt
+simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
+further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt: ( return_stmt | import_stmt | 'pass' | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
-            | assignment | expressions
-            )
+small_stmt[stmt_ty]: ( return_stmt | import_stmt | pass_stmt | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
+                     | assignment | expressions
+                     )
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
@@ -24,6 +25,8 @@ yield_stmt: yield_expr
 assert_stmt: 'assert' expression [',' expression]
 
 del_stmt: 'del' targets  # TODO: exclude *target
+
+pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, a)) }
 
 import_stmt: import_name | import_from
 import_name: 'import' dotted_as_names
