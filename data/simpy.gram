@@ -3,7 +3,7 @@
 start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
-statement[asdl_seq*]:  compound_stmt | simple_stmt
+statement[asdl_seq*]:  a=compound_stmt { singleton_seq(p, a) } | simple_stmt
 simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
 further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;

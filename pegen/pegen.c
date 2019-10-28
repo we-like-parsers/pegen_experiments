@@ -458,6 +458,7 @@ get_flattened_seq_size(asdl_seq *seqs)
     int size = 0;
     for (int i = 0, l = asdl_seq_LEN(seqs); i < l; i++) {
         asdl_seq *inner_seq = asdl_seq_GET(seqs, i);
+        if (asdl_seq_GET(inner_seq, 0) == (void *) 1) continue;
         size += asdl_seq_LEN(inner_seq);
     }
     return size;
@@ -475,10 +476,12 @@ seq_flatten(Parser *p, asdl_seq *seqs)
     int flattened_seq_idx = 0;
     for (int i = 0, l = asdl_seq_LEN(seqs); i < l; i++) {
         asdl_seq *inner_seq = asdl_seq_GET(seqs, i);
+        if (asdl_seq_GET(inner_seq, 0) == (void *) 1) continue;
         for (int j = 0, li = asdl_seq_LEN(inner_seq); j < li; j++) {
             asdl_seq_SET(flattened_seq, flattened_seq_idx++, asdl_seq_GET(inner_seq, j));
         }
     }
+    assert(flattened_seq_idx == flattened_seq_size);
 
     return flattened_seq;
 }
