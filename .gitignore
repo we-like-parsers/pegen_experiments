@@ -11,3 +11,4 @@ parse.py
 .pytest_cache
 .envrc
 requirements-local.*
+cpython

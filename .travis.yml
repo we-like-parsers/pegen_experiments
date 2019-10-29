@@ -11,7 +11,6 @@ cache: pip
 
 env:
 - PYTHON="python"
-- CPYTHON="./cpython"
 
 script:
 - mypy pegen
@@ -39,7 +38,6 @@ matrix:
 
     - name: "simpy_cpython"
       script:
-          - time git clone --quiet https://github.com/python/cpython.git
+          - tar xzf data/cpython-lib.tgz
           - make clean
-          - make
           - make simpy_cpython
