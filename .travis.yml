@@ -20,7 +20,7 @@ matrix:
   include:
     - name: "mypy"
       script:
-          - mypy pegen
+          - make mypy
 
     - name: "pytest"
       script:
