@@ -45,6 +45,27 @@ def memoize(func):
     return memoize_wrapper
 
 
+def no_memoize(func):
+    """Like @memoize but doesn't use cache."""
+
+    def memoize_wrapper(self, *args):
+        vis = self.tokenizer.vis
+        pos = self.mark()
+        if vis is not None:
+            vis.show_call(pos, func.__name__, args)
+        res = func(self, *args)
+        endpos = self.mark()
+        if res is None:
+            assert endpos == pos
+        else:
+            assert endpos > pos
+        if vis is not None:
+            vis.show_return(pos, res, endpos)
+        return res
+
+    return memoize_wrapper
+
+
 def memoize_left_rec(func):
     """Memoize a left-recursive parsing method.
 
