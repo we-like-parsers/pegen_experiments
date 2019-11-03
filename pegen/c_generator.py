@@ -376,8 +376,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print(f"children[n++] = res;")
                 self.print("mark = p->mark;")
             else:
-                if rulename:
-                    self.print(f"insert_memo(p, mark, {rulename}_type, res);")
                 self.print(f"goto done;")
         self.print("}")
         self.print("p->mark = mark;")
