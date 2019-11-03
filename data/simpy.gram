@@ -39,9 +39,15 @@ import_as_names: import_as_name (',' import_as_name)* [',']
 dotted_as_names: dotted_as_name (',' dotted_as_name)*
 dotted_name: NAME ('.' NAME)*
 
-if_stmt: 'if' full_expression ':' block elif_block* [else_block]
-elif_block: 'elif' full_expression ':' block
-else_block: 'else' ':' block
+if_stmt:
+    | 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+    | 'if' a=NAME ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'if' a=NAME ':' b=block c=elif_stmt { _Py_If(a, b, c, EXTRA(a, c)) }
+elif_stmt:
+    | 'elif' a=NAME ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+    | 'elif' a=NAME ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'elif' a=NAME ':' b=block c=elif_stmt { _Py_If(a, b, c, EXTRA(a, c)) }
+else_block: 'else' ':' b=block { b }
 
 while_stmt: 'while' full_expression ':' block [else_block]
 
@@ -91,7 +97,7 @@ expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* 
 star_full_expression: '*' bitwise_or | full_expression
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
-expression: lambdef | disjunction ['if' disjunction 'else' expression]
+expression: lambdef | disjunction 'if' disjunction 'else' expression | disjunction
 lambdef: 'lambda' [lambda_parameters] ':' expression
 
 lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
@@ -110,21 +116,22 @@ lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
                  )
 lambda_name_with_default: NAME '=' expression
 
-disjunction: conjunction ('or' conjunction)*
-conjunction: comparison ('and' comparison)*
-comparison: 'not'* bitwise_or (compare_op bitwise_or)*
+disjunction: disjunction 'or' conjunction | conjunction
+conjunction: conjunction 'and' inversion | inversion
+inversion: 'not' inversion | comparison
+comparison: bitwise_or (compare_op bitwise_or)+ | bitwise_or
 compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | ['not'] 'in' | 'is' ['not']
 
-bitwise_or: bitwise_xor ('|' bitwise_xor)*
-bitwise_xor: bitwise_and ('^' bitwise_and)*
-bitwise_and: shift_expr ('&' shift_expr)*
-shift_expr: sum (('<<'|'>>') sum)*
+bitwise_or: bitwise_or '|' bitwise_xor | bitwise_xor
+bitwise_xor: bitwise_xor '^' bitwise_and | bitwise_and
+bitwise_and: bitwise_and '&' shift_expr | shift_expr
+shift_expr: shift_expr ('<<'|'>>') sum | sum
 
-sum: term (('+' term | '-' term))*
-term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
+sum: sum ('+'|'-') term | term
+term: term ('*'|'/'|'//'|'%'|'@') factor | factor
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
-primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
+primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')+ | AWAIT atom | atom
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
