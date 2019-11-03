@@ -11,7 +11,7 @@ HEADER = """\
 
 from token import ENDMARKER, NAME, NEWLINE, NUMBER, STRING
 
-from story7.memo import memoize, memoize_left_rec
+from story7.memo import memoize, memoize_left_rec, no_memoize
 from story7.node import Node
 from story7.parser import Parser
 """
@@ -64,12 +64,15 @@ class Generator:
                 break
         return False
 
-    def gen_rule(self, rule):
+    def gen_rule(self, rule, memoize):
         if self.is_left_rec(rule):
             self.put(f"@memoize_left_rec")
             leftrec = "'*' + "
         else:
-            self.put(f"@memoize")
+            if memoize:
+                self.put(f"@memoize")
+            else:
+                self.put(f"@no_memoize")
             leftrec = ""
         self.put(f"def {rule.name}(self):")
         with self.indent():
@@ -197,6 +200,7 @@ def check(grammar):
 
 def generate(grammar, classname, stream=None):
     metas = grammar.metas_dict
+    memoize = "no_memoize" not in metas
     gen = Generator(stream)
     header = metas.get("header", HEADER)
     subheader = metas.get("subheader", "")
@@ -207,7 +211,7 @@ def generate(grammar, classname, stream=None):
     for rule in grammar.rules:
         gen.put()
         with gen.indent():
-            gen.gen_rule(rule)
+            gen.gen_rule(rule, memoize)
     trailer = metas.get("trailer")
     if trailer:
         gen.put(trailer)
