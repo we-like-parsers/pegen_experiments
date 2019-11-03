@@ -7,7 +7,9 @@ from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
 TEST_DIR = os.path.join("test", "test_data")
-PYTHON_SOURCE_FILENAMES = [filename for filename in os.listdir(TEST_DIR) if filename.endswith(".py")]
+PYTHON_SOURCE_FILENAMES = sorted(
+    filename for filename in os.listdir(TEST_DIR) if filename.endswith(".py")
+)
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
