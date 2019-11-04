@@ -56,11 +56,11 @@ dotted_name: NAME ('.' NAME)*
 
 if_stmt:
     | 'if' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
-    | 'if' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'if' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA(a, c)) }
     | 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
 elif_stmt:
     | 'elif' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
-    | 'elif' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'elif' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA(a, c)) }
     | 'elif' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
 else_block: 'else' ':' b=block { b }
 
