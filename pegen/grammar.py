@@ -349,7 +349,12 @@ class Repeat:
 
 class Repeat0(Repeat):
     def __str__(self) -> str:
-        return f"({self.node})*"
+        s = str(self.node)
+        # TODO: Decide whether to use (X)* or X* based on type of X
+        if " " in s:
+            return f"({s})*"
+        else:
+            return f"{s}*"
 
     def __repr__(self) -> str:
         return f"Repeat0({self.node!r})"
@@ -360,7 +365,12 @@ class Repeat0(Repeat):
 
 class Repeat1(Repeat):
     def __str__(self) -> str:
-        return f"({self.node})+"
+        s = str(self.node)
+        # TODO: Decide whether to use (X)+ or X+ based on type of X
+        if " " in s:
+            return f"({s})+"
+        else:
+            return f"{s}+"
 
     def __repr__(self) -> str:
         return f"Repeat1({self.node!r})"
