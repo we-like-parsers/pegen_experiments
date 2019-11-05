@@ -44,10 +44,18 @@ update_memo(Parser *p, int mark, int type, void *node)
     return insert_memo(p, mark, type, node);
 }
 
+// Return dummy NAME.
 void *
 CONSTRUCTOR(Parser *p, ...)
 {
-    return (void *)1;
+    PyObject *id = PyUnicode_FromStringAndSize("", 0);
+    if (id == NULL)
+        return NULL;
+    if (PyArena_AddPyObject(p->arena, id) < 0) {
+        Py_DECREF(id);
+        return NULL;
+    }
+    return Name(id, Load, 1, 0, 1, 0,p->arena);
 }
 
 static int
