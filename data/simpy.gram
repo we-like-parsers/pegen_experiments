@@ -107,7 +107,7 @@ class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 block: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
 star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
-expressions: expression | ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
+expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
 
 star_full_expression: '*' bitwise_or | full_expression
 full_expression: NAME ':=' expression | expression
@@ -146,7 +146,7 @@ sum: sum ('+'|'-') term | term
 term: term ('*'|'/'|'//'|'%'|'@') factor | factor
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
-primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')+ | AWAIT atom | atom
+primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
