@@ -503,3 +503,32 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 
     return flattened_seq;
 }
+
+expr_ty
+seq_to_dotted_name(Parser *p, asdl_seq *seq)
+{
+    if (!seq) {
+        return NULL;
+    }
+
+    expr_ty final_name = asdl_seq_GET(seq, 0);
+    for (int i = 1, l = asdl_seq_LEN(seq); i < l; i++) {
+        expr_ty name = asdl_seq_GET(seq, i);
+        final_name = _Py_Attribute(final_name, get_identifier_from_expr_ty(name), Load, EXTRA(final_name, name));
+    }
+
+    return final_name;
+}
+
+identifier
+get_identifier_from_expr_ty(expr_ty expr)
+{
+    if (expr->kind == Attribute_kind) {
+        return expr->v.Attribute.attr;
+    }
+    if (expr->kind == Name_kind) {
+        return expr->v.Name.id;
+    }
+
+    return NULL;
+}

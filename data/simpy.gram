@@ -44,15 +44,19 @@ break_stmt: a='break' { _Py_Break(EXTRA(a, a)) }
 continue_stmt: a='continue' { _Py_Continue(EXTRA(a, a)) }
 
 import_stmt: import_name | import_from
-import_name: 'import' dotted_as_names
+import_name[stmt_ty]: a='import' b=dotted_as_names { _Py_Import(b, EXTRA(a, b)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from: ('from' (('.' | '...')* !'import' dotted_name | ('.' | '...')+)
               'import' ('*' | '(' import_as_names ')' | import_as_names))
 import_as_name: NAME ['as' NAME]
-dotted_as_name: dotted_name ['as' NAME]
+dotted_as_name[alias_ty]:
+    | a=dotted_name 'as' b=NAME { _Py_alias(get_identifier_from_expr_ty(a), get_identifier_from_expr_ty(b), p->arena) }
+    | a=dotted_name { _Py_alias(get_identifier_from_expr_ty(a), NULL, p->arena) }
 import_as_names: import_as_name (',' import_as_name)* [',']
-dotted_as_names: dotted_as_name (',' dotted_as_name)*
-dotted_name: NAME ('.' NAME)*
+dotted_as_names[asdl_seq*]: a=dotted_as_name b=further_dotted_as_names* { seq_insert_in_front(p, a, b) }
+further_dotted_as_names[alias_ty]: ',' a=dotted_as_name { a }
+dotted_name[expr_ty]: a=NAME b=further_dotted_name* { seq_to_dotted_name(p, seq_insert_in_front(p, a, b)) }
+further_dotted_name[expr_ty]: '.' a=NAME { a }
 
 if_stmt:
     | 'if' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
