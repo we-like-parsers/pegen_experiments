@@ -522,7 +522,7 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
     }
     len--; // Last name does not have a dot
 
-    identifier str = PyBytes_FromStringAndSize(NULL, len);
+    PyObject *str = PyBytes_FromStringAndSize(NULL, len);
     if (!str) {
         return NULL;
     }
@@ -542,9 +542,9 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
     s--;
     *s = '\0';
 
-    identifier *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
-                                           PyBytes_GET_SIZE(str),
-                                           NULL);
+    PyObject *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
+                                         PyBytes_GET_SIZE(str),
+                                         NULL);
     Py_DECREF(str);
     if (!uni) {
         return NULL;
