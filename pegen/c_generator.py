@@ -163,10 +163,11 @@ class CCallMakerVisitor(GrammarVisitor):
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
-    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]]):
+    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]], debug: bool = False):
         super().__init__(grammar, file)
         self.callmakervisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
+        self.debug = debug
 
     def unique_varname(self, name: str = "tmpvar") -> str:
         new_var = name + "_" + str(self._varname_counter)
@@ -308,7 +309,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                     self.print(f"insert_memo(p, mark, {node.name}_type, seq);")
                 self.print("return seq;")
             else:
-                ## gen.print(f'fprintf(stderr, "Fail at %d: {self.name}\\n", p->mark);')
+                if self.debug:
+                    self.print(f'fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark);')
                 self.print("res = NULL;")
         if not is_loop:
             self.print("  done:")
@@ -362,22 +364,30 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             action = node.action
             if not action:
-                ## self.print(f'fprintf(stderr, "Hit at %d: {node}, {names}\\n", p->mark);')
                 if len(names) > 1:
+                    if self.debug:
+                        self.print(
+                            f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                        )
                     self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
                 else:
+                    if self.debug:
+                        self.print(
+                            f'fprintf(stderr, "Hit with default action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                        )
                     self.print(f"res = {names[0]};")
             else:
                 self.print(f"res = {action};")
-                ## self.print(f'fprintf(stderr, "Hit with action at %d: {node}, {names}, {action}\\n", p->mark);')
+                if self.debug:
+                    self.print(
+                        f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
+                    )
             if is_loop:
                 self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
                 self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
                 self.print(f"children[n++] = res;")
                 self.print("mark = p->mark;")
             else:
-                if rulename:
-                    self.print(f"insert_memo(p, mark, {rulename}_type, res);")
                 self.print(f"goto done;")
         self.print("}")
         self.print("p->mark = mark;")

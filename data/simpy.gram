@@ -8,9 +8,20 @@ simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_i
 further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
-small_stmt[stmt_ty]: ( return_stmt | import_stmt | pass_stmt | raise_stmt | yield_stmt | assert_stmt | del_stmt | global_stmt | nonlocal_stmt
-                     | assignment | expressions
-                     )
+small_stmt[stmt_ty]:
+    | return_stmt
+    | import_stmt
+    | pass_stmt
+    | raise_stmt
+    | yield_stmt
+    | assert_stmt
+    | del_stmt
+    | global_stmt
+    | nonlocal_stmt
+    | break_stmt
+    | continue_stmt
+    | assignment
+    | e=expressions { _Py_Expr(e, EXTRA(e, e)) }
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
@@ -28,6 +39,10 @@ del_stmt: 'del' targets  # TODO: exclude *target
 
 pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, a)) }
 
+break_stmt: a='break' { _Py_Break(EXTRA(a, a)) }
+
+continue_stmt: a='continue' { _Py_Continue(EXTRA(a, a)) }
+
 import_stmt: import_name | import_from
 import_name: 'import' dotted_as_names
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
@@ -39,9 +54,15 @@ import_as_names: import_as_name (',' import_as_name)* [',']
 dotted_as_names: dotted_as_name (',' dotted_as_name)*
 dotted_name: NAME ('.' NAME)*
 
-if_stmt: 'if' full_expression ':' block elif_block* [else_block]
-elif_block: 'elif' full_expression ':' block
-else_block: 'else' ':' block
+if_stmt:
+    | 'if' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'if' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA(a, c)) }
+    | 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+elif_stmt:
+    | 'elif' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }
+    | 'elif' a=full_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA(a, c)) }
+    | 'elif' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+else_block: 'else' ':' b=block { b }
 
 while_stmt: 'while' full_expression ':' block [else_block]
 
@@ -83,7 +104,7 @@ decorators: ('@' factor NEWLINE)+
 
 class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
-block: simple_stmt | NEWLINE INDENT statements DEDENT
+block: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
 star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
 expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
@@ -91,7 +112,7 @@ expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* 
 star_full_expression: '*' bitwise_or | full_expression
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
-expression: lambdef | disjunction ['if' disjunction 'else' expression]
+expression: lambdef | disjunction 'if' disjunction 'else' expression | disjunction
 lambdef: 'lambda' [lambda_parameters] ':' expression
 
 lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
@@ -110,21 +131,24 @@ lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
                  )
 lambda_name_with_default: NAME '=' expression
 
-disjunction: conjunction ('or' conjunction)*
-conjunction: comparison ('and' comparison)*
-comparison: 'not'* bitwise_or (compare_op bitwise_or)*
+disjunction: disjunction 'or' conjunction | conjunction
+conjunction: conjunction 'and' inversion | inversion
+inversion: 'not' inversion | comparison
+comparison: bitwise_or (compare_op bitwise_or)+ | bitwise_or
 compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | ['not'] 'in' | 'is' ['not']
 
-bitwise_or: bitwise_xor ('|' bitwise_xor)*
-bitwise_xor: bitwise_and ('^' bitwise_and)*
-bitwise_and: shift_expr ('&' shift_expr)*
-shift_expr: sum (('<<'|'>>') sum)*
+bitwise_or: bitwise_or '|' bitwise_xor | bitwise_xor
+bitwise_xor: bitwise_xor '^' bitwise_and | bitwise_and
+bitwise_and: bitwise_and '&' shift_expr | shift_expr
+shift_expr: shift_expr ('<<'|'>>') sum | sum
 
-sum: term (('+' term | '-' term))*
-term: factor (('*' factor | '/' factor | '//' factor | '%' factor | '@' factor))*
+sum: sum ('+'|'-') term | term
+term: term ('*'|'/'|'//'|'%'|'@') factor | factor
 factor: ('+' | '-' | '~') factor | power
 power: primary '**' factor | primary
-primary: [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
+primary:
+    | !'await' a=atom !'.' !'(' !'[' { a }
+    | [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression

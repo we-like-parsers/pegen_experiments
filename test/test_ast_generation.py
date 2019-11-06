@@ -6,7 +6,10 @@ from typing import Any
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
-PYTHON_SOURCE_FILENAMES = ["pass.py", "multiple_pass.py"]
+TEST_DIR = os.path.join("test", "test_data")
+PYTHON_SOURCE_FILENAMES = sorted(
+    filename for filename in os.listdir(TEST_DIR) if filename.endswith(".py")
+)
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
@@ -25,8 +28,10 @@ def read_python_source(path: str) -> str:
 
 def test_ast_generation_on_source_files(tmp_path: PurePath) -> None:
     extension = create_tmp_extension(tmp_path)
+    print()
     for filename in PYTHON_SOURCE_FILENAMES:
-        source = read_python_source(os.path.join("test", "test_data", filename))
+        print(filename)
+        source = read_python_source(os.path.join(TEST_DIR, filename))
 
         actual_ast = extension.parse_string(source)
         expected_ast = ast.parse(source)

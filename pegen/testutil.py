@@ -68,7 +68,9 @@ def import_file(full_name: str, path: str) -> Any:
     return mod
 
 
-def generate_parser_c_extension(grammar: Grammar, path: pathlib.PurePath) -> Any:
+def generate_parser_c_extension(
+    grammar: Grammar, path: pathlib.PurePath, debug: bool = False
+) -> Any:
     """Generate a parser c extension for the given grammar in the given path
 
     Returns a module object with a parse_string() method.
@@ -76,7 +78,7 @@ def generate_parser_c_extension(grammar: Grammar, path: pathlib.PurePath) -> Any
     """
     source = path / "parse.c"
     with open(source, "w") as file:
-        genr = CParserGenerator(grammar, file)
+        genr = CParserGenerator(grammar, file, debug=debug)
         genr.generate("parse.c")
     extension_path = compile_c_extension(str(source), build_dir=str(path / "build"))
     extension = import_file("parse", extension_path)
