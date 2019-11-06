@@ -507,20 +507,56 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 expr_ty
 seq_to_dotted_name(Parser *p, asdl_seq *seq)
 {
-    if (!seq) {
+    if (asdl_seq_LEN(seq) == 1) {
+        return asdl_seq_GET(seq, 0);
+    }
+
+    // Get length of dotted string
+    ssize_t len = 0;
+    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
+        expr_ty current_expr = asdl_seq_GET(seq, i);
+        ssize_t current_len = PyUnicode_GET_LENGTH(current_expr->v.Name.id);
+        len += strlen(current_len) + 1;
+    }
+    len--; // Last name does not have a dot
+
+    identifier str = PyBytes_FromStringAndSize(NULL, len);
+    if (!str) {
         return NULL;
     }
 
-    expr_ty final_name = asdl_seq_GET(seq, 0);
-    for (int i = 1, l = asdl_seq_LEN(seq); i < l; i++) {
-        expr_ty name = asdl_seq_GET(seq, i);
-        final_name = _Py_Attribute(final_name,
-                                   get_identifier_from_expr_ty(name),
-                                   Load,
-                                   EXTRA(final_name, name));
+    char *s = PyBytes_AS_STRING(str);
+    if (!s) {
+        return NULL;
     }
 
-    return final_name;
+    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
+        expr_ty current_expr = asdl_seq_GET(seq, i);
+        const char *current_name = PyUnicode_AS_DATA(current_expr->v.Name.id);
+        strcpy(s, current_name);
+        s += strlen(current_name);
+        *s++ = '.';
+    }
+    s--;
+    *s = '\0';
+
+    identifier *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
+                                           PyBytes_GET_SIZE(str),
+                                           NULL);
+    Py_DECREF(str);
+    if (!uni)
+        return NULL;
+    str = uni;
+    PyUnicode_InternInPlace(&str);
+    if (PyArena_AddPyObject(p->arena, str) < 0) {
+        Py_DECREF(str);
+        return NULL;
+    }
+
+    expr_ty first_elem = asdl_seq_GET(seq, 0);
+    expr_ty last_elem = asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
+    return Name(str, Load, first_elem->lineno, first_elem->col_offset,
+                last_elem->end_lineno, last_elem->end_col_offset, p->arena);
 }
 
 identifier
