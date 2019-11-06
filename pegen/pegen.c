@@ -520,7 +520,7 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
         ssize_t current_len = PyUnicode_GET_LENGTH(current_expr->v.Name.id);
         len += current_len + 1;
     }
-    len--; // Last name does not have a dot
+    --len; // Last name does not have a dot
 
     PyObject *str = PyBytes_FromStringAndSize(NULL, len);
     if (!str) {
@@ -534,7 +534,10 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
 
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         expr_ty current_expr = asdl_seq_GET(seq, i);
-        const char *current_name = PyUnicode_AS_DATA(current_expr->v.Name.id);
+        const char *current_name = PyUnicode_AsUTF8(current_expr->v.Name.id);
+        if (!current_name) {
+            return NULL;
+        }
         strcpy(s, current_name);
         s += strlen(current_name);
         *s++ = '.';
