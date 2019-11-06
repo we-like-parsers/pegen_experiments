@@ -514,7 +514,10 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
     expr_ty final_name = asdl_seq_GET(seq, 0);
     for (int i = 1, l = asdl_seq_LEN(seq); i < l; i++) {
         expr_ty name = asdl_seq_GET(seq, i);
-        final_name = _Py_Attribute(final_name, get_identifier_from_expr_ty(name), Load, EXTRA(final_name, name));
+        final_name = _Py_Attribute(final_name,
+                                   get_identifier_from_expr_ty(name),
+                                   Load,
+                                   EXTRA(final_name, name));
     }
 
     return final_name;
