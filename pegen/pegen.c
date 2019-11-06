@@ -518,7 +518,7 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         expr_ty current_expr = asdl_seq_GET(seq, i);
         ssize_t current_len = PyUnicode_GET_LENGTH(current_expr->v.Name.id);
-        len += strlen(current_len) + 1;
+        len += current_len + 1;
     }
     len--; // Last name does not have a dot
 
