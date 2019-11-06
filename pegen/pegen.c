@@ -507,6 +507,8 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 expr_ty
 seq_to_dotted_name(Parser *p, asdl_seq *seq)
 {
+    /* Create a string of the form a.b.c like Python/ast.c alias_for_dotted_name does
+       for dotted names */
     if (asdl_seq_LEN(seq) == 1) {
         return asdl_seq_GET(seq, 0);
     }
@@ -544,8 +546,9 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
                                            PyBytes_GET_SIZE(str),
                                            NULL);
     Py_DECREF(str);
-    if (!uni)
+    if (!uni) {
         return NULL;
+    }
     str = uni;
     PyUnicode_InternInPlace(&str);
     if (PyArena_AddPyObject(p->arena, str) < 0) {
