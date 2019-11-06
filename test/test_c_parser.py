@@ -169,24 +169,24 @@ def test_pass_stmt_action(tmp_path: PurePath) -> None:
 
 def test_if_stmt_action(tmp_path: PurePath) -> None:
     grammar = """
-start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
-statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
-statement[asdl_seq*]:  a=compound_stmt { singleton_seq(p, a) } | simple_stmt
+    start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+    statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
+    statement[asdl_seq*]:  a=compound_stmt { singleton_seq(p, a) } | simple_stmt
 
-simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
-further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
+    simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
+    further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
 
-block: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
+    block: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
-compound_stmt: if_stmt
+    compound_stmt: if_stmt
 
-if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+    if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
 
-small_stmt[stmt_ty]: pass_stmt
+    small_stmt[stmt_ty]: pass_stmt
 
-pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, a)) }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, a)) }
 
-full_expression: NAME
-"""
+    full_expression: NAME
+    """
     stmt = "pass"
     verify_ast_generation(grammar, stmt, tmp_path)
