@@ -50,8 +50,8 @@ import_from: ('from' (('.' | '...')* !'import' dotted_name | ('.' | '...')+)
               'import' ('*' | '(' import_as_names ')' | import_as_names))
 import_as_name: NAME ['as' NAME]
 dotted_as_name[alias_ty]:
-    | a=dotted_name 'as' b=NAME { _Py_alias(get_identifier_from_expr_ty(a), get_identifier_from_expr_ty(b), p->arena) }
-    | a=dotted_name { _Py_alias(get_identifier_from_expr_ty(a), NULL, p->arena) }
+    | a=dotted_name 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
+    | a=dotted_name { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
 import_as_names: import_as_name (',' import_as_name)* [',']
 dotted_as_names[asdl_seq*]: a=dotted_as_name b=further_dotted_as_names* { seq_insert_in_front(p, a, b) }
 further_dotted_as_names[alias_ty]: ',' a=dotted_as_name { a }

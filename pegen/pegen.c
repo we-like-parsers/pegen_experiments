@@ -564,16 +564,3 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
     return Name(str, Load, first_elem->lineno, first_elem->col_offset,
                 last_elem->end_lineno, last_elem->end_col_offset, p->arena);
 }
-
-identifier
-get_identifier_from_expr_ty(expr_ty expr)
-{
-    if (expr->kind == Attribute_kind) {
-        return expr->v.Attribute.attr;
-    }
-    if (expr->kind == Name_kind) {
-        return expr->v.Name.id;
-    }
-
-    return NULL;
-}
