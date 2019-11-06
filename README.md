@@ -41,6 +41,9 @@ rewriting everything based on the approach from the blogs.  Episodes:
 - [Implementing PEG Features](https://medium.com/@gvanrossum_83706/implementing-peg-features-76caa4b2151f)
 - [PEG at the Core Developer Sprint](https://medium.com/@gvanrossum_83706/peg-at-the-core-developer-sprint-8b23677b91e6)
 
+I gave a talk about this at North Bay Python:
+[Writing a PEG parser for fun and profit](https://www.youtube.com/watch?v=QppWTvh7_sI)
+
 C code generator
 ----------------
 
