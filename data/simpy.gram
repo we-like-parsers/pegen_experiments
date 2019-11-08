@@ -54,7 +54,7 @@ dotted_as_name[alias_ty]:
     | a=dotted_name 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
     | a=dotted_name { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
 dotted_name[expr_ty]:
-    | a=NAME '.' b=dotted_name { join_names_with_dot(p, a, b) }
+    | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
 
 if_stmt:
