@@ -507,8 +507,6 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 expr_ty
 join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
 {
-    /* Create a string of the form "first_name.second_name" like
-       Python/ast.c alias_for_dotted_name does for dotted names */
     PyObject *first_identifier = first_name->v.Name.id;
     PyObject *second_identifier = second_name->v.Name.id;
 
@@ -518,9 +516,15 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
     if (PyUnicode_READY(second_identifier) == -1) {
         return NULL;
     }
-    ssize_t len = PyUnicode_GET_LENGTH(first_name->v.Name.id) +
-                  PyUnicode_GET_LENGTH(second_name->v.Name.id) + 1; // +1 for the dot
-
+    const char *first_str = PyUnicode_AsUTF8(first_identifier);
+    if (!first_str) {
+        return NULL;
+    }
+    const char *second_str = PyUnicode_AsUTF8(second_identifier);
+    if (!second_str) {
+        return NULL;
+    }
+    ssize_t len = strlen(first_str) + strlen(second_str) + 1; // +1 for the dot
 
     PyObject *str = PyBytes_FromStringAndSize(NULL, len);
     if (!str) {
@@ -532,14 +536,6 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
         return NULL;
     }
 
-    const char *first_str = PyUnicode_AsUTF8(first_name->v.Name.id);
-    if (!first_str) {
-        return NULL;
-    }
-    const char *second_str = PyUnicode_AsUTF8(second_name->v.Name.id);
-    if (!second_str) {
-        return NULL;
-    }
     strcpy(s, first_str);
     s += strlen(first_str);
     *s++ = '.';
