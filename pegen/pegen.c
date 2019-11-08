@@ -561,3 +561,21 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
                 second_name->end_col_offset,
                 p->arena);
 }
+
+int
+seq_count_dots(asdl_seq *seq)
+{
+    int number_of_dots = 0;
+    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
+        Token *current_expr = asdl_seq_GET(seq, i);
+        if (current_expr->type == ELLIPSIS) {
+            number_of_dots += 3;
+        } else if (current_expr->type == DOT) {
+            number_of_dots += 1;
+        } else {
+            return -1;
+        }
+    }
+
+    return number_of_dots;
+}

@@ -45,10 +45,17 @@ continue_stmt: a='continue' { _Py_Continue(EXTRA(a, a)) }
 import_stmt: import_name | import_from
 import_name[stmt_ty]: a='import' b=dotted_as_names { _Py_Import(b, EXTRA(a, b)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
-import_from: ('from' (('.' | '...')* !'import' dotted_name | ('.' | '...')+)
-              'import' ('*' | '(' import_from_as_names ')' | import_from_as_names))
-import_from_as_names: import_from_as_name (',' import_from_as_name)* [',']
-import_from_as_name: NAME ['as' NAME]
+import_from[stmt_ty]:
+    | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets { _Py_ImportFrom(((expr_ty) c)->v.Name.id, d, seq_count_dots(b), EXTRA(a, d)) }
+    | e='from' f=('.' | '...')+ 'import' g=import_from_targets { _Py_ImportFrom(NULL, g, seq_count_dots(f), EXTRA(e, g)) }
+import_from_targets[asdl_seq*]:
+    | '(' a=import_from_as_names ')' { a }
+    | import_from_as_names
+    | a='*' { singleton_seq(p, a) }
+import_from_as_names[asdl_seq*]: a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
+import_from_as_name[alias_ty]:
+    | a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
+    | a=NAME { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
 dotted_as_names[asdl_seq*]: a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
 dotted_as_name[alias_ty]:
     | a=dotted_name 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
