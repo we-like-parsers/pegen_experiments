@@ -60,3 +60,4 @@ PyObject *run_parser_from_string(const char *str, void *(start_rule_func)(Parser
 asdl_seq *singleton_seq(Parser *, void *);
 asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);
 asdl_seq *seq_flatten(Parser *, asdl_seq *);
+expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);

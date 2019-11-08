@@ -3,9 +3,8 @@
 start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
-statement[asdl_seq*]:  a=compound_stmt { singleton_seq(p, a) } | simple_stmt
-simple_stmt[asdl_seq*]: a=small_stmt b=further_small_stmt* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
-further_small_stmt[stmt_ty]: ';' a=small_stmt { a }
+statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) } | simple_stmt
+simple_stmt[asdl_seq*]: a=small_stmt b=(';' c=small_stmt { c })* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt[stmt_ty]:
@@ -44,15 +43,19 @@ break_stmt: a='break' { _Py_Break(EXTRA(a, a)) }
 continue_stmt: a='continue' { _Py_Continue(EXTRA(a, a)) }
 
 import_stmt: import_name | import_from
-import_name: 'import' dotted_as_names
+import_name[stmt_ty]: a='import' b=dotted_as_names { _Py_Import(b, EXTRA(a, b)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from: ('from' (('.' | '...')* !'import' dotted_name | ('.' | '...')+)
-              'import' ('*' | '(' import_as_names ')' | import_as_names))
-import_as_name: NAME ['as' NAME]
-dotted_as_name: dotted_name ['as' NAME]
-import_as_names: import_as_name (',' import_as_name)* [',']
-dotted_as_names: dotted_as_name (',' dotted_as_name)*
-dotted_name: NAME ('.' NAME)*
+              'import' ('*' | '(' import_from_as_names ')' | import_from_as_names))
+import_from_as_names: import_from_as_name (',' import_from_as_name)* [',']
+import_from_as_name: NAME ['as' NAME]
+dotted_as_names[asdl_seq*]: a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
+dotted_as_name[alias_ty]:
+    | a=dotted_name 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
+    | a=dotted_name { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
+dotted_name[expr_ty]:
+    | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
+    | NAME
 
 if_stmt:
     | 'if' a=full_expression ':' b=block c=else_block { _Py_If(a, b, c, EXTRA(a, c)) }

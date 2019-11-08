@@ -503,3 +503,61 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 
     return flattened_seq;
 }
+
+expr_ty
+join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
+{
+    PyObject *first_identifier = first_name->v.Name.id;
+    PyObject *second_identifier = second_name->v.Name.id;
+
+    if (PyUnicode_READY(first_identifier) == -1) {
+        return NULL;
+    }
+    if (PyUnicode_READY(second_identifier) == -1) {
+        return NULL;
+    }
+    const char *first_str = PyUnicode_AsUTF8(first_identifier);
+    if (!first_str) {
+        return NULL;
+    }
+    const char *second_str = PyUnicode_AsUTF8(second_identifier);
+    if (!second_str) {
+        return NULL;
+    }
+    ssize_t len = strlen(first_str) + strlen(second_str) + 1; // +1 for the dot
+
+    PyObject *str = PyBytes_FromStringAndSize(NULL, len);
+    if (!str) {
+        return NULL;
+    }
+
+    char *s = PyBytes_AS_STRING(str);
+    if (!s) {
+        return NULL;
+    }
+
+    strcpy(s, first_str);
+    s += strlen(first_str);
+    *s++ = '.';
+    strcpy(s, second_str);
+    s += strlen(second_str);
+    *s = '\0';
+
+    PyObject *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
+                                         PyBytes_GET_SIZE(str),
+                                         NULL);
+    Py_DECREF(str);
+    PyUnicode_InternInPlace(&uni);
+    if (PyArena_AddPyObject(p->arena, uni) < 0) {
+        Py_DECREF(uni);
+        return NULL;
+    }
+
+    return Name(uni,
+                Load,
+                first_name->lineno,
+                first_name->col_offset,
+                second_name->end_lineno,
+                second_name->end_col_offset,
+                p->arena);
+}
