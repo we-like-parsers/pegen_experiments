@@ -505,22 +505,22 @@ seq_flatten(Parser *p, asdl_seq *seqs)
 }
 
 expr_ty
-seq_to_dotted_name(Parser *p, asdl_seq *seq)
+join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
 {
-    /* Create a string of the form a.b.c like Python/ast.c alias_for_dotted_name does
-       for dotted names */
-    if (asdl_seq_LEN(seq) == 1) {
-        return asdl_seq_GET(seq, 0);
-    }
+    /* Create a string of the form "first_name.second_name" like
+       Python/ast.c alias_for_dotted_name does for dotted names */
+    PyObject *first_identifier = first_name->v.Name.id;
+    PyObject *second_identifier = second_name->v.Name.id;
 
-    // Get length of dotted string
-    ssize_t len = 0;
-    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
-        expr_ty current_expr = asdl_seq_GET(seq, i);
-        ssize_t current_len = PyUnicode_GET_LENGTH(current_expr->v.Name.id);
-        len += current_len + 1;
+    if (PyUnicode_READY(first_identifier) == -1) {
+        return NULL;
     }
-    --len; // Last name does not have a dot
+    if (PyUnicode_READY(second_identifier) == -1) {
+        return NULL;
+    }
+    ssize_t len = PyUnicode_GET_LENGTH(first_name->v.Name.id) +
+                  PyUnicode_GET_LENGTH(second_name->v.Name.id) + 1; // +1 for the dot
+
 
     PyObject *str = PyBytes_FromStringAndSize(NULL, len);
     if (!str) {
@@ -532,35 +532,36 @@ seq_to_dotted_name(Parser *p, asdl_seq *seq)
         return NULL;
     }
 
-    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
-        expr_ty current_expr = asdl_seq_GET(seq, i);
-        const char *current_name = PyUnicode_AsUTF8(current_expr->v.Name.id);
-        if (!current_name) {
-            return NULL;
-        }
-        strcpy(s, current_name);
-        s += strlen(current_name);
-        *s++ = '.';
+    const char *first_str = PyUnicode_AsUTF8(first_name->v.Name.id);
+    if (!first_str) {
+        return NULL;
     }
-    s--;
+    const char *second_str = PyUnicode_AsUTF8(second_name->v.Name.id);
+    if (!second_str) {
+        return NULL;
+    }
+    strcpy(s, first_str);
+    s += strlen(first_str);
+    *s++ = '.';
+    strcpy(s, second_str);
+    s += strlen(second_str);
     *s = '\0';
 
     PyObject *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
                                          PyBytes_GET_SIZE(str),
                                          NULL);
     Py_DECREF(str);
-    if (!uni) {
-        return NULL;
-    }
-    str = uni;
-    PyUnicode_InternInPlace(&str);
-    if (PyArena_AddPyObject(p->arena, str) < 0) {
-        Py_DECREF(str);
+    PyUnicode_InternInPlace(&uni);
+    if (PyArena_AddPyObject(p->arena, uni) < 0) {
+        Py_DECREF(uni);
         return NULL;
     }
 
-    expr_ty first_elem = asdl_seq_GET(seq, 0);
-    expr_ty last_elem = asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
-    return Name(str, Load, first_elem->lineno, first_elem->col_offset,
-                last_elem->end_lineno, last_elem->end_col_offset, p->arena);
+    return Name(uni,
+                Load,
+                first_name->lineno,
+                first_name->col_offset,
+                second_name->end_lineno,
+                second_name->end_col_offset,
+                p->arena);
 }
