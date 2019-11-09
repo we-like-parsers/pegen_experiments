@@ -579,3 +579,16 @@ seq_count_dots(asdl_seq *seq)
 
     return number_of_dots;
 }
+
+alias_ty
+alias_for_star(Parser *p)
+{
+    PyObject *str = PyUnicode_InternFromString("*");
+    if (!str)
+        return NULL;
+    if (PyArena_AddPyObject(p->arena, str) < 0) {
+        Py_DECREF(str);
+        return NULL;
+    }
+    return alias(str, NULL, p->arena);
+}

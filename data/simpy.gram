@@ -51,7 +51,7 @@ import_from[stmt_ty]:
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | a='*' { singleton_seq(p, a) }
+    | a='*' { singleton_seq(p, alias_for_star(p)) }
 import_from_as_names[asdl_seq*]: a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
 import_from_as_name[alias_ty]:
     | a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
