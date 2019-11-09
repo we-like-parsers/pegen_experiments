@@ -61,3 +61,5 @@ asdl_seq *singleton_seq(Parser *, void *);
 asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);
 asdl_seq *seq_flatten(Parser *, asdl_seq *);
 expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);
+int seq_count_dots(asdl_seq *);
+alias_ty alias_for_star(Parser *);
