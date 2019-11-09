@@ -46,7 +46,8 @@ import_stmt: import_name | import_from
 import_name[stmt_ty]: a='import' b=dotted_as_names { _Py_Import(b, EXTRA(a, b)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
-    | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets { _Py_ImportFrom(((expr_ty) c)->v.Name.id, d, seq_count_dots(b), EXTRA(a, d)) }
+    | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
+        _Py_ImportFrom(((expr_ty) c)->v.Name.id, d, seq_count_dots(b), EXTRA(a, d)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets { _Py_ImportFrom(NULL, g, seq_count_dots(f), EXTRA(e, g)) }
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
