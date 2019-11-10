@@ -88,6 +88,10 @@ inline int stmt_type_headline(stmt_ty a) { return a->lineno; }
 inline int stmt_type_headcol(stmt_ty a) { return a->col_offset; }
 inline int stmt_type_tailline(stmt_ty a) { return a->end_lineno; }
 inline int stmt_type_tailcol(stmt_ty a) { return a->end_col_offset; }
+inline int excepthandler_type_headline(excepthandler_ty a) { return a->lineno; }
+inline int excepthandler_type_headcol(excepthandler_ty a) { return a->col_offset; }
+inline int excepthandler_type_tailline(excepthandler_ty a) { return a->end_lineno; }
+inline int excepthandler_type_tailcol(excepthandler_ty a) { return a->end_col_offset; }
 inline int token_type_headline(Token *a) { return a->lineno; }
 inline int token_type_headcol(Token *a) { return a->col_offset; }
 inline int token_type_tailline(Token *a) { return a->end_lineno; }
