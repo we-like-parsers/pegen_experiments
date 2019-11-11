@@ -31,6 +31,11 @@ typedef struct {
     int lineno, col_offset, end_lineno, end_col_offset;
 } PegenAlias;
 
+typedef struct {
+    cmpop_ty cmpop;
+    expr_ty expr;
+} CmpopExprPair;
+
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
@@ -72,6 +77,9 @@ alias_ty alias_for_star(Parser *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *seq_map_to_alias(Parser *, asdl_seq *);
+CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
+asdl_int_seq *get_cmpops(Parser *, asdl_seq *);
+asdl_seq *get_exprs(Parser *, asdl_seq *);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }

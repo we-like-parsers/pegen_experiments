@@ -143,12 +143,21 @@ class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
 star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
-expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
+expressions[expr_ty]:
+    | '*' bitwise_or (',' ('*' bitwise_or | expression))+ [',']
+    | '*' bitwise_or ','
+    | '*' bitwise_or
+    | expression (',' ('*' bitwise_or | expression))+ [',']
+    | expression ','
+    | expression
 
 star_full_expression: '*' bitwise_or | full_expression
 full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
-expression: lambdef | disjunction 'if' disjunction 'else' expression | disjunction
+expression[expr_ty]:
+    | lambdef
+    | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA_EXPR(a, c)) }
+    | disjunction
 lambdef: 'lambda' [lambda_parameters] ':' expression
 
 lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
@@ -167,28 +176,73 @@ lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
                  )
 lambda_name_with_default: NAME '=' expression
 
-disjunction: disjunction 'or' conjunction | conjunction
-conjunction: conjunction 'and' inversion | inversion
-inversion: 'not' inversion | comparison
-comparison: bitwise_or (compare_op bitwise_or)+ | bitwise_or
-compare_op: '<' | '<=' | '==' | '>=' | '>' | '!=' | ['not'] 'in' | 'is' ['not']
+disjunction[expr_ty]:
+    | a=conjunction b=('or' c=conjunction { c })+ { _Py_BoolOp(
+        Or,
+        seq_insert_in_front(p, a, b),
+        EXTRA_EXPR(a, seq_get_tail(NULL, b))) }
+    | conjunction
+conjunction[expr_ty]:
+    | a=inversion b=('and' c=inversion { c })+ { _Py_BoolOp(
+        And,
+        seq_insert_in_front(p, a, b),
+        EXTRA_EXPR(a, seq_get_tail(NULL, b))) }
+    | inversion
+inversion[expr_ty]:
+    | a='not' b=inversion { _Py_UnaryOp(Not, b, EXTRA(a, token_type, b, expr_type)) }
+    | comparison
+comparison[expr_ty]:
+    | a=bitwise_or b=(c=compare_op d=bitwise_or { cmpop_expr_pair(p, c, d) })+ { _Py_Compare(
+        a,
+        get_cmpops(p, b),
+        get_exprs(p, b),
+        EXTRA_EXPR(a, ((CmpopExprPair *) seq_get_tail(NULL, b))->expr)) }
+    | bitwise_or
+compare_op[cmpop_ty]:
+    | '==' { Eq }
+    | '!=' { NotEq }
+    | '<=' { LtE }
+    | '<' { Lt }
+    | '>=' { GtE }
+    | '>' { Gt }
+    | 'not' 'in' { NotIn }
+    | 'in' { In }
+    | 'is' 'not' { IsNot }
+    | 'is' { Is }
 
-bitwise_or: bitwise_or '|' bitwise_xor | bitwise_xor
-bitwise_xor: bitwise_xor '^' bitwise_and | bitwise_and
-bitwise_and: bitwise_and '&' shift_expr | shift_expr
-shift_expr: shift_expr ('<<'|'>>') sum | sum
+bitwise_or[expr_ty]: a=bitwise_or '|' b=bitwise_xor { _Py_BinOp(a, BitOr, b, EXTRA_EXPR(a, b)) } | bitwise_xor
+bitwise_xor[expr_ty]: a=bitwise_xor '^' b=bitwise_and { _Py_BinOp(a, BitXor, b, EXTRA_EXPR(a, b)) } | bitwise_and
+bitwise_and[expr_ty]: a=bitwise_and '&' b=shift_expr { _Py_BinOp(a, BitAnd, b, EXTRA_EXPR(a, b)) } | shift_expr
+shift_expr[expr_ty]:
+    | a=shift_expr '<<' b=sum { _Py_BinOp(a, LShift, b, EXTRA_EXPR(a, b)) }
+    | a=shift_expr '>>' b=sum { _Py_BinOp(a, RShift, b, EXTRA_EXPR(a, b)) }
+    | sum
 
-sum: sum ('+'|'-') term | term
-term: term ('*'|'/'|'//'|'%'|'@') factor | factor
-factor: ('+' | '-' | '~') factor | power
-power: primary '**' factor | primary
-primary:
+sum[expr_ty]:
+    | a=sum '+' b=term { _Py_BinOp(a, Add, b, EXTRA_EXPR(a, b)) }
+    | a=sum '-' b=term { _Py_BinOp(a, Sub, b, EXTRA_EXPR(a, b)) }
+    | term
+term[expr_ty]:
+    | a=term '*' b=factor { _Py_BinOp(a, Mult, b, EXTRA_EXPR(a, b)) }
+    | a=term '/' b=factor { _Py_BinOp(a, Div, b, EXTRA_EXPR(a, b)) }
+    | a=term '//' b=factor { _Py_BinOp(a, FloorDiv, b, EXTRA_EXPR(a, b)) }
+    | a=term '%' b=factor { _Py_BinOp(a, Mod, b, EXTRA_EXPR(a, b)) }
+    | a=term '@' b=factor { _Py_BinOp(a, MatMult, b, EXTRA_EXPR(a, b)) }
+    | factor
+factor[expr_ty]:
+    | a='+' b=factor { _Py_UnaryOp(UAdd, b, EXTRA(a, token_type, b, expr_type)) }
+    | a='-' b=factor { _Py_UnaryOp(USub, b, EXTRA(a, token_type, b, expr_type)) }
+    | a='~' b=factor { _Py_UnaryOp(Invert, b, EXTRA(a, token_type, b, expr_type)) }
+    | power
+power[expr_ty]: a=primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA_EXPR(a, b)) } | primary
+primary[expr_ty]:
     | !'await' a=atom !'.' !'(' !'[' { a }
     | [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
-atom: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | STRING+ | NUMBER | '...'
+# STRING+'s output is just a hack for now 
+atom[expr_ty]: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | a=STRING+ { asdl_seq_GET(a, 0) } | NUMBER | '...'
 list: '[' [star_full_expressions] ']'
 listcomp: '[' full_expression for_if_clauses ']'
 tuple: '(' [star_full_expression ',' [star_full_expressions]] ')'
