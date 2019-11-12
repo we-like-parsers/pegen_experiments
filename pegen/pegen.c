@@ -602,6 +602,32 @@ seq_get_tail(void *previous, asdl_seq *seq)
     return asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
 }
 
+PegenAlias *
+pegen_alias(alias_ty alias, int line, int endline, int col, int endcol, PyArena *arena)
+{
+    PegenAlias *a = PyArena_Malloc(arena, sizeof(PegenAlias));
+    if (!a) {
+        return NULL;
+    }
+    a->alias = alias;
+    a->line = line;
+    a->endline = endline;
+    a->col = col;
+    a->endcol = col;
+    return a;
+}
+
+asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        PegenAlias *a = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, a->alias);
+    }
+    return new_seq;
+}
+
 int
 expr_type(void *a, int head, int line)
 {
@@ -639,4 +665,17 @@ token_type(void *a, int head, int line)
         return ((Token *) a)->endline;
     else
         return ((Token *) a)->endcol;
+}
+
+int
+alias_type(void *a, int head, int line)
+{
+    if (head && line)
+        return ((PegenAlias *) a)->line;
+    if (head && !line)
+        return ((PegenAlias *) a)->col;
+    if (!head && line)
+        return ((PegenAlias *) a)->endline;
+    else
+        return ((PegenAlias *) a)->endcol;
 }

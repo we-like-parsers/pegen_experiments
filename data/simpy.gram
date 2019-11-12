@@ -43,25 +43,30 @@ break_stmt: a='break' { _Py_Break(EXTRA(a, token_type, a, token_type)) }
 continue_stmt: a='continue' { _Py_Continue(EXTRA(a, token_type, a, token_type)) }
 
 import_stmt: import_name | import_from
-import_name[stmt_ty]: a='import' b=dotted_as_names { _Py_Import(b, EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+import_name[stmt_ty]: a='import' b=dotted_as_names {
+    _Py_Import(seq_map_to_alias(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), alias_type)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
-        _Py_ImportFrom(((expr_ty) c)->v.Name.id, d, seq_count_dots(b), EXTRA(a, token_type, seq_get_tail(NULL, d), expr_type)) }
+        _Py_ImportFrom(((expr_ty) c)->v.Name.id, seq_map_to_alias(p, d), seq_count_dots(b), EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets {
-        _Py_ImportFrom(NULL, g, seq_count_dots(f), EXTRA(e, token_type, seq_get_tail(NULL, g), expr_type)) }
+        _Py_ImportFrom(NULL, seq_map_to_alias(p, g), seq_count_dots(f), EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | a='*' { singleton_seq(p, alias_for_star(p)) }
+    | a='*' { singleton_seq(p, pegen_alias(alias_for_star(p), EXTRA(a, token_type, a, token_type))) }
 import_from_as_names[asdl_seq*]: a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
-import_from_as_name[alias_ty]:
-    | a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
-    | a=NAME { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
+import_from_as_name[PegenAlias*]:
+    | a=NAME 'as' b=NAME {
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
+    | a=NAME {
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
 dotted_as_names[asdl_seq*]: a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
-dotted_as_name[alias_ty]:
-    | a=dotted_name 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
-    | a=dotted_name { _Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena) }
+dotted_as_name[PegenAlias*]:
+    | a=dotted_name 'as' b=NAME {
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
+    | a=dotted_name {
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
 dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
@@ -116,7 +121,7 @@ decorators: ('@' factor NEWLINE)+
 
 class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
-block[asdl_seq*]: a=simple_stmt { singleton_seq(p, a) } | NEWLINE INDENT a=statements DEDENT { a }
+block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
 star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
 expressions: ('*' bitwise_or | expression) (',' ('*' bitwise_or | expression))* [',']
