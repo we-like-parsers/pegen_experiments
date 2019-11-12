@@ -28,7 +28,7 @@ def read_python_source(path: str) -> str:
     return source
 
 
-@pytest.mark.parametrize("filename", [f for f in PYTHON_SOURCE_FILENAMES])
+@pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
 def test_ast_generation_on_source_files(tmp_path: PurePath, filename: PurePath) -> None:
     extension = create_tmp_extension(tmp_path)
     print()
