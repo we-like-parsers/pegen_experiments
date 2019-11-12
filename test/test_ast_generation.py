@@ -35,6 +35,6 @@ def test_ast_generation_on_source_files(tmp_path: PurePath) -> None:
 
         actual_ast = extension.parse_string(source)
         expected_ast = ast.parse(source)
-        assert ast.dump(actual_ast) == ast.dump(
-            expected_ast
+        assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+            expected_ast, include_attributes=True
         ), f"Wrong AST generation for file: {filename}"

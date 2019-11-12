@@ -592,3 +592,51 @@ alias_for_star(Parser *p)
     }
     return alias(str, NULL, p->arena);
 }
+
+void *
+seq_get_tail(void *previous, asdl_seq *seq)
+{
+    if (asdl_seq_LEN(seq) == 0) {
+        return previous;
+    }
+    return asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
+}
+
+int
+expr_type(void *a, int head, int line)
+{
+    if (head && line)
+        return ((expr_ty) a)->lineno;
+    if (head && !line)
+        return ((expr_ty) a)->col_offset;
+    if (!head && line)
+        return ((expr_ty) a)->end_lineno;
+    else
+        return ((expr_ty) a)->end_col_offset;
+}
+
+int
+stmt_type(void *a, int head, int line)
+{
+    if (head && line)
+        return ((stmt_ty) a)->lineno;
+    if (head && !line)
+        return ((stmt_ty) a)->col_offset;
+    if (!head && line)
+        return ((stmt_ty) a)->end_lineno;
+    else
+        return ((stmt_ty) a)->end_col_offset;
+}
+
+int
+token_type(void *a, int head, int line)
+{
+    if (head && line)
+        return ((Token *) a)->line;
+    if (head && !line)
+        return ((Token *) a)->col;
+    if (!head && line)
+        return ((Token *) a)->endline;
+    else
+        return ((Token *) a)->endcol;
+}
