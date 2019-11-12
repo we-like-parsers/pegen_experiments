@@ -49,11 +49,11 @@ void *keyword_token(Parser *p, const char *val);
 
 void *CONSTRUCTOR(Parser *p, ...);
 
-#define LINE(arg) ((expr_ty)(arg))->lineno
-#define COL(arg) ((expr_ty)(arg))->col_offset
-#define ENDLINE(arg) ((expr_ty)(arg))->end_lineno
-#define ENDCOL(arg) ((expr_ty)(arg))->end_col_offset
-#define EXTRA(head, tail) LINE(head), COL(head), ENDLINE(tail), ENDCOL(tail), p->arena
+#define EXTRA(head, head_type_func, tail, tail_type_func) head_type_func(head, 1, 1), \
+                                                          head_type_func(head, 1, 0), \
+                                                          tail_type_func(tail, 0, 1), \
+                                                          tail_type_func(tail, 0, 0), \
+                                                          p->arena
 
 PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);
 PyObject *run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode);
@@ -63,3 +63,7 @@ asdl_seq *seq_flatten(Parser *, asdl_seq *);
 expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);
 int seq_count_dots(asdl_seq *);
 alias_ty alias_for_star(Parser *);
+void *seq_get_tail(void *, asdl_seq *);
+int expr_type(void *, int, int);
+int stmt_type(void *, int, int);
+int token_type(void *, int, int);
