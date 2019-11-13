@@ -603,7 +603,7 @@ seq_get_tail(void *previous, asdl_seq *seq)
 }
 
 PegenAlias *
-pegen_alias(alias_ty alias, int line, int endline, int col, int endcol, PyArena *arena)
+pegen_alias(alias_ty alias, int line, int col, int endline, int endcol, PyArena *arena)
 {
     PegenAlias *a = PyArena_Malloc(arena, sizeof(PegenAlias));
     if (!a) {
@@ -613,7 +613,7 @@ pegen_alias(alias_ty alias, int line, int endline, int col, int endcol, PyArena 
     a->lineno = line;
     a->end_lineno = endline;
     a->col_offset = col;
-    a->end_col_offset = col;
+    a->end_col_offset = endcol;
     return a;
 }
 
