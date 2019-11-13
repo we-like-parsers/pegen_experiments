@@ -101,10 +101,10 @@ fill_token(Parser *p)
     if (end != NULL && end >= p->tok->line_start)
         end_col_offset = end - p->tok->line_start;
 
-    t->line = lineno;
-    t->col = col_offset;
-    t->endline = end_lineno;
-    t->endcol = end_col_offset;
+    t->lineno = lineno;
+    t->col_offset = col_offset;
+    t->end_lineno = end_lineno;
+    t->end_col_offset = end_col_offset;
 
     // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
@@ -215,7 +215,7 @@ name_token(Parser *p)
         return NULL;
     }
     // TODO: What new_identifier() does.
-    return Name(id, Load, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Name(id, Load, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 void *
@@ -276,7 +276,7 @@ number_token(Parser *p)
         Py_DECREF(c);
         return NULL;
     }
-    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 expr_ty
@@ -298,7 +298,7 @@ string_token(Parser *p)
         Py_DECREF(c);
         return NULL;
     }
-    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 void *
@@ -360,8 +360,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 	    // TODO: comvert from bytes offset to character offset
 	    // TODO: set correct attributes on SyntaxError object
             PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
-                         t->line, t->col + 1, token_name(t->type));
-            PyErr_SyntaxLocationObject(p->tok->filename, t->line, t->col + 1);
+                         t->lineno, t->col_offset + 1, token_name(t->type));
+            PyErr_SyntaxLocationObject(p->tok->filename, t->lineno, t->col_offset + 1);
         }
         goto exit;
     }
@@ -610,10 +610,10 @@ pegen_alias(alias_ty alias, int line, int endline, int col, int endcol, PyArena 
         return NULL;
     }
     a->alias = alias;
-    a->line = line;
-    a->endline = endline;
-    a->col = col;
-    a->endcol = col;
+    a->lineno = line;
+    a->end_lineno = endline;
+    a->col_offset = col;
+    a->end_col_offset = col;
     return a;
 }
 
@@ -629,53 +629,53 @@ asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
 }
 
 int
-expr_type(void *a, int head, int line)
+expr_type(expr_ty a, int head, int line)
 {
     if (head && line)
-        return ((expr_ty) a)->lineno;
+        return a->lineno;
     if (head && !line)
-        return ((expr_ty) a)->col_offset;
+        return a->col_offset;
     if (!head && line)
-        return ((expr_ty) a)->end_lineno;
+        return a->end_lineno;
     else
-        return ((expr_ty) a)->end_col_offset;
+        return a->end_col_offset;
 }
 
 int
-stmt_type(void *a, int head, int line)
+stmt_type(stmt_ty a, int head, int line)
 {
     if (head && line)
-        return ((stmt_ty) a)->lineno;
+        return a->lineno;
     if (head && !line)
-        return ((stmt_ty) a)->col_offset;
+        return a->col_offset;
     if (!head && line)
-        return ((stmt_ty) a)->end_lineno;
+        return a->end_lineno;
     else
-        return ((stmt_ty) a)->end_col_offset;
+        return a->end_col_offset;
 }
 
 int
-token_type(void *a, int head, int line)
+token_type(Token *a, int head, int line)
 {
     if (head && line)
-        return ((Token *) a)->line;
+        return a->lineno;
     if (head && !line)
-        return ((Token *) a)->col;
+        return a->col_offset;
     if (!head && line)
-        return ((Token *) a)->endline;
+        return a->end_lineno;
     else
-        return ((Token *) a)->endcol;
+        return a->end_col_offset;
 }
 
 int
-alias_type(void *a, int head, int line)
+alias_type(PegenAlias *a, int head, int line)
 {
     if (head && line)
-        return ((PegenAlias *) a)->line;
+        return a->lineno;
     if (head && !line)
-        return ((PegenAlias *) a)->col;
+        return a->col_offset;
     if (!head && line)
-        return ((PegenAlias *) a)->endline;
+        return a->end_lineno;
     else
-        return ((PegenAlias *) a)->endcol;
+        return a->end_col_offset;
 }

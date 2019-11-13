@@ -14,7 +14,7 @@ typedef struct _memo {
 typedef struct {
     int type;
     PyObject *bytes;
-    int line, col, endline, endcol;
+    int lineno, col_offset, end_lineno, end_col_offset;
     Memo *memo;
 } Token;
 
@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct {
     alias_ty alias;
-    int line, col, endline, endcol;
+    int lineno, col_offset, end_lineno, end_col_offset;
 } PegenAlias;
 
 int insert_memo(Parser *p, int mark, int type, void *node);
@@ -72,7 +72,7 @@ alias_ty alias_for_star(Parser *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *seq_map_to_alias(Parser *, asdl_seq *);
-int expr_type(void *, int, int);
-int stmt_type(void *, int, int);
-int token_type(void *, int, int);
-int alias_type(void *, int, int);
+int expr_type(expr_ty, int, int);
+int stmt_type(stmt_ty, int, int);
+int token_type(Token *, int, int);
+int alias_type(PegenAlias *, int, int);
