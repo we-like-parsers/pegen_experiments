@@ -28,14 +28,20 @@ def read_python_source(path: str) -> str:
     return source
 
 
-@pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
-def test_ast_generation_on_source_files(tmp_path: PurePath, filename: PurePath) -> None:
+@pytest.fixture(scope="module")
+def parser_extension(tmp_path_factory: Any):
+    tmp_path = tmp_path_factory.mktemp("extension")
     extension = create_tmp_extension(tmp_path)
+    return extension
+
+
+@pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
+def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePath) -> None:
     print()
     print(filename)
     source = read_python_source(os.path.join(TEST_DIR, filename))
 
-    actual_ast = extension.parse_string(source)
+    actual_ast = parser_extension.parse_string(source)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
