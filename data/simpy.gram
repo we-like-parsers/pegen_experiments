@@ -20,7 +20,7 @@ small_stmt[stmt_ty]:
     | break_stmt
     | continue_stmt
     | assignment
-    | e=expressions { _Py_Expr(e, EXTRA(e, expr_type, e, expr_type)) }
+    | e=expressions { _Py_Expr(e, EXTRA_EXPR(e, e)) }
 compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
@@ -48,7 +48,7 @@ import_name[stmt_ty]: a='import' b=dotted_as_names {
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
-        _Py_ImportFrom(((expr_ty) c)->v.Name.id, seq_map_to_alias(p, d), seq_count_dots(b), EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
+        _Py_ImportFrom(c->v.Name.id, seq_map_to_alias(p, d), seq_count_dots(b), EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets {
         _Py_ImportFrom(NULL, seq_map_to_alias(p, g), seq_count_dots(f), EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
 import_from_targets[asdl_seq*]:
@@ -64,9 +64,9 @@ import_from_as_name[PegenAlias*]:
 dotted_as_names[asdl_seq*]: a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
 dotted_as_name[PegenAlias*]:
     | a=dotted_name 'as' b=NAME {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
+        pegen_alias(_Py_alias(a->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
     | a=dotted_name {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
+        pegen_alias(_Py_alias(a->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
 dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
