@@ -37,8 +37,6 @@ def parser_extension(tmp_path_factory: Any):
 
 @pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
 def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePath) -> None:
-    print()
-    print(filename)
     source = read_python_source(os.path.join(TEST_DIR, filename))
 
     actual_ast = parser_extension.parse_string(source)
