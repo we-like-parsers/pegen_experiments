@@ -3,7 +3,7 @@ import os
 from pathlib import PurePath
 from typing import Any
 
-import pytest
+import pytest # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
