@@ -54,26 +54,6 @@ void *keyword_token(Parser *p, const char *val);
 
 void *CONSTRUCTOR(Parser *p, ...);
 
-#define expr_type_headline(a) ((expr_ty) a)->lineno
-#define expr_type_headcol(a) ((expr_ty) a)->col_offset
-#define expr_type_tailline(a) ((expr_ty) a)->end_lineno
-#define expr_type_tailcol(a) ((expr_ty) a)->end_col_offset
-
-#define stmt_type_headline(a) ((stmt_ty) a)->lineno
-#define stmt_type_headcol(a) ((stmt_ty) a)->col_offset
-#define stmt_type_tailline(a) ((stmt_ty) a)->end_lineno
-#define stmt_type_tailcol(a) ((stmt_ty) a)->end_col_offset
-
-#define token_type_headline(a) ((Token *) a)->lineno
-#define token_type_headcol(a) ((Token *) a)->col_offset
-#define token_type_tailline(a) ((Token *) a)->end_lineno
-#define token_type_tailcol(a) ((Token *) a)->end_col_offset
-
-#define alias_type_headline(a) ((PegenAlias *) a)->lineno
-#define alias_type_headcol(a) ((PegenAlias *) a)->col_offset
-#define alias_type_tailline(a) ((PegenAlias *) a)->end_lineno
-#define alias_type_tailcol(a) ((PegenAlias *) a)->end_col_offset
-
 #define EXTRA_EXPR(head, tail) EXTRA(head, expr_type, tail, expr_type)
 #define EXTRA(head, head_type_func, tail, tail_type_func) head_type_func##_headline(head), \
                                                           head_type_func##_headcol(head), \
@@ -92,3 +72,20 @@ alias_ty alias_for_star(Parser *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *seq_map_to_alias(Parser *, asdl_seq *);
+
+inline int expr_type_headline(expr_ty a) { return a->lineno; }
+inline int expr_type_headcol(expr_ty a) { return a->col_offset; }
+inline int expr_type_tailline(expr_ty a) { return a->end_lineno; }
+inline int expr_type_tailcol(expr_ty a) { return a->end_col_offset; }
+inline int stmt_type_headline(stmt_ty a) { return a->lineno; }
+inline int stmt_type_headcol(stmt_ty a) { return a->col_offset; }
+inline int stmt_type_tailline(stmt_ty a) { return a->end_lineno; }
+inline int stmt_type_tailcol(stmt_ty a) { return a->end_col_offset; }
+inline int token_type_headline(Token *a) { return a->lineno; }
+inline int token_type_headcol(Token *a) { return a->col_offset; }
+inline int token_type_tailline(Token *a) { return a->end_lineno; }
+inline int token_type_tailcol(Token *a) { return a->end_col_offset; }
+inline int alias_type_headline(PegenAlias *a) { return a->lineno; }
+inline int alias_type_headcol(PegenAlias *a) { return a->col_offset; }
+inline int alias_type_tailline(PegenAlias *a) { return a->end_lineno; }
+inline int alias_type_tailcol(PegenAlias *a) { return a->end_col_offset; }
