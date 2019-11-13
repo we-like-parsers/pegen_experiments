@@ -29,7 +29,7 @@ def read_python_source(path: str) -> str:
 
 
 @pytest.fixture(scope="module")
-def parser_extension(tmp_path_factory: Any):
+def parser_extension(tmp_path_factory: Any) -> Any:
     tmp_path = tmp_path_factory.mktemp("extension")
     extension = create_tmp_extension(tmp_path)
     return extension
