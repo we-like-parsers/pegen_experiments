@@ -54,11 +54,31 @@ void *keyword_token(Parser *p, const char *val);
 
 void *CONSTRUCTOR(Parser *p, ...);
 
+#define expr_type_headline(a) ((expr_ty) a)->lineno
+#define expr_type_headcol(a) ((expr_ty) a)->col_offset
+#define expr_type_tailline(a) ((expr_ty) a)->end_lineno
+#define expr_type_tailcol(a) ((expr_ty) a)->end_col_offset
+
+#define stmt_type_headline(a) ((stmt_ty) a)->lineno
+#define stmt_type_headcol(a) ((stmt_ty) a)->col_offset
+#define stmt_type_tailline(a) ((stmt_ty) a)->end_lineno
+#define stmt_type_tailcol(a) ((stmt_ty) a)->end_col_offset
+
+#define token_type_headline(a) ((Token *) a)->lineno
+#define token_type_headcol(a) ((Token *) a)->col_offset
+#define token_type_tailline(a) ((Token *) a)->end_lineno
+#define token_type_tailcol(a) ((Token *) a)->end_col_offset
+
+#define alias_type_headline(a) ((PegenAlias *) a)->lineno
+#define alias_type_headcol(a) ((PegenAlias *) a)->col_offset
+#define alias_type_tailline(a) ((PegenAlias *) a)->end_lineno
+#define alias_type_tailcol(a) ((PegenAlias *) a)->end_col_offset
+
 #define EXTRA_EXPR(head, tail) EXTRA(head, expr_type, tail, expr_type)
-#define EXTRA(head, head_type_func, tail, tail_type_func) head_type_func(head, 1, 1), \
-                                                          head_type_func(head, 1, 0), \
-                                                          tail_type_func(tail, 0, 1), \
-                                                          tail_type_func(tail, 0, 0), \
+#define EXTRA(head, head_type_func, tail, tail_type_func) head_type_func##_headline(head), \
+                                                          head_type_func##_headcol(head), \
+                                                          tail_type_func##_tailline(tail), \
+                                                          tail_type_func##_tailcol(tail), \
                                                           p->arena
 
 PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);
@@ -72,7 +92,3 @@ alias_ty alias_for_star(Parser *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *seq_map_to_alias(Parser *, asdl_seq *);
-int expr_type(expr_ty, int, int);
-int stmt_type(stmt_ty, int, int);
-int token_type(Token *, int, int);
-int alias_type(PegenAlias *, int, int);
