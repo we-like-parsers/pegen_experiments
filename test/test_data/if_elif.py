@@ -1,4 +1,4 @@
 if a:
     pass
-else:
+elif b:
     pass

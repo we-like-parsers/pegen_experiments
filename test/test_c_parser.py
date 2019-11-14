@@ -40,16 +40,16 @@ def test_c_parser(tmp_path: PurePath) -> None:
     grammar_source = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
     stmt[stmt_ty]: a=expr_stmt { a }
-    expr_stmt[stmt_ty]: a=expr NEWLINE { _Py_Expr(a, EXTRA(a, a)) }
-    expr[expr_ty]: ( l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
-                   | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
-                   | t=term { t }
-                   )
-    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
-                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
+    expr_stmt[stmt_ty]: a=expression NEWLINE { _Py_Expr(a, EXTRA_EXPR(a, a)) }
+    expression[expr_ty]: ( l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA_EXPR(l, r)) }
+                         | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA_EXPR(l, r)) }
+                         | t=term { t }
+                         )
+    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA_EXPR(l, r)) }
+                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA_EXPR(l, r)) }
                    | f=factor { f }
                    )
-    factor[expr_ty]: ('(' e=expr ')' { e }
+    factor[expr_ty]: ('(' e=expression ')' { e }
                      | a=atom { a }
                      )
     atom[expr_ty]: ( n=NAME { n }
@@ -148,7 +148,7 @@ def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     statement[stmt_ty]: simple_stmt
     simple_stmt[stmt_ty]: small_stmt
     small_stmt[stmt_ty]: return_stmt
-    return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA(a, a)) }
+    return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA(a, token_type, a, token_type)) }
     """
     stmt = "return"
     verify_ast_generation(grammar, stmt, tmp_path)
@@ -161,7 +161,7 @@ def test_pass_stmt_action(tmp_path: PurePath) -> None:
     statement[stmt_ty]: simple_stmt
     simple_stmt[stmt_ty]: small_stmt
     small_stmt[stmt_ty]: pass_stmt
-    pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, a)) }
+    pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
     """
     stmt = "pass"
     verify_ast_generation(grammar, stmt, tmp_path)
@@ -180,11 +180,11 @@ def test_if_stmt_action(tmp_path: PurePath) -> None:
 
     compound_stmt: if_stmt
 
-    if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA(a, b)) }
+    if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA_EXPR(a, b)) }
 
     small_stmt[stmt_ty]: pass_stmt
 
-    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, a)) }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 
     full_expression: NAME
     """

@@ -2,12 +2,12 @@ start[mod_ty]: a=stmt* ENDMARKER { Module(a, NULL, p->arena) }
 stmt[stmt_ty]: compound_stmt | simple_stmt
 compound_stmt[stmt_ty]: pass_stmt | if_stmt
 
-pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, a)) }
+pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 
 if_stmt[stmt_ty]:
-    | 'if' c=expr ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA(c, c)) }
+    | 'if' c=expression ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA_EXPR(c, c)) }
 else_clause[asdl_seq*]:
-    | 'elif' c=expr ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA(c, c))) }
+    | 'elif' c=expression ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA_EXPR(c, c))) }
     | 'else' ':' s=suite { s }
 
 suite[asdl_seq*]:
@@ -16,24 +16,24 @@ suite[asdl_seq*]:
 
 simple_stmt[stmt_ty]: a=expr_stmt NEWLINE { a }
 
-expr_stmt[stmt_ty]: a=expr { _Py_Expr(a, EXTRA(a, a)) }
+expr_stmt[stmt_ty]: a=expression { _Py_Expr(a, EXTRA_EXPR(a, a)) }
 
-expr[expr_ty]:
-    | l=expr '+' r=term { _Py_BinOp(l, Add, r, EXTRA(l, r)) }
-    | l=expr '-' r=term { _Py_BinOp(l, Sub, r, EXTRA(l, r)) }
+expression[expr_ty]:
+    | l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA_EXPR(l, r)) }
+    | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA_EXPR(l, r)) }
     | term
 term[expr_ty]:
-    | l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA(l, r)) }
-    | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA(l, r)) }
+    | l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA_EXPR(l, r)) }
+    | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA_EXPR(l, r)) }
     | factor
 factor[expr_ty]:
-    | l=primary '**' r=factor { _Py_BinOp(l, Pow, r, EXTRA(l, r)) }
+    | l=primary '**' r=factor { _Py_BinOp(l, Pow, r, EXTRA_EXPR(l, r)) }
     | primary
 primary[expr_ty]:
-    | f=primary '(' e=expr ')' { _Py_Call(f, singleton_seq(p, e), NULL, EXTRA(f, e)) }
+    | f=primary '(' e=expression ')' { _Py_Call(f, singleton_seq(p, e), NULL, EXTRA_EXPR(f, e)) }
     | atom
 atom[expr_ty]:
-    | '(' e=expr ')' { e }
+    | '(' e=expression ')' { e }
     | NAME
     | NUMBER
     | STRING

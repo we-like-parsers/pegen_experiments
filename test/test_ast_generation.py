@@ -3,6 +3,8 @@ import os
 from pathlib import PurePath
 from typing import Any
 
+import pytest # type: ignore
+
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
@@ -26,15 +28,19 @@ def read_python_source(path: str) -> str:
     return source
 
 
-def test_ast_generation_on_source_files(tmp_path: PurePath) -> None:
+@pytest.fixture(scope="module")
+def parser_extension(tmp_path_factory: Any) -> Any:
+    tmp_path = tmp_path_factory.mktemp("extension")
     extension = create_tmp_extension(tmp_path)
-    print()
-    for filename in PYTHON_SOURCE_FILENAMES:
-        print(filename)
-        source = read_python_source(os.path.join(TEST_DIR, filename))
+    return extension
 
-        actual_ast = extension.parse_string(source)
-        expected_ast = ast.parse(source)
-        assert ast.dump(actual_ast) == ast.dump(
-            expected_ast
-        ), f"Wrong AST generation for file: {filename}"
+
+@pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
+def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePath) -> None:
+    source = read_python_source(os.path.join(TEST_DIR, filename))
+
+    actual_ast = parser_extension.parse_string(source)
+    expected_ast = ast.parse(source)
+    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+        expected_ast, include_attributes=True
+    ), f"Wrong AST generation for file: {filename}"

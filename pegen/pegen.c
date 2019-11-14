@@ -23,8 +23,8 @@ insert_memo(Parser *p, int mark, int type, void *node)
     m->type = type;
     m->node = node;
     m->mark = p->mark;
-    m->next = p->tokens[mark].memo;
-    p->tokens[mark].memo = m;
+    m->next = p->tokens[mark]->memo;
+    p->tokens[mark]->memo = m;
     return 0;
 }
 
@@ -32,7 +32,7 @@ insert_memo(Parser *p, int mark, int type, void *node)
 int
 update_memo(Parser *p, int mark, int type, void *node)
 {
-    for (Memo *m = p->tokens[mark].memo; m != NULL; m = m->next) {
+    for (Memo *m = p->tokens[mark]->memo; m != NULL; m = m->next) {
         if (m->type == type) {
             // Update existing node.
             m->node = node;
@@ -75,16 +75,19 @@ fill_token(Parser *p)
 
     if (p->fill == p->size) {
         int newsize = p->size * 2;
-        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token));
+        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token *));
         if (p->tokens == NULL) {
             PyErr_Format(PyExc_MemoryError, "Realloc tokens failed");
             return -1;
         }
-        memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token));
+        for (int i = p->size; i < newsize; i++) {
+            p->tokens[i] = PyMem_Malloc(sizeof(Token));
+            memset(p->tokens[i], '\0', sizeof(Token));
+        }
         p->size = newsize;
     }
 
-    Token *t = p->tokens + p->fill;
+    Token *t = p->tokens[p->fill];
     t->type = type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL) {
@@ -101,10 +104,10 @@ fill_token(Parser *p)
     if (end != NULL && end >= p->tok->line_start)
         end_col_offset = end - p->tok->line_start;
 
-    t->line = lineno;
-    t->col = col_offset;
-    t->endline = end_lineno;
-    t->endcol = end_col_offset;
+    t->lineno = lineno;
+    t->col_offset = col_offset;
+    t->end_lineno = end_lineno;
+    t->end_col_offset = end_col_offset;
 
     // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
@@ -120,7 +123,7 @@ is_memoized(Parser *p, int type, void *pres)
         }
     }
 
-    Token *t = &p->tokens[p->mark];
+    Token *t = p->tokens[p->mark];
 
     for (Memo *m = t->memo; m != NULL; m = m->next) {
         if (m->type == type) {
@@ -169,13 +172,14 @@ expect_token(Parser *p, int type)
             return NULL;
         }
     }
-    Token *t = p->tokens + p->mark;
+    Token *t = p->tokens[p->mark];
     if (t->type != type) {
         // fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
         return NULL;
     }
     p->mark += 1;
     // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
+
     return t;
 }
 
@@ -215,7 +219,7 @@ name_token(Parser *p)
         return NULL;
     }
     // TODO: What new_identifier() does.
-    return Name(id, Load, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Name(id, Load, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 void *
@@ -276,7 +280,7 @@ number_token(Parser *p)
         Py_DECREF(c);
         return NULL;
     }
-    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 expr_ty
@@ -298,7 +302,7 @@ string_token(Parser *p)
         Py_DECREF(c);
         return NULL;
     }
-    return Constant(c, NULL, t->line, t->col, t->endline, t->endcol, p->arena);
+    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
 void *
@@ -325,12 +329,13 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     }
     assert(tok != NULL);
     p->tok = tok;
-    p->tokens = PyMem_Malloc(sizeof(Token));
+    p->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
         goto exit;
     }
-    memset(p->tokens, '\0', sizeof(Token));
+    p->tokens[0] = PyMem_Malloc(sizeof(Token));
+    memset(p->tokens[0], '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
@@ -356,12 +361,12 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
             PyErr_SyntaxLocationObject(p->tok->filename, 1, 1);
         }
         else {
-            Token *t = p->tokens + p->fill - 1;
+            Token *t = p->tokens[p->fill - 1];
 	    // TODO: comvert from bytes offset to character offset
 	    // TODO: set correct attributes on SyntaxError object
             PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
-                         t->line, t->col + 1, token_name(t->type));
-            PyErr_SyntaxLocationObject(p->tok->filename, t->line, t->col + 1);
+                         t->lineno, t->col_offset + 1, token_name(t->type));
+            PyErr_SyntaxLocationObject(p->tok->filename, t->lineno, t->col_offset + 1);
         }
         goto exit;
     }
@@ -375,6 +380,9 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
 exit:
 
+    for (int i = 0; i < p->size; i++) {
+        PyMem_Free(p->tokens[i]);
+    }
     PyMem_Free(p->tokens);
     if (p->arena != NULL) {
         PyArena_Free(p->arena);
@@ -591,4 +599,44 @@ alias_for_star(Parser *p)
         return NULL;
     }
     return alias(str, NULL, p->arena);
+}
+
+void *
+seq_get_tail(void *previous, asdl_seq *seq)
+{
+    if (asdl_seq_LEN(seq) == 0) {
+        return previous;
+    }
+    return asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
+}
+
+PegenAlias *
+pegen_alias(alias_ty alias,
+            int lineno,
+            int col_offset,
+            int end_lineno,
+            int end_col_offset,
+            PyArena *arena)
+{
+    PegenAlias *a = PyArena_Malloc(arena, sizeof(PegenAlias));
+    if (!a) {
+        return NULL;
+    }
+    a->alias = alias;
+    a->lineno = lineno;
+    a->col_offset = col_offset;
+    a->end_lineno = end_lineno;
+    a->end_col_offset = end_col_offset;
+    return a;
+}
+
+asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        PegenAlias *a = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, a->alias);
+    }
+    return new_seq;
 }
