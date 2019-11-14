@@ -162,6 +162,14 @@ lookahead(int positive, void *(func)(Parser *), Parser *p)
 }
 
 Token *
+copy_token(Token *old_token)
+{
+    Token *new_token = PyMem_Malloc(sizeof(Token));
+    memcpy(new_token, old_token, sizeof(Token));
+    return new_token;
+}
+
+Token *
 expect_token(Parser *p, int type)
 {
     if (p->mark == p->fill) {
@@ -176,7 +184,10 @@ expect_token(Parser *p, int type)
     }
     p->mark += 1;
     // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
-    return t;
+
+    // This is needed to avoid user-after-free's, which occur
+    // due to p->tokens getting reallocated.
+    return copy_token(t);
 }
 
 void *
@@ -603,17 +614,22 @@ seq_get_tail(void *previous, asdl_seq *seq)
 }
 
 PegenAlias *
-pegen_alias(alias_ty alias, int line, int col, int endline, int endcol, PyArena *arena)
+pegen_alias(alias_ty alias,
+            int lineno,
+            int col_offset,
+            int end_lineno,
+            int end_col_offset,
+            PyArena *arena)
 {
     PegenAlias *a = PyArena_Malloc(arena, sizeof(PegenAlias));
     if (!a) {
         return NULL;
     }
     a->alias = alias;
-    a->lineno = line;
-    a->end_lineno = endline;
-    a->col_offset = col;
-    a->end_col_offset = endcol;
+    a->lineno = lineno;
+    a->col_offset = col_offset;
+    a->end_lineno = end_lineno;
+    a->end_col_offset = end_col_offset;
     return a;
 }
 
