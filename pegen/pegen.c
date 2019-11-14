@@ -23,8 +23,8 @@ insert_memo(Parser *p, int mark, int type, void *node)
     m->type = type;
     m->node = node;
     m->mark = p->mark;
-    m->next = p->tokens[mark].memo;
-    p->tokens[mark].memo = m;
+    m->next = p->tokens[mark]->memo;
+    p->tokens[mark]->memo = m;
     return 0;
 }
 
@@ -32,7 +32,7 @@ insert_memo(Parser *p, int mark, int type, void *node)
 int
 update_memo(Parser *p, int mark, int type, void *node)
 {
-    for (Memo *m = p->tokens[mark].memo; m != NULL; m = m->next) {
+    for (Memo *m = p->tokens[mark]->memo; m != NULL; m = m->next) {
         if (m->type == type) {
             // Update existing node.
             m->node = node;
@@ -75,16 +75,19 @@ fill_token(Parser *p)
 
     if (p->fill == p->size) {
         int newsize = p->size * 2;
-        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token));
+        p->tokens = PyMem_Realloc(p->tokens, newsize * sizeof(Token *));
         if (p->tokens == NULL) {
             PyErr_Format(PyExc_MemoryError, "Realloc tokens failed");
             return -1;
         }
-        memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token));
+        for (int i = p->size; i < newsize; i++) {
+            p->tokens[i] = PyMem_Malloc(sizeof(Token));
+            memset(p->tokens[i], '\0', sizeof(Token));
+        }
         p->size = newsize;
     }
 
-    Token *t = p->tokens + p->fill;
+    Token *t = p->tokens[p->fill];
     t->type = type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL) {
@@ -120,7 +123,7 @@ is_memoized(Parser *p, int type, void *pres)
         }
     }
 
-    Token *t = &p->tokens[p->mark];
+    Token *t = p->tokens[p->mark];
 
     for (Memo *m = t->memo; m != NULL; m = m->next) {
         if (m->type == type) {
@@ -162,14 +165,6 @@ lookahead(int positive, void *(func)(Parser *), Parser *p)
 }
 
 Token *
-copy_token(Token *old_token)
-{
-    Token *new_token = PyMem_Malloc(sizeof(Token));
-    memcpy(new_token, old_token, sizeof(Token));
-    return new_token;
-}
-
-Token *
 expect_token(Parser *p, int type)
 {
     if (p->mark == p->fill) {
@@ -177,7 +172,7 @@ expect_token(Parser *p, int type)
             return NULL;
         }
     }
-    Token *t = p->tokens + p->mark;
+    Token *t = p->tokens[p->mark];
     if (t->type != type) {
         // fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
         return NULL;
@@ -185,9 +180,7 @@ expect_token(Parser *p, int type)
     p->mark += 1;
     // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
 
-    // This is needed to avoid user-after-free's, which occur
-    // due to p->tokens getting reallocated.
-    return copy_token(t);
+    return t;
 }
 
 void *
@@ -336,12 +329,13 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     }
     assert(tok != NULL);
     p->tok = tok;
-    p->tokens = PyMem_Malloc(sizeof(Token));
+    p->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
         goto exit;
     }
-    memset(p->tokens, '\0', sizeof(Token));
+    p->tokens[0] = PyMem_Malloc(sizeof(Token));
+    memset(p->tokens[0], '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
@@ -367,7 +361,7 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
             PyErr_SyntaxLocationObject(p->tok->filename, 1, 1);
         }
         else {
-            Token *t = p->tokens + p->fill - 1;
+            Token *t = p->tokens[p->fill - 1];
 	    // TODO: comvert from bytes offset to character offset
 	    // TODO: set correct attributes on SyntaxError object
             PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
@@ -386,6 +380,9 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
 
 exit:
 
+    for (int i = 0; i < p->size; i++) {
+        PyMem_Free(p->tokens[i]);
+    }
     PyMem_Free(p->tokens);
     if (p->arena != NULL) {
         PyArena_Free(p->arena);

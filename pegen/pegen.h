@@ -20,7 +20,7 @@ typedef struct {
 
 typedef struct {
     struct tok_state *tok;
-    Token *tokens;
+    Token **tokens;
     int mark;
     int fill, size;
     PyArena *arena;
