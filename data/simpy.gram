@@ -60,9 +60,8 @@ import_from[stmt_ty]:
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | a='*' { singleton_seq(p,
-                            pegen_alias(alias_for_star(p),
-                            EXTRA(a, token_type, a, token_type))) }
+    | a='*' { singleton_seq(p, pegen_alias(alias_for_star(p),
+                                           EXTRA(a, token_type, a, token_type))) }
 import_from_as_names[asdl_seq*]:
     | a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
 import_from_as_name[PegenAlias*]:
