@@ -48,37 +48,57 @@ import_name[stmt_ty]: a='import' b=dotted_as_names {
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
-        _Py_ImportFrom(c->v.Name.id, seq_map_to_alias(p, d), seq_count_dots(b), EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
+        _Py_ImportFrom(c->v.Name.id,
+                       seq_map_to_alias(p, d),
+                       seq_count_dots(b),
+                       EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets {
-        _Py_ImportFrom(NULL, seq_map_to_alias(p, g), seq_count_dots(f), EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
+        _Py_ImportFrom(NULL,
+                       seq_map_to_alias(p, g),
+                       seq_count_dots(f), 
+                       EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | a='*' { singleton_seq(p, pegen_alias(alias_for_star(p), EXTRA(a, token_type, a, token_type))) }
-import_from_as_names[asdl_seq*]: a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
+    | a='*' { singleton_seq(p,
+                            pegen_alias(alias_for_star(p),
+                            EXTRA(a, token_type, a, token_type))) }
+import_from_as_names[asdl_seq*]:
+    | a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
 import_from_as_name[PegenAlias*]:
     | a=NAME 'as' b=NAME {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena),
+                    EXTRA(a, expr_type, b, expr_type)) }
     | a=NAME {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
-dotted_as_names[asdl_seq*]: a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
+        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena),
+                    EXTRA(a, expr_type, a, expr_type)) }
+dotted_as_names[asdl_seq*]: 
+    | a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
 dotted_as_name[PegenAlias*]:
     | a=dotted_name 'as' b=NAME {
-        pegen_alias(_Py_alias(a->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA(a, expr_type, b, expr_type)) }
+        pegen_alias(_Py_alias(a->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena),
+                    EXTRA(a, expr_type, b, expr_type)) }
     | a=dotted_name {
-        pegen_alias(_Py_alias(a->v.Name.id, NULL, p->arena), EXTRA(a, expr_type, a, expr_type)) }
+        pegen_alias(_Py_alias(a->v.Name.id, NULL, p->arena),
+                    EXTRA(a, expr_type, a, expr_type)) }
 dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
 
 if_stmt[stmt_ty]:
-    | a='if' b=full_expression ':' c=block d=else_block { _Py_If(b, c, d, EXTRA(a, token_type, seq_get_tail(NULL, d), stmt_type)) }
-    | a='if' b=full_expression ':' c=block e=elif_stmt { _Py_If(b, c, singleton_seq(p, e), EXTRA(a, token_type, e, stmt_type)) }
-    | a='if' b=full_expression ':' c=block { _Py_If(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
+    | a='if' b=full_expression ':' c=block d=else_block {
+        _Py_If(b, c, d, EXTRA(a, token_type, seq_get_tail(NULL, d), stmt_type)) }
+    | a='if' b=full_expression ':' c=block e=elif_stmt {
+        _Py_If(b, c, singleton_seq(p, e), EXTRA(a, token_type, e, stmt_type)) }
+    | a='if' b=full_expression ':' c=block {
+        _Py_If(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
 elif_stmt[stmt_ty]:
-    | 'elif' b=full_expression ':' c=block d=else_block { _Py_If(b, c, d, EXTRA(b, expr_type, seq_get_tail(NULL, d), stmt_type)) }
-    | 'elif' b=full_expression ':' c=block e=elif_stmt { _Py_If(b, c, singleton_seq(p, e), EXTRA(b, expr_type, e, stmt_type)) }
-    | 'elif' b=full_expression ':' c=block { _Py_If(b, c, NULL, EXTRA(b, expr_type, seq_get_tail(NULL, c), stmt_type)) }
+    | 'elif' b=full_expression ':' c=block d=else_block {
+        _Py_If(b, c, d, EXTRA(b, expr_type, seq_get_tail(NULL, d), stmt_type)) }
+    | 'elif' b=full_expression ':' c=block e=elif_stmt {
+        _Py_If(b, c, singleton_seq(p, e), EXTRA(b, expr_type, e, stmt_type)) }
+    | 'elif' b=full_expression ':' c=block {
+        _Py_If(b, c, NULL, EXTRA(b, expr_type, seq_get_tail(NULL, c), stmt_type)) }
 else_block[asdl_seq*]: 'else' ':' b=block { b }
 
 while_stmt: 'while' full_expression ':' block [else_block]
