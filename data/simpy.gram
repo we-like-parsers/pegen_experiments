@@ -192,23 +192,23 @@ inversion[expr_ty]:
     | a='not' b=inversion { _Py_UnaryOp(Not, b, EXTRA(a, token_type, b, expr_type)) }
     | comparison
 comparison[expr_ty]:
-    | a=bitwise_or b=(c=compare_op d=bitwise_or { cmpop_expr_pair(p, c, d) })+ { _Py_Compare(
+    | a=bitwise_or b=(c=compare_op d=bitwise_or { cmpop_expr_pair(p, c->cmpop, d) })+ { _Py_Compare(
         a,
         get_cmpops(p, b),
         get_exprs(p, b),
         EXTRA_EXPR(a, ((CmpopExprPair *) seq_get_tail(NULL, b))->expr)) }
     | bitwise_or
-compare_op[cmpop_ty]:
-    | '==' { Eq }
-    | '!=' { NotEq }
-    | '<=' { LtE }
-    | '<' { Lt }
-    | '>=' { GtE }
-    | '>' { Gt }
-    | 'not' 'in' { NotIn }
-    | 'in' { In }
-    | 'is' 'not' { IsNot }
-    | 'is' { Is }
+compare_op[CmpopExprPair*]:
+    | '==' { cmpop_expr_pair(p, Eq, NULL) }
+    | '!=' { cmpop_expr_pair(p, NotEq, NULL) }
+    | '<=' { cmpop_expr_pair(p, LtE, NULL) }
+    | '<' { cmpop_expr_pair(p, Lt, NULL) }
+    | '>=' { cmpop_expr_pair(p, GtE, NULL) }
+    | '>' { cmpop_expr_pair(p, Gt, NULL) }
+    | 'not' 'in' { cmpop_expr_pair(p, NotIn, NULL) }
+    | 'in' { cmpop_expr_pair(p, In, NULL) }
+    | 'is' 'not' { cmpop_expr_pair(p, IsNot, NULL) }
+    | 'is' { cmpop_expr_pair(p, Is, NULL) }
 
 bitwise_or[expr_ty]: a=bitwise_or '|' b=bitwise_xor { _Py_BinOp(a, BitOr, b, EXTRA_EXPR(a, b)) } | bitwise_xor
 bitwise_xor[expr_ty]: a=bitwise_xor '^' b=bitwise_and { _Py_BinOp(a, BitXor, b, EXTRA_EXPR(a, b)) } | bitwise_and
