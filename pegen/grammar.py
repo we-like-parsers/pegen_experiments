@@ -72,6 +72,9 @@ class Rule:
     def is_loop(self) -> bool:
         return self.name.startswith("_loop")
 
+    def is_loop_with_sep(self) -> bool:
+        return self.name.startswith("_loop_sep")
+
     def __str__(self) -> str:
         if self.type is None:
             return f"{self.name}: {self.rhs}"
@@ -374,6 +377,21 @@ class Repeat1(Repeat):
 
     def __repr__(self) -> str:
         return f"Repeat1({self.node!r})"
+
+    def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
+        return False
+
+
+class RepeatWithSeparator(Repeat):
+    def __init__(self, separator: str, node: Plain):
+        self.separator = separator
+        self.node = node
+
+    def __str__(self) -> str:
+        return f"{self.separator}.{self.node!s}"
+
+    def __repr__(self) -> str:
+        return f"RepeatWithSeparator({self.separator}, {self.node!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return False

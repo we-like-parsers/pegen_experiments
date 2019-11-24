@@ -47,6 +47,19 @@ def test_typed_rules():
     )
 
 
+def test_repeat_with_separator_rules():
+    grammar = """
+    start: ','.thing NEWLINE
+    thing: NUMBER
+    """
+    rules = parse_string(grammar, GrammarParser).rules
+    assert str(rules["start"]) == "start: ','.thing NEWLINE"
+    assert repr(rules["start"]).startswith(
+        "Rule('start', None, Rhs([Alt([NamedItem(None, RepeatWithSeparator(',', NameLeaf('thing'"
+    )
+    assert str(rules["thing"]) == "thing: NUMBER"
+
+
 def test_expr_grammar():
     grammar = """
     start: sum NEWLINE
@@ -229,6 +242,23 @@ def test_repeat_1_complex():
     ]
     with pytest.raises(SyntaxError):
         parse_string("1\n", parser_class)
+
+
+def test_repeat_with_sep_simple():
+    grammar = """
+    start: ','.thing NEWLINE
+    thing: NUMBER
+    """
+    parser_class = make_parser(grammar)
+    node = parse_string("1, 2, 3\n", parser_class)
+    assert node == [
+        [
+            [TokenInfo(NUMBER, string="1", start=(1, 0), end=(1, 1), line="1, 2, 3\n")],
+            [TokenInfo(NUMBER, string="2", start=(1, 3), end=(1, 4), line="1, 2, 3\n")],
+            [TokenInfo(NUMBER, string="3", start=(1, 6), end=(1, 7), line="1, 2, 3\n")],
+        ],
+        TokenInfo(NEWLINE, string="\n", start=(1, 7), end=(1, 8), line="1, 2, 3\n"),
+    ]
 
 
 def test_left_recursive():
