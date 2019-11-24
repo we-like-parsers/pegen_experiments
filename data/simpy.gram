@@ -192,27 +192,40 @@ inversion[expr_ty]:
     | a='not' b=inversion { _Py_UnaryOp(Not, b, EXTRA(a, token_type, b, expr_type)) }
     | comparison
 comparison[expr_ty]:
-    | a=bitwise_or b=(c=compare_op d=bitwise_or { cmpop_expr_pair(p, c->cmpop, d) })+ { _Py_Compare(
-        a,
-        get_cmpops(p, b),
-        get_exprs(p, b),
-        EXTRA_EXPR(a, ((CmpopExprPair *) seq_get_tail(NULL, b))->expr)) }
+    | a=bitwise_or b=compare_op_bitwise_or_pair+ {
+        Pegen_Compare(p, a, b) }
     | bitwise_or
-compare_op[CmpopExprPair*]:
-    | '==' { cmpop_expr_pair(p, Eq, NULL) }
-    | '!=' { cmpop_expr_pair(p, NotEq, NULL) }
-    | '<=' { cmpop_expr_pair(p, LtE, NULL) }
-    | '<' { cmpop_expr_pair(p, Lt, NULL) }
-    | '>=' { cmpop_expr_pair(p, GtE, NULL) }
-    | '>' { cmpop_expr_pair(p, Gt, NULL) }
-    | 'not' 'in' { cmpop_expr_pair(p, NotIn, NULL) }
-    | 'in' { cmpop_expr_pair(p, In, NULL) }
-    | 'is' 'not' { cmpop_expr_pair(p, IsNot, NULL) }
-    | 'is' { cmpop_expr_pair(p, Is, NULL) }
+compare_op_bitwise_or_pair[CmpopExprPair*]:
+    | eq_bitwise_or
+    | noteq_bitwise_or
+    | lte_bitwise_or
+    | lt_bitwise_or
+    | gte_bitwise_or
+    | gt_bitwise_or
+    | notin_bitwise_or
+    | in_bitwise_or
+    | isnot_bitwise_or
+    | is_bitwise_or
+eq_bitwise_or: '==' a=bitwise_or { cmpop_expr_pair(p, Eq, a) }
+noteq_bitwise_or: '!=' a=bitwise_or { cmpop_expr_pair(p, NotEq, a) }
+lte_bitwise_or: '<=' a=bitwise_or { cmpop_expr_pair(p, LtE, a) }
+lt_bitwise_or: '<' a=bitwise_or { cmpop_expr_pair(p, Lt, a) }
+gte_bitwise_or: '>=' a=bitwise_or { cmpop_expr_pair(p, GtE, a) }
+gt_bitwise_or: '>' a=bitwise_or { cmpop_expr_pair(p, Gt, a) }
+notin_bitwise_or: 'not' 'in' a=bitwise_or { cmpop_expr_pair(p, NotIn, a) }
+in_bitwise_or: 'in' a=bitwise_or { cmpop_expr_pair(p, In, a) }
+isnot_bitwise_or: 'is' 'not' a=bitwise_or { cmpop_expr_pair(p, IsNot, a) }
+is_bitwise_or: 'is' a=bitwise_or { cmpop_expr_pair(p, Is, a) }
 
-bitwise_or[expr_ty]: a=bitwise_or '|' b=bitwise_xor { _Py_BinOp(a, BitOr, b, EXTRA_EXPR(a, b)) } | bitwise_xor
-bitwise_xor[expr_ty]: a=bitwise_xor '^' b=bitwise_and { _Py_BinOp(a, BitXor, b, EXTRA_EXPR(a, b)) } | bitwise_and
-bitwise_and[expr_ty]: a=bitwise_and '&' b=shift_expr { _Py_BinOp(a, BitAnd, b, EXTRA_EXPR(a, b)) } | shift_expr
+bitwise_or[expr_ty]: 
+    | a=bitwise_or '|' b=bitwise_xor { _Py_BinOp(a, BitOr, b, EXTRA_EXPR(a, b)) }
+    | bitwise_xor
+bitwise_xor[expr_ty]:
+    | a=bitwise_xor '^' b=bitwise_and { _Py_BinOp(a, BitXor, b, EXTRA_EXPR(a, b)) }
+    | bitwise_and 
+bitwise_and[expr_ty]:
+    | a=bitwise_and '&' b=shift_expr { _Py_BinOp(a, BitAnd, b, EXTRA_EXPR(a, b)) }
+    | shift_expr 
 shift_expr[expr_ty]:
     | a=shift_expr '<<' b=sum { _Py_BinOp(a, LShift, b, EXTRA_EXPR(a, b)) }
     | a=shift_expr '>>' b=sum { _Py_BinOp(a, RShift, b, EXTRA_EXPR(a, b)) }
@@ -234,7 +247,9 @@ factor[expr_ty]:
     | a='-' b=factor { _Py_UnaryOp(USub, b, EXTRA(a, token_type, b, expr_type)) }
     | a='~' b=factor { _Py_UnaryOp(Invert, b, EXTRA(a, token_type, b, expr_type)) }
     | power
-power[expr_ty]: a=primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA_EXPR(a, b)) } | primary
+power[expr_ty]:
+    | a=primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA_EXPR(a, b)) }
+    | primary 
 primary[expr_ty]:
     | !'await' a=atom !'.' !'(' !'[' { a }
     | [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
@@ -242,7 +257,20 @@ primary[expr_ty]:
 slices: slice (',' slice)* [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
 # STRING+'s output is just a hack for now 
-atom[expr_ty]: list | listcomp | tuple | group | genexp | set | setcomp | dict | dictcomp | NAME | a=STRING+ { asdl_seq_GET(a, 0) } | NUMBER | '...'
+atom[expr_ty]:
+    | list
+    | listcomp
+    | tuple
+    | group
+    | genexp
+    | set
+    | setcomp
+    | dict
+    | dictcomp
+    | NAME
+    | a=STRING+ { asdl_seq_GET(a, 0) }
+    | NUMBER
+    | '...'
 list: '[' [star_full_expressions] ']'
 listcomp: '[' full_expression for_if_clauses ']'
 tuple: '(' [star_full_expression ',' [star_full_expressions]] ')'

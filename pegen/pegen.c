@@ -676,3 +676,13 @@ get_exprs(Parser *p, asdl_seq *seq)
     }
     return new_seq;
 }
+
+expr_ty
+Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
+{
+    return _Py_Compare(expr,
+                       get_cmpops(p, pairs),
+                       get_exprs(p, pairs),
+                       EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
+}
+
