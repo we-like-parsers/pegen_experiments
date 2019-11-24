@@ -640,3 +640,49 @@ asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
     }
     return new_seq;
 }
+
+CmpopExprPair *
+cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)
+{
+    CmpopExprPair *a = PyArena_Malloc(p->arena, sizeof(CmpopExprPair));
+    if (!a) {
+        return NULL;
+    }
+    a->cmpop = cmpop;
+    a->expr = expr;
+    return a;
+}
+
+asdl_int_seq *
+get_cmpops(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_int_seq *new_seq = _Py_asdl_int_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        CmpopExprPair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->cmpop);
+    }
+    return new_seq;
+}
+
+asdl_seq *
+get_exprs(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        CmpopExprPair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->expr);
+    }
+    return new_seq;
+}
+
+expr_ty
+Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
+{
+    return _Py_Compare(expr,
+                       get_cmpops(p, pairs),
+                       get_exprs(p, pairs),
+                       EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
+}
+
