@@ -100,7 +100,7 @@ class ParserGenerator:
 
     def name_loop_with_sep(self, node: RepeatWithSeparator) -> str:
         self.counter += 1
-        name = f"_loop_sep_{self.counter}"
+        name = f"_tmp_sep_{self.counter}"
         self.counter += 1
         extra_function_name = f"_loop0_{self.counter}"
         self.todo[extra_function_name] = Rule(
@@ -128,7 +128,6 @@ class ParserGenerator:
                             NamedItem("elem", node.node),
                             NamedItem("seq", NameLeaf(extra_function_name)),
                         ],
-                        action="[elem] + seq",
                     )
                 ]
             ),

@@ -72,8 +72,8 @@ class Rule:
     def is_loop(self) -> bool:
         return self.name.startswith("_loop")
 
-    def is_loop_with_sep(self) -> bool:
-        return self.name.startswith("_loop_sep")
+    def is_tmp_with_sep(self) -> bool:
+        return self.name.startswith("_tmp_sep")
 
     def __str__(self) -> str:
         if self.type is None:
