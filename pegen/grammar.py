@@ -53,10 +53,21 @@ class Grammar:
         return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
 
     def __repr__(self) -> str:
-        return f"Grammar({self.rules!r})"
+        lines = ["Grammar("]
+        lines.append("  [")
+        for rule in self.rules.values():
+            lines.append(f"    {repr(rule)},")
+        lines.append("  ],")
+        lines.append("  {repr(list(self.metas.items()))}")
+        lines.append(")")
+        return "\n".join(lines)
 
     def __iter__(self) -> Iterator[Rule]:
         yield from self.rules.values()
+
+
+# Global flag whether we want actions in __str__() -- default off.
+SIMPLE_STR = True
 
 
 class Rule:
@@ -76,10 +87,15 @@ class Rule:
         return self.name.startswith("_tmp_sep")
 
     def __str__(self) -> str:
-        if self.type is None:
-            return f"{self.name}: {self.rhs}"
+        if SIMPLE_STR or self.type is None:
+            res = f"{self.name}: {self.rhs}"
         else:
-            return f"{self.name}[{self.type}]: {self.rhs}"
+            res = f"{self.name}[{self.type}]: {self.rhs}"
+        if len(res) < 88:
+            return res
+        lines = [res.split(":")[0]]
+        lines += [f"    | {alt}" for alt in self.rhs.alts]
+        return "\n".join(lines)
 
     def __repr__(self) -> str:
         return f"Rule({self.name!r}, {self.type!r}, {self.rhs!r})"
@@ -209,7 +225,7 @@ class Alt:
 
     def __str__(self) -> str:
         core = " ".join(str(item) for item in self.items)
-        if self.action:
+        if not SIMPLE_STR and self.action:
             return f"{core} {{ {self.action} }}"
         else:
             return core
@@ -251,7 +267,7 @@ class NamedItem:
         self.nullable = False
 
     def __str__(self) -> str:
-        if self.name:
+        if not SIMPLE_STR and self.name:
             return f"{self.name}={self.item}"
         else:
             return str(self.item)
