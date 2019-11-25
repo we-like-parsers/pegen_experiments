@@ -111,7 +111,7 @@ class PythonCallMakerVisitor(GrammarVisitor):
     def visit_RepeatWithSeparator(self, node: RepeatWithSeparator) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
-        name = self.gen.name_loop_with_sep(node)
+        name = self.gen.name_node_with_sep(node)
         self.cache[node] = name, f"self.{name}()"  # But no trailing comma here!
         return self.cache[node]
 
@@ -147,7 +147,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
 
     def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
-        is_tmp_with_sep = node.is_tmp_with_sep()
+        is_node_with_sep = node.is_node_with_sep()
         rhs = node.flatten()
         if node.left_recursive:
             if node.leader:
@@ -167,7 +167,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("mark = self.mark()")
             if is_loop:
                 self.print("children = []")
-            self.visit(rhs, is_loop=is_loop, is_tmp_with_sep=is_tmp_with_sep)
+            self.visit(rhs, is_loop=is_loop, is_node_with_sep=is_node_with_sep)
             if is_loop:
                 self.print("return children")
             else:
@@ -184,13 +184,13 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 name = dedupe(name, names)
             self.print(f"({name} := {call})")
 
-    def visit_Rhs(self, node: Rhs, is_loop: bool = False, is_tmp_with_sep: bool = False) -> None:
+    def visit_Rhs(self, node: Rhs, is_loop: bool = False, is_node_with_sep: bool = False) -> None:
         if is_loop:
             assert len(node.alts) == 1
         for alt in node.alts:
-            self.visit(alt, is_loop=is_loop, is_tmp_with_sep=is_tmp_with_sep)
+            self.visit(alt, is_loop=is_loop, is_node_with_sep=is_node_with_sep)
 
-    def visit_Alt(self, node: Alt, is_loop: bool, is_tmp_with_sep: bool) -> None:
+    def visit_Alt(self, node: Alt, is_loop: bool, is_node_with_sep: bool) -> None:
         names: List[str] = []
         self.print("cut = False")  # TODO: Only if needed.
         if is_loop:
@@ -209,7 +209,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             action = node.action
             if not action:
-                if is_tmp_with_sep:
+                if is_node_with_sep:
                     assert len(names) == 2
                     action = f"[{names[0]}] + {names[1]}"
                 else:

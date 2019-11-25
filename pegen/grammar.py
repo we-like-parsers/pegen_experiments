@@ -72,7 +72,7 @@ class Rule:
     def is_loop(self) -> bool:
         return self.name.startswith("_loop")
 
-    def is_tmp_with_sep(self) -> bool:
+    def is_node_with_sep(self) -> bool:
         return self.name.startswith("_tmp_sep")
 
     def __str__(self) -> str:

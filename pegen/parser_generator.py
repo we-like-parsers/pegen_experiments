@@ -98,7 +98,7 @@ class ParserGenerator:
         self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
-    def name_loop_with_sep(self, node: RepeatWithSeparator) -> str:
+    def name_node_with_sep(self, node: RepeatWithSeparator) -> str:
         self.counter += 1
         name = f"_tmp_sep_{self.counter}"
         self.counter += 1
