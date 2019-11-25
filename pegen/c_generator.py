@@ -243,7 +243,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         else:
             type = "void *"
 
-        self.print(f"// {node}")
+        for line in str(node).splitlines():
+            self.print(f"// {line}")
         if node.left_recursive and node.leader:
             self.print(f"static {type} {node.name}_raw(Parser *);")
 
