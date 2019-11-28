@@ -110,7 +110,7 @@ class ParserGenerator:
                 [
                     Alt(
                         [
-                            NamedItem(None, StringLeaf(node.separator)),
+                            NamedItem(None, node.separator),
                             NamedItem("elem", node.node),
                         ],
                         action="elem",

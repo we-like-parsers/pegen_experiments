@@ -447,7 +447,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self) -> Optional[Item]:
-        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | STRING '.' atom { RepeatWithSeparator ( string . string , atom ) } | atom { atom }
+        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | sep=atom '.' node=atom '+' { RepeatWithSeparator ( sep , node ) } | atom { atom }
         mark = self.mark()
         cut = False
         if (
@@ -491,13 +491,15 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (string := self.string())
+            (sep := self.atom())
             and
             (literal := self.expect('.'))
             and
-            (atom := self.atom())
+            (node := self.atom())
+            and
+            (literal_1 := self.expect('+'))
         ):
-            return RepeatWithSeparator ( string . string , atom )
+            return RepeatWithSeparator ( sep , node )
         self.reset(mark)
         if cut: return None
         cut = False

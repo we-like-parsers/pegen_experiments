@@ -49,13 +49,14 @@ def test_typed_rules():
 
 def test_repeat_with_separator_rules():
     grammar = """
-    start: ','.thing NEWLINE
+    start: ','.thing+ NEWLINE
     thing: NUMBER
     """
     rules = parse_string(grammar, GrammarParser).rules
     assert str(rules["start"]) == "start: ','.thing NEWLINE"
+    print(repr(rules["start"]))
     assert repr(rules["start"]).startswith(
-        "Rule('start', None, Rhs([Alt([NamedItem(None, RepeatWithSeparator(',', NameLeaf('thing'"
+        "Rule('start', None, Rhs([Alt([NamedItem(None, RepeatWithSeparator(StringLeaf(\"','\"), NameLeaf('thing'"
     )
     assert str(rules["thing"]) == "thing: NUMBER"
 
@@ -246,7 +247,7 @@ def test_repeat_1_complex():
 
 def test_repeat_with_sep_simple():
     grammar = """
-    start: ','.thing NEWLINE
+    start: ','.thing+ NEWLINE
     thing: NUMBER
     """
     parser_class = make_parser(grammar)

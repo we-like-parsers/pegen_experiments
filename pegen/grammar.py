@@ -72,7 +72,7 @@ class Rule:
     def is_loop(self) -> bool:
         return self.name.startswith("_loop")
 
-    def is_node_with_sep(self) -> bool:
+    def is_gather(self) -> bool:
         return self.name.startswith("_tmp_sep")
 
     def __str__(self) -> str:
@@ -383,15 +383,15 @@ class Repeat1(Repeat):
 
 
 class RepeatWithSeparator(Repeat):
-    def __init__(self, separator: str, node: Plain):
+    def __init__(self, separator: Plain, node: Plain):
         self.separator = separator
         self.node = node
 
     def __str__(self) -> str:
-        return f"{self.separator}.{self.node!s}"
+        return f"{self.separator!s}.{self.node!s}"
 
     def __repr__(self) -> str:
-        return f"RepeatWithSeparator({self.separator}, {self.node!r})"
+        return f"RepeatWithSeparator({self.separator!r}, {self.node!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return False
