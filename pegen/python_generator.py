@@ -13,7 +13,7 @@ from pegen.grammar import (
     Opt,
     Repeat0,
     Repeat1,
-    RepeatWithSeparator,
+    Gather,
     Group,
     Rule,
     Alt,
@@ -108,10 +108,10 @@ class PythonCallMakerVisitor(GrammarVisitor):
         self.cache[node] = name, f"self.{name}()"  # But no trailing comma here!
         return self.cache[node]
 
-    def visit_RepeatWithSeparator(self, node: RepeatWithSeparator) -> Tuple[str, str]:
+    def visit_Gather(self, node: Gather) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
-        name = self.gen.name_node_with_sep(node)
+        name = self.gen.name_gather(node)
         self.cache[node] = name, f"self.{name}()"  # No trailing comma here either!
         return self.cache[node]
 

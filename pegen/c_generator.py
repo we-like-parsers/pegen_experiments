@@ -17,6 +17,7 @@ from pegen.grammar import (
     Opt,
     Repeat0,
     Repeat1,
+    Gather,
     Group,
     Rule,
 )
@@ -155,6 +156,13 @@ class CCallMakerVisitor(GrammarVisitor):
         self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # But not here!
         return self.cache[node]
 
+    def visit_Gather(self, node: Gather) -> Tuple[str, str]:
+        if node in self.cache:
+            return self.cache[node]
+        name = self.gen.name_gather(node)
+        self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # No trailing comma here either!
+        return self.cache[node]
+
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
@@ -215,7 +223,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"#define {rulename}_type {i}")
         self.print()
         for rulename, rule in self.todo.items():
-            if rule.is_loop():
+            if rule.is_loop() or rule.is_gather():
                 type = "asdl_seq *"
             elif rule.type:
                 type = rule.type + " "
@@ -234,9 +242,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
         is_repeat1 = node.name.startswith("_loop1")
+        is_gather = node.is_gather()
         memoize = not node.left_recursive
         rhs = node.flatten()
-        if is_loop:
+        if is_loop or is_gather:
             type = "asdl_seq *"
         elif node.type:
             type = node.type
@@ -293,7 +302,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("void **children = PyMem_Malloc(0);")
                 self.out_of_memory_return(f"!children", "NULL")
                 self.print("ssize_t n = 0;")
-            self.visit(rhs, is_loop=is_loop, rulename=node.name if memoize else None)
+            self.visit(rhs, is_loop=is_loop, is_gather=is_gather, rulename=node.name if memoize else None)
             if is_loop:
                 if is_repeat1:
                     self.print("if (n == 0) {")
@@ -328,7 +337,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             name = dedupe(name, names)
             self.print(f"({name} = {call})")
 
-    def visit_Rhs(self, node: Rhs, is_loop: bool, rulename: Optional[str]) -> None:
+    def visit_Rhs(self, node: Rhs, is_loop: bool, is_gather: bool, rulename: Optional[str]) -> None:
         if is_loop:
             assert len(node.alts) == 1
         vars = {}
@@ -343,9 +352,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 v += " = 0"  # cut_var must be initialized
             self.print(f"{type}{v};")
         for alt in node.alts:
-            self.visit(alt, is_loop=is_loop, rulename=rulename)
+            self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
 
-    def visit_Alt(self, node: Alt, is_loop: bool, rulename: Optional[str]) -> None:
+    def visit_Alt(self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]) -> None:
         self.print(f"// {node}")
         names: List[str] = []
         if is_loop:
@@ -365,11 +374,15 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             action = node.action
             if not action:
                 if len(names) > 1:
-                    if self.debug:
-                        self.print(
-                            f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
-                        )
-                    self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
+                    if is_gather:
+                        assert len(names) == 2
+                        self.print(f"res = seq_insert_in_front(p, {names[0]}, {names[1]});")
+                    else:
+                        if self.debug:
+                            self.print(
+                                f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                            )
+                        self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
                 else:
                     if self.debug:
                         self.print(

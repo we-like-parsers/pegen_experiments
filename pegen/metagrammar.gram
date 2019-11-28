@@ -4,6 +4,7 @@ from ast import literal_eval
 from pegen.grammar import (
     Alt,
     Cut,
+    Gather,
     Group,
     Item,
     Lookahead,
@@ -19,7 +20,6 @@ from pegen.grammar import (
     PositiveLookahead,
     Repeat0,
     Repeat1,
-    RepeatWithSeparator,
     Rhs,
     Rule,
     RuleList,
@@ -91,7 +91,7 @@ item[Item]:
     |  atom '?' {Opt(atom)}
     |  atom '*' {Repeat0(atom)}
     |  atom '+' {Repeat1(atom)}
-    |  sep=atom '.' node=atom '+' {RepeatWithSeparator(sep, node)}
+    |  sep=atom '.' node=atom '+' {Gather(sep, node)}
     |  atom {atom}
 
 atom[Plain]:

@@ -73,7 +73,7 @@ class Rule:
         return self.name.startswith("_loop")
 
     def is_gather(self) -> bool:
-        return self.name.startswith("_tmp_sep")
+        return self.name.startswith("_tmp_gather")
 
     def __str__(self) -> str:
         if self.type is None:
@@ -382,7 +382,7 @@ class Repeat1(Repeat):
         return False
 
 
-class RepeatWithSeparator(Repeat):
+class Gather(Repeat):
     def __init__(self, separator: Plain, node: Plain):
         self.separator = separator
         self.node = node

@@ -112,6 +112,16 @@ def test_cut(tmp_path: PurePath) -> None:
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
 
 
+def test_gather(tmp_path: PurePath) -> None:
+    grammar = """
+    start: ';'.pass_stmt+ NEWLINE
+    pass_stmt: 'pass'
+    """
+    valid_cases = ["pass", "pass; pass"]
+    invalid_cases = ["pass;", "pass; pass;"]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
+
+
 def test_left_recursion(tmp_path: PurePath) -> None:
     grammar = """
     start: expr NEWLINE
@@ -151,6 +161,15 @@ def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA(a, token_type, a, token_type)) }
     """
     stmt = "return"
+    verify_ast_generation(grammar, stmt, tmp_path)
+
+
+def test_gather_action_ast(tmp_path: PurePath) -> None:
+    grammar = """
+    start[mod_ty]: a=';'.pass_stmt+ NEWLINE ENDMARKER { Module(a, NULL, p->arena) }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type))}
+    """
+    stmt = "pass; pass"
     verify_ast_generation(grammar, stmt, tmp_path)
 
 
