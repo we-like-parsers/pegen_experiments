@@ -5,7 +5,17 @@ from abc import abstractmethod
 from typing import AbstractSet, Dict, IO, Iterator, List, Optional, Set, Text, Tuple
 
 from pegen import sccutils
-from pegen.grammar import Grammar, Rule, Rhs, Alt, NamedItem, Plain, NameLeaf
+from pegen.grammar import (
+    Grammar,
+    Rule,
+    Rhs,
+    Alt,
+    NamedItem,
+    Plain,
+    NameLeaf,
+    StringLeaf,
+    RepeatWithSeparator,
+)
 from pegen.grammar import GrammarError, GrammarVisitor
 
 
@@ -86,6 +96,23 @@ class ParserGenerator:
             prefix = "_loop0_"
         name = f"{prefix}{self.counter}"  # TODO: It's ugly to signal via the name.
         self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
+        return name
+
+    def name_node_with_sep(self, node: RepeatWithSeparator) -> str:
+        self.counter += 1
+        name = f"_tmp_sep_{self.counter}"
+        self.counter += 1
+        extra_function_name = f"_loop0_{self.counter}"
+        extra_function_alt = Alt(
+            [NamedItem(None, node.separator), NamedItem("elem", node.node),], action="elem",
+        )
+        self.todo[extra_function_name] = Rule(
+            extra_function_name, None, Rhs([extra_function_alt]),
+        )
+        alt = Alt(
+            [NamedItem("elem", node.node), NamedItem("seq", NameLeaf(extra_function_name)),],
+        )
+        self.todo[name] = Rule(name, None, Rhs([alt]),)
         return name
 
 

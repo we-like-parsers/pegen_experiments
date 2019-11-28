@@ -28,6 +28,7 @@ from pegen.grammar import (
     PositiveLookahead,
     Repeat0,
     Repeat1,
+    RepeatWithSeparator,
     Rhs,
     Rule,
     RuleList,
@@ -446,7 +447,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self) -> Optional[Item]:
-        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | atom { atom }
+        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | sep=atom '.' node=atom '+' { RepeatWithSeparator ( sep , node ) } | atom { atom }
         mark = self.mark()
         cut = False
         if (
@@ -486,6 +487,19 @@ class GeneratedParser(Parser):
             (literal := self.expect('+'))
         ):
             return Repeat1 ( atom )
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (sep := self.atom())
+            and
+            (literal := self.expect('.'))
+            and
+            (node := self.atom())
+            and
+            (literal_1 := self.expect('+'))
+        ):
+            return RepeatWithSeparator ( sep , node )
         self.reset(mark)
         if cut: return None
         cut = False

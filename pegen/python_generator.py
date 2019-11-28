@@ -13,6 +13,7 @@ from pegen.grammar import (
     Opt,
     Repeat0,
     Repeat1,
+    RepeatWithSeparator,
     Group,
     Rule,
     Alt,
@@ -107,6 +108,13 @@ class PythonCallMakerVisitor(GrammarVisitor):
         self.cache[node] = name, f"self.{name}()"  # But no trailing comma here!
         return self.cache[node]
 
+    def visit_RepeatWithSeparator(self, node: RepeatWithSeparator) -> Tuple[str, str]:
+        if node in self.cache:
+            return self.cache[node]
+        name = self.gen.name_node_with_sep(node)
+        self.cache[node] = name, f"self.{name}()"  # No trailing comma here either!
+        return self.cache[node]
+
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
         return self.visit(node.rhs)
 
@@ -139,6 +147,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
 
     def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
+        is_gather = node.is_gather()
         rhs = node.flatten()
         if node.left_recursive:
             if node.leader:
@@ -158,7 +167,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("mark = self.mark()")
             if is_loop:
                 self.print("children = []")
-            self.visit(rhs, is_loop=is_loop)
+            self.visit(rhs, is_loop=is_loop, is_gather=is_gather)
             if is_loop:
                 self.print("return children")
             else:
@@ -175,13 +184,13 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                 name = dedupe(name, names)
             self.print(f"({name} := {call})")
 
-    def visit_Rhs(self, node: Rhs, is_loop: bool = False) -> None:
+    def visit_Rhs(self, node: Rhs, is_loop: bool = False, is_gather: bool = False) -> None:
         if is_loop:
             assert len(node.alts) == 1
         for alt in node.alts:
-            self.visit(alt, is_loop=is_loop)
+            self.visit(alt, is_loop=is_loop, is_gather=is_gather)
 
-    def visit_Alt(self, node: Alt, is_loop: bool) -> None:
+    def visit_Alt(self, node: Alt, is_loop: bool, is_gather: bool) -> None:
         names: List[str] = []
         self.print("cut = False")  # TODO: Only if needed.
         if is_loop:
@@ -200,7 +209,11 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             action = node.action
             if not action:
-                action = f"[{', '.join(names)}]"
+                if is_gather:
+                    assert len(names) == 2
+                    action = f"[{names[0]}] + {names[1]}"
+                else:
+                    action = f"[{', '.join(names)}]"
             if is_loop:
                 self.print(f"children.append({action})")
                 self.print(f"mark = self.mark()")

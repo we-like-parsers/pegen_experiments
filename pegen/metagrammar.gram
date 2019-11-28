@@ -19,6 +19,7 @@ from pegen.grammar import (
     PositiveLookahead,
     Repeat0,
     Repeat1,
+    RepeatWithSeparator,
     Rhs,
     Rule,
     RuleList,
@@ -90,6 +91,7 @@ item[Item]:
     |  atom '?' {Opt(atom)}
     |  atom '*' {Repeat0(atom)}
     |  atom '+' {Repeat1(atom)}
+    |  sep=atom '.' node=atom '+' {RepeatWithSeparator(sep, node)}
     |  atom {atom}
 
 atom[Plain]:
