@@ -686,3 +686,10 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
+expr_ty
+store_name(Parser *p, expr_ty load_name)
+{
+    return _Py_Name(load_name->v.Name.id,
+                    Store,
+                    EXTRA_EXPR(load_name, load_name));
+}

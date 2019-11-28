@@ -309,7 +309,7 @@ kwarg: NAME '=' expression | '*' expression | '**' expression
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets: a=star_target (',' !'in' star_target)* [','] { a }
 star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
-star_atom: a=NAME { _Py_Name(((expr_ty) a)->v.Name.id, Store, EXTRA_EXPR(a, a)) } | '(' [star_targets] ')' | '[' [star_targets] ']'
+star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets: target (',' target)* [',']
 target: atom t_tail+ | t_atom t_tail*
