@@ -302,7 +302,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("void **children = PyMem_Malloc(0);")
                 self.out_of_memory_return(f"!children", "NULL")
                 self.print("ssize_t n = 0;")
-            self.visit(rhs, is_loop=is_loop, is_gather=is_gather, rulename=node.name if memoize else None)
+            self.visit(
+                rhs, is_loop=is_loop, is_gather=is_gather, rulename=node.name if memoize else None
+            )
             if is_loop:
                 if is_repeat1:
                     self.print("if (n == 0) {")
@@ -337,7 +339,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             name = dedupe(name, names)
             self.print(f"({name} = {call})")
 
-    def visit_Rhs(self, node: Rhs, is_loop: bool, is_gather: bool, rulename: Optional[str]) -> None:
+    def visit_Rhs(
+        self, node: Rhs, is_loop: bool, is_gather: bool, rulename: Optional[str]
+    ) -> None:
         if is_loop:
             assert len(node.alts) == 1
         vars = {}
@@ -354,7 +358,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
 
-    def visit_Alt(self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]) -> None:
+    def visit_Alt(
+        self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]
+    ) -> None:
         self.print(f"// {node}")
         names: List[str] = []
         if is_loop:
