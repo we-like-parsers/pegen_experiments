@@ -72,6 +72,7 @@ def main() -> None:
         if args.verbose:
             raise  # Show traceback
         traceback.print_exception(err.__class__, err, None)
+        sys.stderr.write("For full traceback, use -v\n")
         sys.exit(1)
 
     if not args.quiet:
