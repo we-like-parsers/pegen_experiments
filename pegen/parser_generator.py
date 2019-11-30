@@ -100,7 +100,7 @@ class ParserGenerator:
 
     def name_gather(self, node: Gather) -> str:
         self.counter += 1
-        name = f"_tmp_gather_{self.counter}"
+        name = f"_gather_{self.counter}"
         self.counter += 1
         extra_function_name = f"_loop0_{self.counter}"
         extra_function_alt = Alt(

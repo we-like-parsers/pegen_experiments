@@ -73,7 +73,7 @@ class Rule:
         return self.name.startswith("_loop")
 
     def is_gather(self) -> bool:
-        return self.name.startswith("_tmp_gather")
+        return self.name.startswith("_gather")
 
     def __str__(self) -> str:
         if self.type is None:
@@ -388,10 +388,10 @@ class Gather(Repeat):
         self.node = node
 
     def __str__(self) -> str:
-        return f"{self.separator!s}.{self.node!s}"
+        return f"{self.separator!s}.{self.node!s}+"
 
     def __repr__(self) -> str:
-        return f"RepeatWithSeparator({self.separator!r}, {self.node!r})"
+        return f"Gather({self.separator!r}, {self.node!r})"
 
     def nullable_visit(self, rules: Dict[str, Rule]) -> bool:
         return False

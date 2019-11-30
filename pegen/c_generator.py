@@ -153,14 +153,14 @@ class CCallMakerVisitor(GrammarVisitor):
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_loop(node.node, True)
-        self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # But not here!
+        self.cache[node] = f"{name}_var", f"{name}_rule(p)"
         return self.cache[node]
 
     def visit_Gather(self, node: Gather) -> Tuple[str, str]:
         if node in self.cache:
             return self.cache[node]
         name = self.gen.name_gather(node)
-        self.cache[node] = f"{name}_var", f"{name}_rule(p)"  # No trailing comma here either!
+        self.cache[node] = f"{name}_var", f"{name}_rule(p)"
         return self.cache[node]
 
     def visit_Group(self, node: Group) -> Tuple[Optional[str], str]:
