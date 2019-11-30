@@ -79,6 +79,7 @@ PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *seq_map_to_alias(Parser *, asdl_seq *);
 CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
+expr_ty store_name(Parser *, expr_ty);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }

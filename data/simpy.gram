@@ -21,7 +21,7 @@ small_stmt[stmt_ty]:
     | continue_stmt
     | assignment
     | e=expressions { _Py_Expr(e, EXTRA_EXPR(e, e)) }
-compound_stmt: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
+compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign (yield_expr | expressions)
@@ -100,9 +100,21 @@ elif_stmt[stmt_ty]:
         _Py_If(b, c, NULL, EXTRA(b, expr_type, seq_get_tail(NULL, c), stmt_type)) }
 else_block[asdl_seq*]: 'else' ':' b=block { b }
 
-while_stmt: 'while' full_expression ':' block [else_block]
+while_stmt[stmt_ty]:
+    | a='while' ex=full_expression ':' b=block el=else_block {
+        _Py_While(ex, b, el, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
+    | a='while' ex=full_expression ':' b=block {
+        _Py_While(ex, b, NULL, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 
-for_stmt: [ASYNC] 'for' star_targets 'in' expressions ':' block [else_block]
+for_stmt[stmt_ty]:
+    | a=ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block el=else_block {
+        _Py_AsyncFor(t, ex, b, el, NULL, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
+    | a=ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block {
+        _Py_AsyncFor(t, ex, b, NULL, NULL, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | a='for' t=star_targets 'in' ex=expressions ':' b=block el=else_block {
+        _Py_For(t, ex, b, el, NULL, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
+    | a='for' t=star_targets 'in' ex=expressions ':' b=block {
+        _Py_For(t, ex, b, NULL, NULL, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 
 with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression ['as' target]])* ':' block
 
@@ -310,9 +322,9 @@ kwarg: NAME '=' expression | '*' expression | '**' expression
 # NOTE: star_targets may contain *NAME, targets may not.
 # NOTE: the !'in' is to handle "for x, in ...".
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
-star_targets: star_target (',' !'in' star_target)* [',']
-star_target: '*' bitwise_or | atom t_tail+ | star_atom t_tail*
-star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
+star_targets: a=star_target (',' !'in' star_target)* [','] { a }
+star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
+star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets: target (',' target)* [',']
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
