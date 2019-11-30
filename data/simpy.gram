@@ -100,13 +100,13 @@ elif_stmt[stmt_ty]:
         _Py_If(b, c, NULL, EXTRA(b, expr_type, seq_get_tail(NULL, c), stmt_type)) }
 else_block[asdl_seq*]: 'else' ':' b=block { b }
 
-while_stmt:
+while_stmt[stmt_ty]:
     | a='while' ex=full_expression ':' b=block el=else_block {
         _Py_While(ex, b, el, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
     | a='while' ex=full_expression ':' b=block {
         _Py_While(ex, b, NULL, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 
-for_stmt:
+for_stmt[stmt_ty]:
     | a=ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block el=else_block {
         _Py_AsyncFor(t, ex, b, el, NULL, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
     | a=ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block {
