@@ -79,8 +79,6 @@ def main() -> None:
             print("Raw Grammar:")
             for line in repr(grammar).splitlines():
                 print(" ", line)
-            ## for rule in grammar.rules.values():
-            ##     print(" ", repr(rule))
 
         print("Clean Grammar:")
         for line in str(grammar).splitlines():
