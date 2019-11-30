@@ -1,5 +1,6 @@
 PYTHON ?= `/usr/bin/which python3.8`
 CPYTHON ?= "./cpython"
+MYPY ?= `/usr/bin/which mypy`
 
 GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
@@ -57,7 +58,7 @@ simpy_cpython:
 		--exclude "*/lib2to3/tests/data/*"
 
 mypy: regen-metaparser
-	mypy  # For list of files, see mypy.ini
+	$(MYPY)  # For list of files, see mypy.ini
 
 black:
 	black pegen tatsu test scripts

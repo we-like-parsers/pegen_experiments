@@ -1,22 +1,23 @@
-# mypy: allow-untyped-defs
-
 import io
 import textwrap
 
 from tokenize import TokenInfo, NAME, NEWLINE, NUMBER, OP
 
+from typing import Any, Dict, List, Type
+
 import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
-from pegen.grammar import GrammarVisitor, GrammarError
+from pegen.grammar import GrammarVisitor, GrammarError, Grammar
 from pegen.grammar_visualizer import ASTGrammarPrinter
+from pegen.parser import Parser
 from pegen.python_generator import PythonParserGenerator
 
 from pegen.testutil import generate_parser, parse_string, make_parser
 
 
-def test_parse_grammar():
-    grammar = """
+def test_parse_grammar() -> None:
+    grammar_source = """
     start: sum NEWLINE
     sum: t1=term '+' t2=term { action } | term
     term: NUMBER
@@ -26,9 +27,9 @@ def test_parse_grammar():
     sum: term '+' term | term
     term: NUMBER
     """
-    grammar = parse_string(grammar, GrammarParser)
-    assert str(grammar) == textwrap.dedent(expected).strip()
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     rules = grammar.rules
+    assert str(grammar) == textwrap.dedent(expected).strip()
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules["start"]) == "start: sum NEWLINE"
     assert str(rules["sum"]) == "sum: term '+' term | term"
@@ -36,8 +37,8 @@ def test_parse_grammar():
     assert repr(rules["term"]) == expected_repr
 
 
-def test_long_rule_str():
-    grammar = """
+def test_long_rule_str() -> None:
+    grammar_source = """
     start: zero | one | one zero | one one | one zero zero | one zero one | one one zero | one one one
     """
     expected = """
@@ -51,11 +52,11 @@ def test_long_rule_str():
         | one one zero
         | one one one
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     assert str(grammar.rules["start"]) == textwrap.dedent(expected).strip()
 
 
-def test_typed_rules():
+def test_typed_rules() -> None:
     grammar = """
     start[int]: sum NEWLINE
     sum[int]: t1=term '+' t2=term { action } | term
@@ -71,7 +72,7 @@ def test_typed_rules():
     )
 
 
-def test_repeat_with_separator_rules():
+def test_repeat_with_separator_rules() -> None:
     grammar = """
     start: ','.thing+ NEWLINE
     thing: NUMBER
@@ -85,7 +86,7 @@ def test_repeat_with_separator_rules():
     assert str(rules["thing"]) == "thing: NUMBER"
 
 
-def test_expr_grammar():
+def test_expr_grammar() -> None:
     grammar = """
     start: sum NEWLINE
     sum: term '+' term | term
@@ -99,7 +100,7 @@ def test_expr_grammar():
     ]
 
 
-def test_optional_operator():
+def test_optional_operator() -> None:
     grammar = """
     start: sum NEWLINE
     sum: term ('+' term)?
@@ -124,7 +125,7 @@ def test_optional_operator():
     ]
 
 
-def test_optional_literal():
+def test_optional_literal() -> None:
     grammar = """
     start: sum NEWLINE
     sum: term '+' ?
@@ -146,7 +147,7 @@ def test_optional_literal():
     ]
 
 
-def test_alt_optional_operator():
+def test_alt_optional_operator() -> None:
     grammar = """
     start: sum NEWLINE
     sum: term ['+' term]
@@ -171,7 +172,7 @@ def test_alt_optional_operator():
     ]
 
 
-def test_repeat_0_simple():
+def test_repeat_0_simple() -> None:
     grammar = """
     start: thing thing* NEWLINE
     thing: NUMBER
@@ -194,7 +195,7 @@ def test_repeat_0_simple():
     ]
 
 
-def test_repeat_0_complex():
+def test_repeat_0_complex() -> None:
     grammar = """
     start: term ('+' term)* NEWLINE
     term: NUMBER
@@ -221,7 +222,7 @@ def test_repeat_0_complex():
     ]
 
 
-def test_repeat_1_simple():
+def test_repeat_1_simple() -> None:
     grammar = """
     start: thing thing+ NEWLINE
     thing: NUMBER
@@ -240,7 +241,7 @@ def test_repeat_1_simple():
         parse_string("1\n", parser_class)
 
 
-def test_repeat_1_complex():
+def test_repeat_1_complex() -> None:
     grammar = """
     start: term ('+' term)+ NEWLINE
     term: NUMBER
@@ -269,7 +270,7 @@ def test_repeat_1_complex():
         parse_string("1\n", parser_class)
 
 
-def test_repeat_with_sep_simple():
+def test_repeat_with_sep_simple() -> None:
     grammar = """
     start: ','.thing+ NEWLINE
     thing: NUMBER
@@ -286,8 +287,8 @@ def test_repeat_with_sep_simple():
     ]
 
 
-def test_left_recursive():
-    grammar = """
+def test_left_recursive() -> None:
+    grammar_source = """
     start: expr NEWLINE
     expr: ('-' term | expr '+' term | term)
     term: NUMBER
@@ -295,7 +296,7 @@ def test_left_recursive():
     bar: NAME*
     baz: NAME?
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     parser_class = generate_parser(grammar)
     rules = grammar.rules
     assert not rules["start"].left_recursive
@@ -319,7 +320,7 @@ def test_left_recursive():
     ]
 
 
-def test_python_expr():
+def test_python_expr() -> None:
     grammar = """
     start: expr NEWLINE? $ { ast.Expression(expr, lineno=1, col_offset=0) }
     expr: ( expr '+' term { ast.BinOp(expr, ast.Add(), term, lineno=expr.lineno, col_offset=expr.col_offset, end_lineno=term.end_lineno, end_col_offset=term.end_col_offset) }
@@ -344,12 +345,12 @@ def test_python_expr():
     assert val == 3.0
 
 
-def test_nullable():
-    grammar = """
+def test_nullable() -> None:
+    grammar_source = """
     start: sign NUMBER
     sign: ['-' | '+']
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     out = io.StringIO()
     genr = PythonParserGenerator(grammar, out)
     rules = grammar.rules
@@ -357,12 +358,12 @@ def test_nullable():
     assert rules["sign"].nullable
 
 
-def test_advanced_left_recursive():
-    grammar = """
+def test_advanced_left_recursive() -> None:
+    grammar_source = """
     start: NUMBER | sign start
     sign: ['-']
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     out = io.StringIO()
     genr = PythonParserGenerator(grammar, out)
     rules = grammar.rules
@@ -372,13 +373,13 @@ def test_advanced_left_recursive():
     assert not rules["sign"].left_recursive
 
 
-def test_mutually_left_recursive():
-    grammar = """
+def test_mutually_left_recursive() -> None:
+    grammar_source = """
     start: foo 'E'
     foo: bar 'A' | 'B'
     bar: foo 'C' | 'D'
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     out = io.StringIO()
     genr = PythonParserGenerator(grammar, out)
     rules = grammar.rules
@@ -386,9 +387,9 @@ def test_mutually_left_recursive():
     assert rules["foo"].left_recursive
     assert rules["bar"].left_recursive
     genr.generate("<string>")
-    ns = {}
+    ns: Dict[str, Any] = {}
     exec(out.getvalue(), ns)
-    parser_class = ns["GeneratedParser"]
+    parser_class: Type[Parser] = ns["GeneratedParser"]
     node = parse_string("D A C A E", parser_class)
     assert node == [
         [
@@ -417,7 +418,7 @@ def test_mutually_left_recursive():
     ]
 
 
-def test_nasty_mutually_left_recursive():
+def test_nasty_mutually_left_recursive() -> None:
     # This grammar does not recognize 'x - + =', much to my chagrin.
     # But that's the way PEG works.
     # [Breathlessly]
@@ -427,23 +428,23 @@ def test_nasty_mutually_left_recursive():
     # which fails, so it retreats to NAME,
     # which succeeds, so we end up just recognizing 'x',
     # and then start fails because there's no '=' after that.
-    grammar = """
+    grammar_source = """
     start: target '='
     target: maybe '+' | NAME
     maybe: maybe '-' | target
     """
-    grammar = parse_string(grammar, GrammarParser)
+    grammar: Grammar = parse_string(grammar_source, GrammarParser)
     out = io.StringIO()
     genr = PythonParserGenerator(grammar, out)
     genr.generate("<string>")
-    ns = {}
+    ns: Dict[str, Any] = {}
     exec(out.getvalue(), ns)
     parser_class = ns["GeneratedParser"]
     with pytest.raises(SyntaxError):
         parse_string("x - + =", parser_class)
 
 
-def test_lookahead():
+def test_lookahead() -> None:
     grammar = """
     start: (expr_stmt | assign_stmt) &'.'
     expr_stmt: !(target '=') expr
@@ -493,7 +494,7 @@ def test_lookahead():
     ]
 
 
-def test_named_lookahead_error():
+def test_named_lookahead_error() -> None:
     grammar = """
     start: foo=!'x' NAME
     """
@@ -501,7 +502,7 @@ def test_named_lookahead_error():
         make_parser(grammar)
 
 
-def test_start_leader():
+def test_start_leader() -> None:
     grammar = """
     start: attr | NAME
     attr: start '.' NAME
@@ -510,7 +511,7 @@ def test_start_leader():
     make_parser(grammar)
 
 
-def test_left_recursion_too_complex():
+def test_left_recursion_too_complex() -> None:
     grammar = """
     start: foo
     foo: bar '+' | baz '+' | '+'
@@ -522,7 +523,7 @@ def test_left_recursion_too_complex():
     assert "no leader" in str(errinfo.value)
 
 
-def test_cut():
+def test_cut() -> None:
     grammar = """
     start: '(' ~ expr ')'
     expr: NUMBER
@@ -536,7 +537,7 @@ def test_cut():
     ]
 
 
-def test_dangling_reference():
+def test_dangling_reference() -> None:
     grammar = """
     start: foo ENDMARKER
     foo: bar NAME
@@ -545,7 +546,7 @@ def test_dangling_reference():
         parser_class = make_parser(grammar)
 
 
-def test_bad_token_reference():
+def test_bad_token_reference() -> None:
     grammar = """
     start: foo
     foo: NAMEE
@@ -554,7 +555,7 @@ def test_bad_token_reference():
         parser_class = make_parser(grammar)
 
 
-def test_missing_start():
+def test_missing_start() -> None:
     grammar = """
     foo: NAME
     """
@@ -564,14 +565,14 @@ def test_missing_start():
 
 class TestGrammarVisitor:
     class Visitor(GrammarVisitor):
-        def __init__(self):
+        def __init__(self) -> None:
             self.n_nodes = 0
 
-        def visit(self, node):
+        def visit(self, node: Any, *args: Any, **kwargs: Any) -> None:
             self.n_nodes += 1
-            super().visit(node)
+            super().visit(node, *args, **kwargs)
 
-    def test_parse_trivial_grammar(self):
+    def test_parse_trivial_grammar(self) -> None:
         grammar = """
         start: 'a'
         """
@@ -582,7 +583,7 @@ class TestGrammarVisitor:
 
         assert visitor.n_nodes == 6
 
-    def test_parse_or_grammar(self):
+    def test_parse_or_grammar(self) -> None:
         grammar = """
         start: rule
         rule: 'a' | 'b'
@@ -599,7 +600,7 @@ class TestGrammarVisitor:
 
         assert visitor.n_nodes == 14
 
-    def test_parse_repeat1_grammar(self):
+    def test_parse_repeat1_grammar(self) -> None:
         grammar = """
         start: 'a'+
         """
@@ -611,7 +612,7 @@ class TestGrammarVisitor:
         # Grammar/Rule/Rhs/Alt/NamedItem/Repeat1/StringLeaf -> 6
         assert visitor.n_nodes == 7
 
-    def test_parse_repeat0_grammar(self):
+    def test_parse_repeat0_grammar(self) -> None:
         grammar = """
         start: 'a'*
         """
@@ -624,7 +625,7 @@ class TestGrammarVisitor:
 
         assert visitor.n_nodes == 7
 
-    def test_parse_optional_grammar(self):
+    def test_parse_optional_grammar(self) -> None:
         grammar = """
         start: 'a' ['b']
         """
@@ -640,14 +641,14 @@ class TestGrammarVisitor:
 
 
 class TestGrammarVisualizer:
-    def test_simple_rule(self):
+    def test_simple_rule(self) -> None:
         grammar = """
         start: 'a' 'b'
         """
         rules = parse_string(grammar, GrammarParser)
 
         printer = ASTGrammarPrinter()
-        lines = []
+        lines: List[str] = []
         printer.print_grammar_ast(rules, printer=lines.append)
 
         output = "\n".join(lines)
@@ -665,7 +666,7 @@ class TestGrammarVisualizer:
 
         assert output == expected_output
 
-    def test_multiple_rules(self):
+    def test_multiple_rules(self) -> None:
         grammar = """
         start: a b
         a: 'a'
@@ -674,7 +675,7 @@ class TestGrammarVisualizer:
         rules = parse_string(grammar, GrammarParser)
 
         printer = ASTGrammarPrinter()
-        lines = []
+        lines: List[str] = []
         printer.print_grammar_ast(rules, printer=lines.append)
 
         output = "\n".join(lines)
@@ -704,14 +705,14 @@ class TestGrammarVisualizer:
 
         assert output == expected_output
 
-    def test_deep_nested_rule(self):
+    def test_deep_nested_rule(self) -> None:
         grammar = """
         start: 'a' ['b'['c'['d']]]
         """
         rules = parse_string(grammar, GrammarParser)
 
         printer = ASTGrammarPrinter()
-        lines = []
+        lines: List[str] = []
         printer.print_grammar_ast(rules, printer=lines.append)
 
         output = "\n".join(lines)

@@ -41,7 +41,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def start(self) -> Optional[Grammar]:
-        # start: grammar $ { grammar }
+        # start: grammar $
         mark = self.mark()
         cut = False
         if (
@@ -56,7 +56,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def grammar(self) -> Optional[Grammar]:
-        # grammar: metas rules { Grammar ( rules , metas ) } | rules { Grammar ( rules , [ ] ) }
+        # grammar: metas rules | rules
         mark = self.mark()
         cut = False
         if (
@@ -78,7 +78,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def metas(self) -> Optional[MetaList]:
-        # metas: meta metas { [ meta ] + metas } | meta { [ meta ] }
+        # metas: meta metas | meta
         mark = self.mark()
         cut = False
         if (
@@ -100,7 +100,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def meta(self) -> Optional[MetaTuple]:
-        # meta: "@" NAME NEWLINE { ( name . string , None ) } | "@" a=NAME b=NAME NEWLINE { ( a . string , b . string ) } | "@" NAME STRING NEWLINE { ( name . string , literal_eval ( string . string ) ) }
+        # meta: "@" NAME NEWLINE | "@" NAME NAME NEWLINE | "@" NAME STRING NEWLINE
         mark = self.mark()
         cut = False
         if (
@@ -143,7 +143,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rules(self) -> Optional[RuleList]:
-        # rules: rule rules { [ rule ] + rules } | rule { [ rule ] }
+        # rules: rule rules | rule
         mark = self.mark()
         cut = False
         if (
@@ -165,7 +165,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rule(self) -> Optional[Rule]:
-        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) ) } | rulename ":" NEWLINE INDENT more_alts DEDENT { Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts ) } | rulename ":" alts NEWLINE { Rule ( rulename [ 0 ] , rulename [ 1 ] , alts ) }
+        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT | rulename ":" NEWLINE INDENT more_alts DEDENT | rulename ":" alts NEWLINE
         mark = self.mark()
         cut = False
         if (
@@ -220,7 +220,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def rulename(self) -> Optional[RuleName]:
-        # rulename: NAME '[' type=NAME '*' ']' { ( name . string , type . string + "*" ) } | NAME '[' type=NAME ']' { ( name . string , type . string ) } | NAME { ( name . string , None ) }
+        # rulename: NAME '[' NAME '*' ']' | NAME '[' NAME ']' | NAME
         mark = self.mark()
         cut = False
         if (
@@ -261,7 +261,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def alts(self) -> Optional[Rhs]:
-        # alts: alt "|" alts { Rhs ( [ alt ] + alts . alts ) } | alt { Rhs ( [ alt ] ) }
+        # alts: alt "|" alts | alt
         mark = self.mark()
         cut = False
         if (
@@ -285,7 +285,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def more_alts(self) -> Optional[Rhs]:
-        # more_alts: "|" alts NEWLINE more_alts { Rhs ( alts . alts + more_alts . alts ) } | "|" alts NEWLINE { Rhs ( alts . alts ) }
+        # more_alts: "|" alts NEWLINE more_alts | "|" alts NEWLINE
         mark = self.mark()
         cut = False
         if (
@@ -315,7 +315,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def alt(self) -> Optional[Alt]:
-        # alt: items '$' action { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = action ) } | items '$' { Alt ( items + [ NamedItem ( None , NameLeaf ( 'ENDMARKER' ) ) ] , action = None ) } | items action { Alt ( items , action = action ) } | items { Alt ( items , action = None ) }
+        # alt: items '$' action | items '$' | items action | items
         mark = self.mark()
         cut = False
         if (
@@ -357,7 +357,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def items(self) -> Optional[NamedItemList]:
-        # items: named_item items { [ named_item ] + items } | named_item { [ named_item ] }
+        # items: named_item items | named_item
         mark = self.mark()
         cut = False
         if (
@@ -379,7 +379,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def named_item(self) -> Optional[NamedItem]:
-        # named_item: NAME '=' ~ item { NamedItem ( name . string , item ) } | item { NamedItem ( None , item ) } | it=lookahead { NamedItem ( None , it ) }
+        # named_item: NAME '=' ~ item | item | lookahead
         mark = self.mark()
         cut = False
         if (
@@ -412,7 +412,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def lookahead(self) -> Optional[LookaheadOrCut]:
-        # lookahead: '&' ~ atom { PositiveLookahead ( atom ) } | '!' ~ atom { NegativeLookahead ( atom ) } | '~' { Cut ( ) }
+        # lookahead: '&' ~ atom | '!' ~ atom | '~'
         mark = self.mark()
         cut = False
         if (
@@ -447,7 +447,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self) -> Optional[Item]:
-        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | sep=atom '.' node=atom '+' { Gather ( sep , node ) } | atom { atom }
+        # item: '[' ~ alts ']' | atom '?' | atom '*' | atom '+' | atom '.' atom '+' | atom
         mark = self.mark()
         cut = False
         if (
@@ -513,7 +513,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def atom(self) -> Optional[Plain]:
-        # atom: '(' ~ alts ')' { Group ( alts ) } | NAME { NameLeaf ( name . string ) } | STRING { StringLeaf ( string . string ) }
+        # atom: '(' ~ alts ')' | NAME | STRING
         mark = self.mark()
         cut = False
         if (
@@ -546,7 +546,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def action(self) -> Optional[str]:
-        # action: "{" ~ target_atoms "}" { target_atoms }
+        # action: "{" ~ target_atoms "}"
         mark = self.mark()
         cut = False
         if (
@@ -565,7 +565,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def target_atoms(self) -> Optional[str]:
-        # target_atoms: target_atom target_atoms { target_atom + " " + target_atoms } | target_atom { target_atom }
+        # target_atoms: target_atom target_atoms | target_atom
         mark = self.mark()
         cut = False
         if (
@@ -587,7 +587,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def target_atom(self) -> Optional[str]:
-        # target_atom: "{" ~ target_atoms "}" { "{" + target_atoms + "}" } | NAME { name . string } | NUMBER { number . string } | STRING { string . string } | !"}" OP { op . string }
+        # target_atom: "{" ~ target_atoms "}" | NAME | NUMBER | STRING | !"}" OP
         mark = self.mark()
         cut = False
         if (
