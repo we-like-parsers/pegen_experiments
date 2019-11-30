@@ -21,7 +21,13 @@ def test_parse_grammar():
     sum: t1=term '+' t2=term { action } | term
     term: NUMBER
     """
-    rules = parse_string(grammar, GrammarParser).rules
+    grammar = parse_string(grammar, GrammarParser)
+    assert str(grammar) == textwrap.dedent("""
+    start: sum NEWLINE
+    sum: term '+' term | term
+    term: NUMBER
+    """).strip()
+    rules = grammar.rules
     # Check the str() and repr() of a few rules; AST nodes don't support ==.
     assert str(rules["start"]) == "start: sum NEWLINE"
     assert str(rules["sum"]) == "sum: term '+' term | term"
@@ -29,6 +35,24 @@ def test_parse_grammar():
         repr(rules["term"])
         == "Rule('term', None, Rhs([Alt([NamedItem(None, NameLeaf('NUMBER'))])]))"
     )
+
+
+def test_long_rule_str():
+    grammar = """
+    start: zero | one | one zero | one one | one zero zero | one zero one | one one zero | one one one
+    """
+    grammar = parse_string(grammar, GrammarParser)
+    assert str(grammar.rules["start"]) == textwrap.dedent("""
+    start:
+        | zero
+        | one
+        | one zero
+        | one one
+        | one zero zero
+        | one zero one
+        | one one zero
+        | one one one
+    """).strip()
 
 
 def test_typed_rules():

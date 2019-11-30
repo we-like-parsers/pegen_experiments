@@ -50,7 +50,7 @@ class Grammar:
         self.metas = dict(metas)
 
     def __str__(self) -> str:
-        return "\n".join(f"{name}: {rule}" for name, rule in self.rules.items())
+        return "\n".join(str(rule) for name, rule in self.rules.items())
 
     def __repr__(self) -> str:
         lines = ["Grammar("]
@@ -93,7 +93,7 @@ class Rule:
             res = f"{self.name}[{self.type}]: {self.rhs}"
         if len(res) < 88:
             return res
-        lines = [res.split(":")[0]]
+        lines = [res.split(":")[0] + ":"]
         lines += [f"    | {alt}" for alt in self.rhs.alts]
         return "\n".join(lines)
 
