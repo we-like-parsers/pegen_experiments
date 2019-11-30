@@ -106,10 +106,25 @@ for_stmt: [ASYNC] 'for' star_targets 'in' expressions ':' block [else_block]
 
 with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression ['as' target]])* ':' block
 
-try_stmt: try_block finally_block | try_block except_block+ [else_block] [finally_block]
-try_block: 'try' ':' block
-except_block: 'except' [expression ['as' target]] ':' block
-finally_block: 'finally' ':' block
+try_stmt[stmt_ty]:
+    | a='try' ':' b=block ex=except_block+ el=else_block f=finally_block {
+        _Py_Try(b, ex, el, f, EXTRA(a, token_type, seq_get_tail(NULL, f), stmt_type)) }
+    | a='try' ':' b=block ex=except_block+ el=else_block {
+        _Py_Try(b, ex, el, NULL, EXTRA(a, token_type, seq_get_tail(NULL, el), stmt_type)) }
+    | a='try' ':' b=block ex=except_block+ f=finally_block {
+        _Py_Try(b, ex, NULL, f, EXTRA(a, token_type, seq_get_tail(NULL, f), stmt_type)) }
+    | a='try' ':' b=block ex=except_block+ {
+        _Py_Try(b, ex, NULL, NULL, EXTRA(a, token_type, seq_get_tail(NULL, ex), excepthandler_type)) }
+    | a='try' ':' b=block f=finally_block {
+        _Py_Try(b, NULL, NULL, f, EXTRA(a, token_type, seq_get_tail(NULL, f), stmt_type)) }
+except_block[excepthandler_ty]:
+    | a='except' e=expression 'as' t=target ':' b=block {
+        _Py_ExceptHandler(e, t->v.Name.id, b, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | a='except' e=expression ':' b=block {
+        _Py_ExceptHandler(e, NULL, b, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | a='except' ':' b=block {
+        _Py_ExceptHandler(NULL, NULL, b, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
+finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
 return_stmt: 'return' [expressions]
 
@@ -300,8 +315,8 @@ star_target: '*' bitwise_or | atom t_tail+ | star_atom t_tail*
 star_atom: NAME | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets: target (',' target)* [',']
-target: atom t_tail+ | t_atom t_tail*
-t_atom: NAME | '(' [targets] ')' | '[' [targets] ']'
+target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
+t_atom[expr_ty]: NAME | '(' [targets] ')' | '[' [targets] ']'
 
 t_tail: call_tail* (attr_tail | index_tail)
 call_tail: '(' ~ [arguments] ')'
