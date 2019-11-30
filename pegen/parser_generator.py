@@ -14,7 +14,7 @@ from pegen.grammar import (
     Plain,
     NameLeaf,
     StringLeaf,
-    RepeatWithSeparator,
+    Gather,
 )
 from pegen.grammar import GrammarError, GrammarVisitor
 
@@ -98,9 +98,9 @@ class ParserGenerator:
         self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
-    def name_node_with_sep(self, node: RepeatWithSeparator) -> str:
+    def name_gather(self, node: Gather) -> str:
         self.counter += 1
-        name = f"_tmp_sep_{self.counter}"
+        name = f"_gather_{self.counter}"
         self.counter += 1
         extra_function_name = f"_loop0_{self.counter}"
         extra_function_alt = Alt(

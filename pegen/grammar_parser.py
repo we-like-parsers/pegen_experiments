@@ -13,6 +13,7 @@ from ast import literal_eval
 from pegen.grammar import (
     Alt,
     Cut,
+    Gather,
     Group,
     Item,
     Lookahead,
@@ -28,7 +29,6 @@ from pegen.grammar import (
     PositiveLookahead,
     Repeat0,
     Repeat1,
-    RepeatWithSeparator,
     Rhs,
     Rule,
     RuleList,
@@ -447,7 +447,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def item(self) -> Optional[Item]:
-        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | sep=atom '.' node=atom '+' { RepeatWithSeparator ( sep , node ) } | atom { atom }
+        # item: '[' ~ alts ']' { Opt ( alts ) } | atom '?' { Opt ( atom ) } | atom '*' { Repeat0 ( atom ) } | atom '+' { Repeat1 ( atom ) } | sep=atom '.' node=atom '+' { Gather ( sep , node ) } | atom { atom }
         mark = self.mark()
         cut = False
         if (
@@ -499,7 +499,7 @@ class GeneratedParser(Parser):
             and
             (literal_1 := self.expect('+'))
         ):
-            return RepeatWithSeparator ( sep , node )
+            return Gather ( sep , node )
         self.reset(mark)
         if cut: return None
         cut = False

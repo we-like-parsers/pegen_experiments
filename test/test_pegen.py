@@ -77,10 +77,10 @@ def test_repeat_with_separator_rules():
     thing: NUMBER
     """
     rules = parse_string(grammar, GrammarParser).rules
-    assert str(rules["start"]) == "start: ','.thing NEWLINE"
+    assert str(rules["start"]) == "start: ','.thing+ NEWLINE"
     print(repr(rules["start"]))
     assert repr(rules["start"]).startswith(
-        "Rule('start', None, Rhs([Alt([NamedItem(None, RepeatWithSeparator(StringLeaf(\"','\"), NameLeaf('thing'"
+        "Rule('start', None, Rhs([Alt([NamedItem(None, Gather(StringLeaf(\"','\"), NameLeaf('thing'"
     )
     assert str(rules["thing"]) == "thing: NUMBER"
 
