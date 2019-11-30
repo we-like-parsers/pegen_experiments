@@ -60,7 +60,7 @@ def main() -> None:
             output_file = "parse.py"
 
     try:
-        rules, parser, tokenizer, gen = build_parser_and_generator(
+        grammar, parser, tokenizer, gen = build_parser_and_generator(
             args.filename,
             output_file,
             args.compile_extension,
@@ -77,11 +77,12 @@ def main() -> None:
     if not args.quiet:
         if args.verbose:
             print("Raw Grammar:")
-            for rule in rules.rules.values():
-                print(" ", repr(rule))
+            for line in repr(grammar).splitlines():
+                print(" ", line)
+
         print("Clean Grammar:")
-        for rule in rules.rules.values():
-            print(" ", rule)
+        for line in str(grammar).splitlines():
+            print(" ", line)
 
     if args.verbose:
         print("First Graph:")
@@ -93,7 +94,7 @@ def main() -> None:
             if len(scc) > 1:
                 print(
                     "  # Indirectly left-recursive; leaders:",
-                    {name for name in scc if rules.rules[name].leader},
+                    {name for name in scc if grammar.rules[name].leader},
                 )
             else:
                 name = next(iter(scc))
