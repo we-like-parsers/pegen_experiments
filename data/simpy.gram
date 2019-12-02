@@ -12,7 +12,6 @@ small_stmt[stmt_ty]:
     | import_stmt
     | pass_stmt
     | raise_stmt
-    | yield_stmt
     | assert_stmt
     | del_stmt
     | global_stmt
@@ -24,17 +23,23 @@ small_stmt[stmt_ty]:
 compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
-assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign (yield_expr | expressions)
+assignment: 
+    | target ':' expression ['=' yield_expression]
+    | (star_targets '=')+ (yield_expr | expressions)
+    | target augassign (yield_expr | expressions)
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
-global_stmt: 'global' NAME (',' NAME)*
-nonlocal_stmt: 'nonlocal' NAME (',' NAME)*
+global_stmt: a='global' b=','.NAME+ {
+    _Py_Global(names_map_to_id(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+nonlocal_stmt: a='nonlocal' b=','.NAME+ {
+    _Py_Nonlocal(names_map_to_id(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
-yield_stmt: yield_expr
+assert_stmt:
+    | a='assert' b=expression ',' c=expression { _Py_Assert(b, c, EXTRA(a, token_type, c, expr_type)) }
+    | a='assert' b=expression { _Py_Assert(b, NULL, EXTRA(a, token_type, b, expr_type)) }
 
-assert_stmt: 'assert' expression [',' expression]
-
-del_stmt: 'del' targets  # TODO: exclude *target
+del_stmt: a='del' b=targets { # TODO: exclude *target
+    _Py_Delete(targets_map_to_del(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
 pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 
@@ -138,9 +143,14 @@ except_block[excepthandler_ty]:
         _Py_ExceptHandler(NULL, NULL, b, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
-return_stmt: 'return' [expressions]
+return_stmt[stmt_ty]:
+    | a='return' b=expressions { _Py_Return(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='return' { _Py_Return(NULL, EXTRA(a, token_type, a, token_type)) }
 
-raise_stmt: 'raise' [expression ['from' expression]]
+raise_stmt[stmt_ty]:
+    | a='raise' b=expression 'from' c=expression { _Py_Raise(b, c, EXTRA(a, token_type, c, expr_type)) }
+    | a='raise' b=expression { _Py_Raise(b, NULL, EXTRA(a, token_type, b, expr_type)) }
+    | a='raise' { _Py_Raise(NULL, NULL, EXTRA(a, token_type, a, token_type)) }
 
 function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' annotation] ':' block
 
@@ -183,6 +193,7 @@ full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
     | lambdef
+    | yield_expr
     | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA_EXPR(a, c)) }
     | disjunction
 lambdef: 'lambda' [lambda_parameters] ':' expression
@@ -311,7 +322,10 @@ kvpairs: kvpair (',' kvpair)* [',']
 kvpair: '**' bitwise_or | expression ':' expression
 for_if_clauses: ([ASYNC] 'for' star_targets 'in' expression ('if' expression)*)+
 
-yield_expr: 'yield' 'from' expression | 'yield' [expressions]
+yield_expr:
+    | a='yield' 'from' b=expression { _Py_YieldFrom(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='yield' b=expressions { _Py_Yield(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='yield' { _Py_Yield(NULL, EXTRA(a, token_type, a, token_type)) }
 
 arguments: expression for_if_clauses | args [',']
 args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work
@@ -326,7 +340,7 @@ star_targets: a=star_target (',' !'in' star_target)* [','] { a }
 star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
 star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
-targets: ','.target+ [',']
+targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
 t_atom[expr_ty]: NAME | '(' [targets] ')' | '[' [targets] ']'
 

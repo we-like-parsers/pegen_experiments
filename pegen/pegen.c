@@ -641,6 +641,17 @@ asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+asdl_seq *names_map_to_id(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        expr_ty e = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, e->v.Name.id);
+    }
+    return new_seq;
+}
+
 CmpopExprPair *
 cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)
 {
@@ -692,4 +703,28 @@ store_name(Parser *p, expr_ty load_name)
     return _Py_Name(load_name->v.Name.id,
                     Store,
                     EXTRA_EXPR(load_name, load_name));
+}
+
+expr_ty
+del_name(Parser *p, expr_ty load_name)
+{
+    return _Py_Name(load_name->v.Name.id,
+                    Del,
+                    EXTRA_EXPR(load_name, load_name));
+}
+
+asdl_seq *
+targets_map_to_del(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        expr_ty e = asdl_seq_GET(seq, i);
+        if (e->kind == Name_kind) {
+            asdl_seq_SET(new_seq, i, del_name(p, e));
+        } else {
+            asdl_seq_SET(new_seq, i, e);
+        }
+    }
+    return new_seq;
 }
