@@ -4,7 +4,7 @@ start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
 statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) } | simple_stmt
-simple_stmt[asdl_seq*]: a=small_stmt b=(';' c=small_stmt { c })* [';'] NEWLINE { seq_insert_in_front(p, a, b) }
+simple_stmt[asdl_seq*]: a=';'.small_stmt+ [';'] NEWLINE { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt[stmt_ty]:
@@ -63,7 +63,7 @@ import_from_targets[asdl_seq*]:
     | a='*' { singleton_seq(p, pegen_alias(alias_for_star(p),
                                            EXTRA(a, token_type, a, token_type))) }
 import_from_as_names[asdl_seq*]:
-    | a=import_from_as_name b=(',' c=import_from_as_name { c })* [','] { seq_insert_in_front(p, a, b) }
+    | a=','.import_from_as_name+ [','] { a }
 import_from_as_name[PegenAlias*]:
     | a=NAME 'as' b=NAME {
         pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena),
@@ -72,7 +72,7 @@ import_from_as_name[PegenAlias*]:
         pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena),
                     EXTRA(a, expr_type, a, expr_type)) }
 dotted_as_names[asdl_seq*]: 
-    | a=dotted_as_name b=(',' c=dotted_as_name { c })* { seq_insert_in_front(p, a, b) }
+    | a=','.dotted_as_name+ { a }
 dotted_as_name[PegenAlias*]:
     | a=dotted_name 'as' b=NAME {
         pegen_alias(_Py_alias(a->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena),
@@ -152,8 +152,8 @@ parameters: ( slash_without_default [',' plain_names] [',' names_with_default] [
             )
 slash_without_default: plain_names ',' '/'
 slash_with_default: [plain_names ','] names_with_default ',' '/'
-names_with_default: name_with_default (',' name_with_default)*
-plain_names: plain_name !'=' (',' plain_name !'=')*
+names_with_default: ','.name_with_default+
+plain_names: ','.(plain_name !'=')+
 star_etc: ( '*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' kwds] [',']
           | '*' (',' plain_name ['=' expression])+ [',' kwds] [',']
           | kwds [',']
@@ -169,7 +169,7 @@ class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
 block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
-star_full_expressions: (star_full_expression) (',' (star_full_expression))* [',']
+star_full_expressions: ','.star_full_expression+ [',']
 expressions[expr_ty]:
     | '*' bitwise_or (',' ('*' bitwise_or | expression))+ [',']
     | '*' bitwise_or ','
@@ -195,8 +195,8 @@ lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' 
                    )
 lambda_slash_without_default: lambda_plain_names ',' '/'
 lambda_slash_with_default: [lambda_plain_names ','] lambda_names_with_default ',' '/'
-lambda_names_with_default: lambda_name_with_default (',' lambda_name_with_default)*
-lambda_plain_names: NAME !'=' (',' NAME !'=')*
+lambda_names_with_default: ','.lambda_name_with_default+
+lambda_plain_names: ','.(NAME !'=')+
 lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
                  | '*' (',' NAME ['=' expression])+ [',' '**' NAME] [',']
                  | '**' NAME [',']
@@ -281,7 +281,7 @@ primary[expr_ty]:
     | !'await' a=atom !'.' !'(' !'[' { a }
     | [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
 
-slices: slice (',' slice)* [',']
+slices: ','.slice+ [',']
 slice: [expression] ':' [expression] [':' [expression]] | expression
 # STRING+'s output is just a hack for now 
 atom[expr_ty]:
@@ -315,7 +315,7 @@ yield_expr: 'yield' 'from' expression | 'yield' [expressions]
 
 arguments: expression for_if_clauses | args [',']
 args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work
-kwargs: kwarg (',' kwarg)*
+kwargs: ','.kwarg+
 posarg: full_expression | '*' expression
 kwarg: NAME '=' expression | '*' expression | '**' expression
 
@@ -326,7 +326,7 @@ star_targets: a=star_target (',' !'in' star_target)* [','] { a }
 star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
 star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
-targets: target (',' target)* [',']
+targets: ','.target+ [',']
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
 t_atom[expr_ty]: NAME | '(' [targets] ')' | '[' [targets] ']'
 
