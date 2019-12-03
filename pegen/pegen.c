@@ -724,8 +724,14 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
         expr_ty e = asdl_seq_GET(seq, i);
         if (e->kind == Name_kind) {
             asdl_seq_SET(new_seq, i, del_name(p, e));
-        } else {
-            asdl_seq_SET(new_seq, i, e);
+        } else if (e->kind == Tuple_kind) {
+            asdl_seq_SET(new_seq, i, _Py_Tuple(map_targets_to_del_names(p, e->v.Tuple.elts),
+                                               Del,
+                                               EXTRA_EXPR(e, e)));
+        } else if (e->kind == List_kind) {
+            asdl_seq_SET(new_seq, i, _Py_List(map_targets_to_del_names(p, e->v.List.elts),
+                                              Del,
+                                              EXTRA_EXPR(e, e)));
         }
     }
     return new_seq;

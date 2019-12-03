@@ -342,7 +342,10 @@ star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targ
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
-t_atom[expr_ty]: NAME | '(' [targets] ')' | '[' [targets] ']'
+t_atom[expr_ty]:
+    | NAME
+    | a='(' b=[targets] c=')' { _Py_Tuple(b, Load, EXTRA(a, token_type, c, token_type)) }
+    | a='[' b=[targets] c=']' { _Py_List(b, Load, EXTRA(a, token_type, c, token_type)) }
 
 t_tail: call_tail* (attr_tail | index_tail)
 call_tail: '(' ~ [arguments] ')'
