@@ -39,7 +39,7 @@ assert_stmt:
     | a='assert' b=expression { _Py_Assert(b, NULL, EXTRA(a, token_type, b, expr_type)) }
 
 del_stmt: a='del' b=targets { # TODO: exclude *target
-    _Py_Delete(targets_map_to_del(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+    _Py_Delete(targets_map_to_del_name(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
 pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 

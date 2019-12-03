@@ -714,7 +714,7 @@ del_name(Parser *p, expr_ty load_name)
 }
 
 asdl_seq *
-targets_map_to_del(Parser *p, asdl_seq *seq)
+targets_map_to_del_name(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
