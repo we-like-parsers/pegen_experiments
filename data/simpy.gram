@@ -30,16 +30,16 @@ assignment:
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
 global_stmt[stmt_ty]: a='global' b=','.NAME+ {
-    _Py_Global(names_map_to_id(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+    _Py_Global(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 nonlocal_stmt[stmt_ty]: a='nonlocal' b=','.NAME+ {
-    _Py_Nonlocal(names_map_to_id(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+    _Py_Nonlocal(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
 assert_stmt[stmt_ty]:
     | a='assert' b=expression ',' c=expression { _Py_Assert(b, c, EXTRA(a, token_type, c, expr_type)) }
     | a='assert' b=expression { _Py_Assert(b, NULL, EXTRA(a, token_type, b, expr_type)) }
 
 del_stmt[stmt_ty]: a='del' b=targets { # TODO: exclude *target
-    _Py_Delete(targets_map_to_del_name(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+    _Py_Delete(map_targets_to_del_names(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
 pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 
@@ -49,17 +49,17 @@ continue_stmt[stmt_ty]: a='continue' { _Py_Continue(EXTRA(a, token_type, a, toke
 
 import_stmt[stmt_ty]: import_name | import_from
 import_name[stmt_ty]: a='import' b=dotted_as_names {
-    _Py_Import(seq_map_to_alias(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), alias_type)) }
+    _Py_Import(extract_orig_aliases(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), alias_type)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
         _Py_ImportFrom(c->v.Name.id,
-                       seq_map_to_alias(p, d),
+                       extract_orig_aliases(p, d),
                        seq_count_dots(b),
                        EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets {
         _Py_ImportFrom(NULL,
-                       seq_map_to_alias(p, g),
+                       extract_orig_aliases(p, g),
                        seq_count_dots(f), 
                        EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
 import_from_targets[asdl_seq*]:

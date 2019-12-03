@@ -630,7 +630,8 @@ pegen_alias(alias_ty alias,
     return a;
 }
 
-asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
+asdl_seq *
+extract_orig_aliases(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
@@ -641,7 +642,8 @@ asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
-asdl_seq *names_map_to_id(Parser *p, asdl_seq *seq)
+asdl_seq *
+map_names_to_ids(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
@@ -714,7 +716,7 @@ del_name(Parser *p, expr_ty load_name)
 }
 
 asdl_seq *
-targets_map_to_del_name(Parser *p, asdl_seq *seq)
+map_targets_to_del_names(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
