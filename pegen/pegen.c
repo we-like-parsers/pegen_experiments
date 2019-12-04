@@ -722,6 +722,7 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
     for (int i = 0; i < len; i++) {
         expr_ty e = asdl_seq_GET(seq, i);
+        assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
         if (e->kind == Name_kind) {
             asdl_seq_SET(new_seq, i, del_name(p, e));
         } else if (e->kind == Tuple_kind) {
