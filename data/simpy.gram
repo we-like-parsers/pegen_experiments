@@ -12,6 +12,7 @@ small_stmt[stmt_ty]:
     | import_stmt
     | pass_stmt
     | raise_stmt
+    | yield_stmt
     | assert_stmt
     | del_stmt
     | global_stmt
@@ -33,6 +34,8 @@ global_stmt[stmt_ty]: a='global' b=','.NAME+ {
     _Py_Global(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 nonlocal_stmt[stmt_ty]: a='nonlocal' b=','.NAME+ {
     _Py_Nonlocal(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+
+yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA_EXPR(y, y)) }
 
 assert_stmt[stmt_ty]:
     | a='assert' b=expression ',' c=expression { _Py_Assert(b, c, EXTRA(a, token_type, c, expr_type)) }
@@ -193,7 +196,6 @@ full_expression: NAME ':=' expression | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
     | lambdef
-    | yield_expr
     | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA_EXPR(a, c)) }
     | disjunction
 lambdef: 'lambda' [lambda_parameters] ':' expression
