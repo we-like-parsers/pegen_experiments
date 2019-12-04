@@ -345,74 +345,74 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     ) -> None:
         if is_loop:
             assert len(node.alts) == 1
-        vars = {}
-        for alt in node.alts:
-            vars.update(self.collect_vars(alt))
-        for v, type in sorted(item for item in vars.items() if item[0] is not None):
-            if not type:
-                type = "void *"
-            else:
-                type += " "
-            if v == "cut_var":
-                v += " = 0"  # cut_var must be initialized
-            self.print(f"{type}{v};")
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
 
     def visit_Alt(
         self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]
     ) -> None:
-        self.print(f"// {node}")
-        names: List[str] = []
-        if is_loop:
-            self.print("while (")
-        else:
-            self.print("if (")
+        self.print(f"{{ // {node}")
         with self.indent():
-            first = True
-            for item in node.items:
-                if first:
-                    first = False
+            vars = self.collect_vars(node)
+            for v, type in sorted(item for item in vars.items() if item[0] is not None):
+                if not type:
+                    type = "void *"
                 else:
-                    self.print("&&")
-                self.visit(item, names=names)
-        self.print(") {")
-        with self.indent():
-            action = node.action
-            if not action:
-                if len(names) > 1:
-                    if is_gather:
-                        assert len(names) == 2
-                        self.print(f"res = seq_insert_in_front(p, {names[0]}, {names[1]});")
+                    type += " "
+                if v == "cut_var":
+                    v += " = 0"  # cut_var must be initialized
+                self.print(f"{type}{v};")
+            names: List[str] = []
+            if is_loop:
+                self.print("while (")
+            else:
+                self.print("if (")
+            with self.indent():
+                first = True
+                for item in node.items:
+                    if first:
+                        first = False
+                    else:
+                        self.print("&&")
+                    self.visit(item, names=names)
+            self.print(") {")
+            with self.indent():
+                action = node.action
+                if not action:
+                    if len(names) > 1:
+                        if is_gather:
+                            assert len(names) == 2
+                            self.print(f"res = seq_insert_in_front(p, {names[0]}, {names[1]});")
+                        else:
+                            if self.debug:
+                                self.print(
+                                    f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                                )
+                            self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
                     else:
                         if self.debug:
                             self.print(
-                                f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                                f'fprintf(stderr, "Hit with default action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
                             )
-                        self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
+                        self.print(f"res = {names[0]};")
                 else:
+                    self.print(f"res = {action};")
                     if self.debug:
                         self.print(
-                            f'fprintf(stderr, "Hit with default action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                            f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
                         )
-                    self.print(f"res = {names[0]};")
-            else:
-                self.print(f"res = {action};")
-                if self.debug:
-                    self.print(
-                        f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
-                    )
-            if is_loop:
-                self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-                self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
-                self.print(f"children[n++] = res;")
-                self.print("mark = p->mark;")
-            else:
-                self.print(f"goto done;")
+                if is_loop:
+                    self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
+                    self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
+                    self.print(f"children[n++] = res;")
+                    self.print("mark = p->mark;")
+                else:
+                    self.print(f"goto done;")
+            self.print("}")
+            self.print("p->mark = mark;")
+            if "cut_var" in names:
+                self.print("if (cut_var) return NULL;")
         self.print("}")
-        self.print("p->mark = mark;")
-        if "cut_var" in names:
-            self.print("if (cut_var) return NULL;")
 
     def collect_vars(self, node: Alt) -> Dict[str, Optional[str]]:
         names: List[str] = []
@@ -435,11 +435,11 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             rulename = name[:-4]
             rule = self.rules.get(rulename)
             if rule is not None:
-                if rule.is_loop():
+                if rule.is_loop() or rule.is_gather():
                     type = "asdl_seq *"
                 else:
                     type = rule.type
-            elif name.startswith("_loop"):
+            elif name.startswith("_loop") or name.startswith("_gather"):
                 type = "asdl_seq *"
         if node.name:
             name = node.name

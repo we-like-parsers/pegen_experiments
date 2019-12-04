@@ -209,3 +209,21 @@ def test_if_stmt_action(tmp_path: PurePath) -> None:
     """
     stmt = "pass"
     verify_ast_generation(grammar, stmt, tmp_path)
+
+
+def test_same_name_different_types(tmp_path: PurePath) -> None:
+    grammar = """
+    start[mod_ty]: a=import_from+ NEWLINE ENDMARKER { Module(a, NULL, p->arena)}
+    import_from[stmt_ty]: ( a='from' !'import' c=simple_name 'import' d=import_as_names_from {
+                              _Py_ImportFrom(c->v.Name.id, d, 0, EXTRA(a, token_type, asdl_seq_GET(d, 0), expr_type)) }
+                          | a='from' '.' 'import' c=import_as_names_from {
+                              _Py_ImportFrom(NULL, c, 1, EXTRA(a, token_type, asdl_seq_GET(c, 0), expr_type)) }
+                          )
+    simple_name[expr_ty]: NAME
+    import_as_names_from[asdl_seq*]: a=','.import_as_name_from+ { a }
+    import_as_name_from[alias_ty]: a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
+    """
+    stmt1 = "from a import b as c"
+    stmt2 = "from . import a as b"
+    for stmt in (stmt1, stmt2):
+        verify_ast_generation(grammar, stmt, tmp_path)
