@@ -630,13 +630,26 @@ pegen_alias(alias_ty alias,
     return a;
 }
 
-asdl_seq *seq_map_to_alias(Parser *p, asdl_seq *seq)
+asdl_seq *
+extract_orig_aliases(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
     for (int i = 0; i < len; i++) {
         PegenAlias *a = asdl_seq_GET(seq, i);
         asdl_seq_SET(new_seq, i, a->alias);
+    }
+    return new_seq;
+}
+
+asdl_seq *
+map_names_to_ids(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        expr_ty e = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, e->v.Name.id);
     }
     return new_seq;
 }
@@ -692,4 +705,35 @@ store_name(Parser *p, expr_ty load_name)
     return _Py_Name(load_name->v.Name.id,
                     Store,
                     EXTRA_EXPR(load_name, load_name));
+}
+
+expr_ty
+del_name(Parser *p, expr_ty load_name)
+{
+    return _Py_Name(load_name->v.Name.id,
+                    Del,
+                    EXTRA_EXPR(load_name, load_name));
+}
+
+asdl_seq *
+map_targets_to_del_names(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        expr_ty e = asdl_seq_GET(seq, i);
+        assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
+        if (e->kind == Name_kind) {
+            asdl_seq_SET(new_seq, i, del_name(p, e));
+        } else if (e->kind == Tuple_kind) {
+            asdl_seq_SET(new_seq, i, _Py_Tuple(map_targets_to_del_names(p, e->v.Tuple.elts),
+                                               Del,
+                                               EXTRA_EXPR(e, e)));
+        } else if (e->kind == List_kind) {
+            asdl_seq_SET(new_seq, i, _Py_List(map_targets_to_del_names(p, e->v.List.elts),
+                                              Del,
+                                              EXTRA_EXPR(e, e)));
+        }
+    }
+    return new_seq;
 }

@@ -24,37 +24,45 @@ small_stmt[stmt_ty]:
 compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
-assignment: target ':' expression ['=' yield_expression] | (star_targets '=')+ (yield_expr | expressions) | target augassign (yield_expr | expressions)
+assignment: 
+    | target ':' expression ['=' yield_expression]
+    | (star_targets '=')+ (yield_expr | expressions)
+    | target augassign (yield_expr | expressions)
 augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
 
-global_stmt: 'global' NAME (',' NAME)*
-nonlocal_stmt: 'nonlocal' NAME (',' NAME)*
+global_stmt[stmt_ty]: a='global' b=','.NAME+ {
+    _Py_Global(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
+nonlocal_stmt[stmt_ty]: a='nonlocal' b=','.NAME+ {
+    _Py_Nonlocal(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
-yield_stmt: yield_expr
+yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA_EXPR(y, y)) }
 
-assert_stmt: 'assert' expression [',' expression]
+assert_stmt[stmt_ty]:
+    | a='assert' b=expression ',' c=expression { _Py_Assert(b, c, EXTRA(a, token_type, c, expr_type)) }
+    | a='assert' b=expression { _Py_Assert(b, NULL, EXTRA(a, token_type, b, expr_type)) }
 
-del_stmt: 'del' targets  # TODO: exclude *target
+del_stmt[stmt_ty]: a='del' b=targets { # TODO: exclude *target
+    _Py_Delete(map_targets_to_del_names(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
 
 pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
 
-break_stmt: a='break' { _Py_Break(EXTRA(a, token_type, a, token_type)) }
+break_stmt[stmt_ty]: a='break' { _Py_Break(EXTRA(a, token_type, a, token_type)) }
 
-continue_stmt: a='continue' { _Py_Continue(EXTRA(a, token_type, a, token_type)) }
+continue_stmt[stmt_ty]: a='continue' { _Py_Continue(EXTRA(a, token_type, a, token_type)) }
 
-import_stmt: import_name | import_from
+import_stmt[stmt_ty]: import_name | import_from
 import_name[stmt_ty]: a='import' b=dotted_as_names {
-    _Py_Import(seq_map_to_alias(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), alias_type)) }
+    _Py_Import(extract_orig_aliases(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), alias_type)) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | a='from' b=('.' | '...')* !'import' c=dotted_name 'import' d=import_from_targets {
         _Py_ImportFrom(c->v.Name.id,
-                       seq_map_to_alias(p, d),
+                       extract_orig_aliases(p, d),
                        seq_count_dots(b),
                        EXTRA(a, token_type, seq_get_tail(NULL, d), alias_type)) }
     | e='from' f=('.' | '...')+ 'import' g=import_from_targets {
         _Py_ImportFrom(NULL,
-                       seq_map_to_alias(p, g),
+                       extract_orig_aliases(p, g),
                        seq_count_dots(f), 
                        EXTRA(e, token_type, seq_get_tail(NULL, g), alias_type)) }
 import_from_targets[asdl_seq*]:
@@ -138,9 +146,14 @@ except_block[excepthandler_ty]:
         _Py_ExceptHandler(NULL, NULL, b, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
-return_stmt: 'return' [expressions]
+return_stmt[stmt_ty]:
+    | a='return' b=expressions { _Py_Return(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='return' { _Py_Return(NULL, EXTRA(a, token_type, a, token_type)) }
 
-raise_stmt: 'raise' [expression ['from' expression]]
+raise_stmt[stmt_ty]:
+    | a='raise' b=expression 'from' c=expression { _Py_Raise(b, c, EXTRA(a, token_type, c, expr_type)) }
+    | a='raise' b=expression { _Py_Raise(b, NULL, EXTRA(a, token_type, b, expr_type)) }
+    | a='raise' { _Py_Raise(NULL, NULL, EXTRA(a, token_type, a, token_type)) }
 
 function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' annotation] ':' block
 
@@ -311,7 +324,10 @@ kvpairs: kvpair (',' kvpair)* [',']
 kvpair: '**' bitwise_or | expression ':' expression
 for_if_clauses: ([ASYNC] 'for' star_targets 'in' expression ('if' expression)*)+
 
-yield_expr: 'yield' 'from' expression | 'yield' [expressions]
+yield_expr[expr_ty]:
+    | a='yield' 'from' b=expression { _Py_YieldFrom(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='yield' b=expressions { _Py_Yield(b, EXTRA(a, token_type, b, expr_type)) }
+    | a='yield' { _Py_Yield(NULL, EXTRA(a, token_type, a, token_type)) }
 
 arguments: expression for_if_clauses | args [',']
 args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work
@@ -326,9 +342,12 @@ star_targets: a=star_target (',' !'in' star_target)* [','] { a }
 star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
 star_atom: a=NAME { store_name(p, a) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
-targets: ','.target+ [',']
+targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
-t_atom[expr_ty]: NAME | '(' [targets] ')' | '[' [targets] ']'
+t_atom[expr_ty]:
+    | NAME
+    | a='(' b=[targets] c=')' { _Py_Tuple(b, Load, EXTRA(a, token_type, c, token_type)) }
+    | a='[' b=[targets] c=']' { _Py_List(b, Load, EXTRA(a, token_type, c, token_type)) }
 
 t_tail: call_tail* (attr_tail | index_tail)
 call_tail: '(' ~ [arguments] ')'
