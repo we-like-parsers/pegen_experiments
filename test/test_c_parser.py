@@ -230,7 +230,7 @@ def test_same_name_different_types(tmp_path: PurePath) -> None:
 
 
 def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
-    grammar = """
+    grammar_source = """
     start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
     statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
     statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) }
@@ -246,7 +246,7 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
     pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
     """
     stmt = "with (\n    a as b,\n    c as d\n): pass"
-    grammar = parse_string(grammar, GrammarParser)
+    grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
     the_ast = extension.parse_string(stmt)
     assert ast.dump(the_ast).startswith(
