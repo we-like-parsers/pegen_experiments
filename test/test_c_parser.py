@@ -236,13 +236,7 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
     statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) }
     compound_stmt[stmt_ty]: with_stmt
     with_stmt[stmt_ty]: (
-          a=ASYNC 'with' '(' b=','.with_item+ ')' ':' c=block {
-            _Py_AsyncWith(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
-        | a=ASYNC 'with' b=','.with_item+ ':' c=block {
-            _Py_AsyncWith(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
-        | a='with' '(' b=','.with_item+ ')' ':' c=block {
-            _Py_With(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
-        | a='with' b=','.with_item+ ':' c=block {
+        a='with' '(' b=','.with_item+ ')' ':' c=block {
             _Py_With(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
     )
     with_item[withitem_ty]: (
