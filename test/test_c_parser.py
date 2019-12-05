@@ -227,3 +227,29 @@ def test_same_name_different_types(tmp_path: PurePath) -> None:
     stmt2 = "from . import a as b"
     for stmt in (stmt1, stmt2):
         verify_ast_generation(grammar, stmt, tmp_path)
+
+
+def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
+    grammar_source = """
+    start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+    statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
+    statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) }
+    compound_stmt[stmt_ty]: with_stmt
+    with_stmt[stmt_ty]: (
+        a='with' '(' b=','.with_item+ ')' ':' c=block {
+            _Py_With(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
+    )
+    with_item[withitem_ty]: (
+        e=NAME o=['as' t=NAME { t }] { _Py_withitem(e, store_name(p, o), p->arena) }
+    )
+    block[stmt_ty]: a=pass_stmt NEWLINE { a } | NEWLINE INDENT a=pass_stmt DEDENT { a }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
+    """
+    stmt = "with (\n    a as b,\n    c as d\n): pass"
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    the_ast = extension.parse_string(stmt)
+    assert ast.dump(the_ast).startswith(
+        "Module(body=[With(items=[withitem(context_expr=Name(id='a', ctx=Load()), optional_vars=Name(id='b', ctx=Store())), "
+        "withitem(context_expr=Name(id='c', ctx=Load()), optional_vars=Name(id='d', ctx=Store()))]"
+    )

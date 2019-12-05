@@ -702,6 +702,9 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
 expr_ty
 store_name(Parser *p, expr_ty load_name)
 {
+    if (!load_name) {
+        return NULL;
+    }
     return _Py_Name(load_name->v.Name.id,
                     Store,
                     EXTRA_EXPR(load_name, load_name));

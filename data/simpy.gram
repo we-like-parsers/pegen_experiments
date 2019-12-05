@@ -124,7 +124,17 @@ for_stmt[stmt_ty]:
     | a='for' t=star_targets 'in' ex=expressions ':' b=block {
         _Py_For(t, ex, b, NULL, NULL, EXTRA(a, token_type, seq_get_tail(NULL, b), stmt_type)) }
 
-with_stmt: [ASYNC] 'with' expression ['as' target] (',' [expression ['as' target]])* ':' block
+with_stmt[stmt_ty]:
+    | a=ASYNC 'with' '(' b=','.with_item+ ')' ':' c=block {
+        _Py_AsyncWith(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
+    | a=ASYNC 'with' b=','.with_item+ ':' c=block {
+        _Py_AsyncWith(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
+    | a='with' '(' b=','.with_item+ ')' ':' c=block {
+        _Py_With(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
+    | a='with' b=','.with_item+ ':' c=block {
+        _Py_With(b, c, NULL, EXTRA(a, token_type, seq_get_tail(NULL, c), stmt_type)) }
+with_item[withitem_ty]:
+    | e=expression o=['as' t=target { t }] { _Py_withitem(e, store_name(p, o), p->arena) }
 
 try_stmt[stmt_ty]:
     | a='try' ':' b=block ex=except_block+ el=else_block f=finally_block {
