@@ -18,10 +18,10 @@ returned.
 ### Grammar Expressions
 
 ##### `# comment`
-Python-style comments
+Python-style comments.
 
 ##### `e1 e2`
-Match e1, then match e2
+Match e1, then match e2.
 
 ##### `e1 | e2`
 Match e1 or e2.
@@ -30,16 +30,16 @@ A | can be used before the first alternative as well for formatting
 purposes.
 
 ##### `( e )`
-Match e
+Match e.
 
 ##### `[ e ] or e?`
-Optinally match e
+Optinally match e.
 
 ##### `e*`
-Match zero or more occurences of e
+Match zero or more occurences of e.
 
 ##### `e+`
-Match one or more occurences of e
+Match one or more occurences of e.
 
 ##### `s.e+`
 Match one or more occurences of e, separated by s. The generated parse tree
@@ -71,7 +71,7 @@ If the action is omitted, then there are two different possibilities:
 
 ### Variables in the Grammar
 
-An expression can be named.  The name can the be used in the action,
+An expression can be named.  The name can then be used in the action,
 like this:
 ```
 rule_name[return_type]: '(' a=some_other_rule ')' { a }
