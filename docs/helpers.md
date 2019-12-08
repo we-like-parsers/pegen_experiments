@@ -1,6 +1,8 @@
 Helper Structs
 --------------
 
+The following are all types defined in `pegen/pegen.h`.
+
 ##### Memo
 
 Linked list, optimized for quickly finding a given type.
@@ -12,7 +14,7 @@ Linked list, optimized for quickly finding a given type.
 
 ##### Token
 
-These are in an array linked from Parser.  (Or linked list???)
+These are in an array linked from Parser.
 
 - type: int, token type (needs only 8 bits)
 - bytes: bytes object
@@ -21,9 +23,8 @@ These are in an array linked from Parser.  (Or linked list???)
 
 ##### Parser
 
-Also needs to point to a PyArena, used for allocating AST nodes and
-other things.  And maybe some flag indicating there's an allocation
-error and a convention to bail if there is one.
+The Parser needs to point to a PyArena, used for allocating AST nodes and
+other things.
 
 - tok: Pointer to tokenizer, CPython's struct tok_state
 - tokens: Pointer to array of Token pointers
@@ -54,44 +55,44 @@ structure of the Compare AST Object.
 Helper Functions
 ----------------
 
-###### `asdl_seq *singleton_seq(Parser *, void *);`
-Creates a single-element asdl_seq* that contains a
+###### `asdl_seq *singleton_seq(Parser *p, void *a)`
+Creates a single-element `asdl_seq *` that contains `a`.
 
-###### `asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);`
-Creates a copy of seq and prepends a to it
+###### `asdl_seq *seq_insert_in_front(Parser *p, void *a, asdl_seq *seq)`
+Creates a copy of `seq` and prepends `a` to it.
 
-###### `asdl_seq *seq_flatten(Parser *, asdl_seq *);`
-Flattens an asdl_seq* of asdl_seq*s
+###### `asdl_seq *seq_flatten(Parser *p, asdl_seq *seq)`
+Flattens an `asdl_seq *` of `asdl_seq *`s.
 
-###### `expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty)`
-Creates a new name of the form <first_name>.<second_name>
+###### `expr_ty join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)`
+Creates a new name of the form <first_name>.<second_name>.
 
-###### `int seq_count_dots(asdl_seq *);`
-Counts the total number of dots in seq's tokens
+###### `int seq_count_dots(asdl_seq *seq)`
+Counts the total number of dots in `seq`s tokens.
 
-###### `alias_ty alias_for_star(Parser *);`
-Creates an alias with '*' as the identifier name
+###### `alias_ty alias_for_star(Parser *p)`
+Creates an alias with `*` as the identifier name.
 
-###### `void *seq_get_tail(void *, asdl_seq *);`
-Returns the last element of seq or previous if seq is empty
+###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
+Returns the last element of `seq` or `previous` if `seq` is empty.
 
-###### `PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);`
-Constructs a PegenAlias
+###### `PegenAlias *pegen_alias(alias_ty alias, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)`
+Constructs a `PegenAlias`.
 
-###### `asdl_seq *extract_orig_aliases(Parser *, asdl_seq *);`
-Extracts alias_ty's from an asdl_seq* of PegenAlias*s
+###### `asdl_seq *extract_orig_aliases(Parser *p, asdl_seq *seq)`
+Extracts `alias_ty`s from an `asdl_seq *` of `PegenAlias *`s.
 
-###### `asdl_seq *map_names_to_ids(Parser *, asdl_seq *);`
-Creates a new asdl_seq* with the identifiers of all the names in seq
+###### `asdl_seq *map_names_to_ids(Parser *p, asdl_seq *seq)`
+Creates a new `asdl_seq *` with the identifiers of all the names in `seq`.
 
-###### `CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);`
-Constructs a CmpopExprPair
+###### `CmpopExprPair *cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)`
+Constructs a `CmpopExprPair`.
 
-###### `expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);`
-Wrapper for _Py_Compare, so that the call in the grammar stays concise
+###### `expr_ty Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)`
+Wrapper for `_Py_Compare`, so that the call in the grammar stays concise.
 
-###### `expr_ty store_name(Parser *, expr_ty);`
-Accepts a load name and creates an identical store name
+###### `expr_ty store_name(Parser *p, expr_ty load_name)`
+Accepts a load name and creates an identical store name.
 
-###### `asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);`
-Creates an asdl_seq* where all the elements have been changed to have del as context
+###### `asdl_seq *map_targets_to_del_names(Parser *p, asdl_seq *seq)`
+Creates an `asdl_seq *` where all the elements have been changed to have del as context.
