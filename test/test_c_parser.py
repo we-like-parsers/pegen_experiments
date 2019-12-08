@@ -211,7 +211,8 @@ def test_if_stmt_action(tmp_path: PurePath) -> None:
     verify_ast_generation(grammar, stmt, tmp_path)
 
 
-def test_same_name_different_types(tmp_path: PurePath) -> None:
+@pytest.mark.parametrize("stmt", ["from a import b as c", "from . import a as b"])
+def test_same_name_different_types(stmt: str, tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=import_from+ NEWLINE ENDMARKER { Module(a, NULL, p->arena)}
     import_from[stmt_ty]: ( a='from' !'import' c=simple_name 'import' d=import_as_names_from {
@@ -223,10 +224,7 @@ def test_same_name_different_types(tmp_path: PurePath) -> None:
     import_as_names_from[asdl_seq*]: a=','.import_as_name_from+ { a }
     import_as_name_from[alias_ty]: a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
     """
-    stmt1 = "from a import b as c"
-    stmt2 = "from . import a as b"
-    for stmt in (stmt1, stmt2):
-        verify_ast_generation(grammar, stmt, tmp_path)
+    verify_ast_generation(grammar, stmt, tmp_path)
 
 
 def test_with_stmt_with_paren(tmp_path: PurePath) -> None:

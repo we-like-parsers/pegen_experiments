@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import os
 import pathlib
 import sys
 import textwrap
@@ -76,6 +77,9 @@ def generate_parser_c_extension(
     Returns a module object with a parse_string() method.
     TODO: express that using a Protocol.
     """
+    # Check that the working directory is empty: reusing non-empty temporary
+    # directories when generating extensions can lead to segmentation faults.
+    assert not os.listdir(path)
     source = path / "parse.c"
     with open(source, "w") as file:
         genr = CParserGenerator(grammar, file, debug=debug)
