@@ -438,6 +438,7 @@ run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int m
     return result;
 }
 
+/* Creates a single-element asdl_seq* that contains a */
 asdl_seq *
 singleton_seq(Parser *p, void *a)
 {
@@ -449,6 +450,7 @@ singleton_seq(Parser *p, void *a)
     return seq;
 }
 
+/* Creates a copy of seq and prepends a to it */
 asdl_seq *
 seq_insert_in_front(Parser *p, void *a, asdl_seq *seq)
 {
@@ -469,7 +471,7 @@ seq_insert_in_front(Parser *p, void *a, asdl_seq *seq)
 }
 
 int
-get_flattened_seq_size(asdl_seq *seqs)
+_get_flattened_seq_size(asdl_seq *seqs)
 {
     int size = 0;
     for (int i = 0, l = asdl_seq_LEN(seqs); i < l; i++) {
@@ -485,10 +487,11 @@ get_flattened_seq_size(asdl_seq *seqs)
     return size;
 }
 
+/* Flattens an asdl_seq* of asdl_seq*s */
 asdl_seq *
 seq_flatten(Parser *p, asdl_seq *seqs)
 {
-    int flattened_seq_size = get_flattened_seq_size(seqs);
+    int flattened_seq_size = _get_flattened_seq_size(seqs);
     asdl_seq *flattened_seq = _Py_asdl_seq_new(flattened_seq_size, p->arena);
     if (!flattened_seq) {
         return NULL;
@@ -512,6 +515,7 @@ seq_flatten(Parser *p, asdl_seq *seqs)
     return flattened_seq;
 }
 
+/* Creates a new name of the form <first_name>.<second_name> */
 expr_ty
 join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
 {
@@ -570,6 +574,7 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
                 p->arena);
 }
 
+/* Counts the total number of dots in seq's tokens */
 int
 seq_count_dots(asdl_seq *seq)
 {
@@ -588,6 +593,7 @@ seq_count_dots(asdl_seq *seq)
     return number_of_dots;
 }
 
+/* Creates an alias with '*' as the identifier name */
 alias_ty
 alias_for_star(Parser *p)
 {
@@ -601,6 +607,7 @@ alias_for_star(Parser *p)
     return alias(str, NULL, p->arena);
 }
 
+/* Returns the last element of seq or previous if seq is empty */
 void *
 seq_get_tail(void *previous, asdl_seq *seq)
 {
@@ -610,6 +617,7 @@ seq_get_tail(void *previous, asdl_seq *seq)
     return asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
 }
 
+/* Constructs a PegenAlias */
 PegenAlias *
 pegen_alias(alias_ty alias,
             int lineno,
@@ -630,6 +638,7 @@ pegen_alias(alias_ty alias,
     return a;
 }
 
+/* Extracts alias_ty's from an asdl_seq* of PegenAlias*s */
 asdl_seq *
 extract_orig_aliases(Parser *p, asdl_seq *seq)
 {
@@ -642,6 +651,7 @@ extract_orig_aliases(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Creates a new asdl_seq* with the identifiers of all the names in seq */
 asdl_seq *
 map_names_to_ids(Parser *p, asdl_seq *seq)
 {
@@ -654,6 +664,7 @@ map_names_to_ids(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Constructs a CmpopExprPair */
 CmpopExprPair *
 cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)
 {
@@ -667,7 +678,7 @@ cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)
 }
 
 asdl_int_seq *
-get_cmpops(Parser *p, asdl_seq *seq)
+_get_cmpops(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_int_seq *new_seq = _Py_asdl_int_seq_new(len, p->arena);
@@ -679,7 +690,7 @@ get_cmpops(Parser *p, asdl_seq *seq)
 }
 
 asdl_seq *
-get_exprs(Parser *p, asdl_seq *seq)
+_get_exprs(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
@@ -690,15 +701,17 @@ get_exprs(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Wrapper for _Py_Compare, so that the call in the grammar stays concise */
 expr_ty
 Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
 {
     return _Py_Compare(expr,
-                       get_cmpops(p, pairs),
-                       get_exprs(p, pairs),
+                       _get_cmpops(p, pairs),
+                       _get_exprs(p, pairs),
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
+/* Accepts a load name and creates an identical store name */
 expr_ty
 store_name(Parser *p, expr_ty load_name)
 {
@@ -711,13 +724,14 @@ store_name(Parser *p, expr_ty load_name)
 }
 
 expr_ty
-del_name(Parser *p, expr_ty load_name)
+_del_name(Parser *p, expr_ty load_name)
 {
     return _Py_Name(load_name->v.Name.id,
                     Del,
                     EXTRA_EXPR(load_name, load_name));
 }
 
+/* Creates an asdl_seq* where all the elements have been changed to have del as context */
 asdl_seq *
 map_targets_to_del_names(Parser *p, asdl_seq *seq)
 {
@@ -727,7 +741,7 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
         expr_ty e = asdl_seq_GET(seq, i);
         assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
         if (e->kind == Name_kind) {
-            asdl_seq_SET(new_seq, i, del_name(p, e));
+            asdl_seq_SET(new_seq, i, _del_name(p, e));
         } else if (e->kind == Tuple_kind) {
             asdl_seq_SET(new_seq, i, _Py_Tuple(map_targets_to_del_names(p, e->v.Tuple.elts),
                                                Del,
