@@ -85,8 +85,21 @@ Succeed if e can be parsed, without consuming any input.
 ##### `!e`
 Fail if e can be parsed, without consuming any input.
 
+An example taken from `data/simpy.gram` specifies that a primary
+consists of an atom, which is not followed by a `.` or a `(` or
+a `[`:
+```
+primary: atom !'.' !'(' !'['
+```
+
 ##### `~e`
 Commit to the current alternative, even if it fails to parse.
+```
+rule_name: '(' ~ some_rule ')' | some_alt
+```
+In this example, if a left parenthesis is parsed, then the other
+alternative won't be considered, even if some_rule or ')' fail
+to be parsed.
 
 
 ### Return Value
