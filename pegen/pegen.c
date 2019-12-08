@@ -757,3 +757,192 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     }
     return new_seq;
 }
+
+NameDefaultPair *
+name_default_pair(Parser *p, arg_ty arg, expr_ty value)
+{
+    NameDefaultPair *a = PyArena_Malloc(p->arena, sizeof(NameDefaultPair));
+    if (!a) {
+        return NULL;
+    }
+    a->arg = arg;
+    a->value = value;
+    return a;
+}
+
+SlashWithDefault *
+slash_with_default(Parser *p, asdl_seq *plain_names, asdl_seq *names_with_defaults)
+{
+    SlashWithDefault *a = PyArena_Malloc(p->arena, sizeof(SlashWithDefault));
+    if (!a) {
+        return NULL;
+    }
+    a->plain_names = plain_names;
+    a->names_with_defaults = names_with_defaults;
+    return a;
+}
+
+StarEtc *
+star_etc(Parser *p, arg_ty vararg, asdl_seq *kwonlyargs, arg_ty kwarg)
+{
+    StarEtc *a = PyArena_Malloc(p->arena, sizeof(StarEtc));
+    if (!a) {
+        return NULL;
+    }
+    a->vararg = vararg;
+    a->kwonlyargs = kwonlyargs;
+    a->kwarg = kwarg;
+    return a;
+}
+
+asdl_seq *
+_join_seqs(Parser *p, asdl_seq *a, asdl_seq *b)
+{
+    int first_len = asdl_seq_LEN(a);
+    int second_len = asdl_seq_LEN(b);
+    asdl_seq *new_seq = _Py_asdl_seq_new(first_len + second_len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+
+    int k = 0;
+    for (int i = 0; i < first_len; i++) {
+        asdl_seq_SET(new_seq, k++, asdl_seq_GET(a, i));
+    }
+    for (int i = 0; i < second_len; i++) {
+        asdl_seq_SET(new_seq, k++, asdl_seq_GET(b, i));
+    }
+
+    return new_seq;
+}
+
+asdl_seq *
+_get_names(Parser *p, asdl_seq *names_with_defaults)
+{
+    int len = asdl_seq_LEN(names_with_defaults);
+    asdl_seq *seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        NameDefaultPair *pair = asdl_seq_GET(names_with_defaults, i);
+        asdl_seq_SET(seq, i, pair->arg);
+    }
+    return seq;
+}
+
+asdl_seq *
+_get_defaults(Parser *p, asdl_seq *names_with_defaults)
+{
+    int len = asdl_seq_LEN(names_with_defaults);
+    asdl_seq *seq = _Py_asdl_seq_new(len, p->arena);
+    for (int i = 0; i < len; i++) {
+        NameDefaultPair *pair = asdl_seq_GET(names_with_defaults, i);
+        asdl_seq_SET(seq, i, pair->value);
+    }
+    return seq;
+}
+
+arguments_ty
+make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *slash_with_default,
+               asdl_seq *plain_names, asdl_seq *names_with_default, StarEtc *star_etc)
+{
+    asdl_seq *posonlyargs;
+    if (slash_without_default != NULL) {
+        posonlyargs = slash_without_default;
+    } else if (slash_with_default != NULL) {
+        posonlyargs = _join_seqs(p,
+                                 slash_with_default->plain_names,
+                                 _get_names(p, slash_with_default->names_with_defaults));
+    } else {
+        posonlyargs = _Py_asdl_seq_new(0, p->arena);
+        if (!posonlyargs)
+            return NULL;
+    }
+
+    asdl_seq *posargs;
+    if (plain_names != NULL && names_with_default != NULL) {
+        posargs = _join_seqs(p,
+                             plain_names,
+                             _get_names(p, names_with_default));
+    } else if (plain_names == NULL && names_with_default != NULL) {
+        posargs = _get_names(p, names_with_default);
+    } else if (plain_names != NULL && names_with_default == NULL) {
+        posargs = plain_names;
+    } else {
+        posargs = _Py_asdl_seq_new(0, p->arena);
+        if (!posargs)
+            return NULL;
+    }
+
+    asdl_seq *posdefaults;
+    if (slash_with_default != NULL && names_with_default != NULL) {
+        posdefaults = _join_seqs(p,
+                                 _get_defaults(p, slash_with_default->names_with_defaults),
+                                 _get_defaults(p, names_with_default));
+    } else if (slash_with_default == NULL && names_with_default != NULL) {
+        posdefaults = _get_defaults(p, names_with_default);
+    } else if (slash_with_default != NULL && names_with_default == NULL) {
+        posdefaults = _get_defaults(p, slash_with_default->names_with_defaults);
+    } else {
+        posdefaults = _Py_asdl_seq_new(0, p->arena);
+        if (!posdefaults)
+            return NULL;
+    }
+
+    arg_ty vararg = NULL;
+    if (star_etc != NULL && star_etc->vararg != NULL) {
+        vararg = star_etc->vararg;
+    }
+
+    asdl_seq *kwonlyargs;
+    if (star_etc != NULL && star_etc->kwonlyargs != NULL) {
+        kwonlyargs = _get_names(p, star_etc->kwonlyargs);
+    } else {
+        kwonlyargs = _Py_asdl_seq_new(0, p->arena);
+        if (!kwonlyargs)
+            return NULL;
+    }
+
+    asdl_seq *kwdefaults;
+    if (star_etc != NULL && star_etc->kwonlyargs != NULL) {
+        kwdefaults = _get_defaults(p, star_etc->kwonlyargs);
+    } else {
+        kwdefaults = _Py_asdl_seq_new(0, p->arena);
+        if (!kwdefaults)
+            return NULL;
+    }
+
+    arg_ty kwarg = NULL;
+    if (star_etc != NULL && star_etc->kwarg != NULL) {
+        kwarg = star_etc->kwarg;
+    }
+
+    return _Py_arguments(posonlyargs, posargs, vararg, kwonlyargs, kwdefaults,
+                         kwarg, posdefaults, p->arena);
+}
+
+arguments_ty
+empty_arguments(Parser *p)
+{
+    asdl_seq *posonlyargs = _Py_asdl_seq_new(0, p->arena);
+    if (!posonlyargs) {
+        return NULL;
+    }
+    asdl_seq *posargs = _Py_asdl_seq_new(0, p->arena);
+    if (!posargs) {
+        return NULL;
+    }
+    asdl_seq *posdefaults = _Py_asdl_seq_new(0, p->arena);
+    if (!posdefaults) {
+        return NULL;
+    }
+    asdl_seq *kwonlyargs = _Py_asdl_seq_new(0, p->arena);
+    if (!kwonlyargs) {
+        return NULL;
+    }
+    asdl_seq *kwdefaults = _Py_asdl_seq_new(0, p->arena);
+    if (!kwdefaults) {
+        return NULL;
+    }
+
+    return _Py_arguments(posonlyargs, posargs, NULL, kwonlyargs,
+                         kwdefaults, NULL, kwdefaults, p->arena);
+}

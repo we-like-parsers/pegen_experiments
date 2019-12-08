@@ -165,28 +165,53 @@ raise_stmt[stmt_ty]:
     | a='raise' b=expression { _Py_Raise(b, NULL, EXTRA(a, token_type, b, expr_type)) }
     | a='raise' { _Py_Raise(NULL, NULL, EXTRA(a, token_type, a, token_type)) }
 
-function_def: [decorators] [ASYNC] 'def' NAME '(' [parameters] ')' ['->' annotation] ':' block
+function_def[stmt_ty]:
+    | d=[decorators] s=ASYNC 'def' n=NAME '(' params=parameters ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id, params, b, d, a, NULL,
+                             EXTRA(s, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | d=[decorators] s=ASYNC 'def' n=NAME '(' ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id, empty_arguments(p), b, d, a, NULL,
+                             EXTRA(s, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | d=[decorators] s='def' n=NAME '(' params=parameters ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_FunctionDef(((expr_ty) n)->v.Name.id, params, b, d, a, NULL,
+                        EXTRA(s, token_type, seq_get_tail(NULL, b), stmt_type)) }
+    | d=[decorators] s='def' n=NAME '(' ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_FunctionDef(((expr_ty) n)->v.Name.id, empty_arguments(p), b, d, a, NULL,
+                        EXTRA(s, token_type, seq_get_tail(NULL, b), stmt_type)) }
 
-parameters: ( slash_without_default [',' plain_names] [',' names_with_default] [',' [star_etc]]
-            | slash_with_default [',' names_with_default] [',' [star_etc]]
-            | plain_names [',' names_with_default] [',' [star_etc]]
-            | names_with_default [',' [star_etc]]
-            | star_etc
-            )
-slash_without_default: plain_names ',' '/'
-slash_with_default: [plain_names ','] names_with_default ',' '/'
-names_with_default: ','.name_with_default+
-plain_names: ','.(plain_name !'=')+
-star_etc: ( '*' NAME [':' annotation] (',' plain_name ['=' expression])* [',' kwds] [',']
-          | '*' (',' plain_name ['=' expression])+ [',' kwds] [',']
-          | kwds [',']
-          )
-name_with_default: plain_name '=' expression
-plain_name: NAME [':' annotation]
-kwds: '**' NAME [':' annotation]
-annotation: expression
+parameters[arguments_ty]:
+    | a=slash_without_default b=[',' x=plain_names { x }] c=[',' y=names_with_default { y }] d=[',' z=[star_etc] { z }] {
+        make_arguments(p, a, NULL, b, c, d) }
+    | a=slash_with_default b=[',' y=names_with_default { y }] c=[',' z=[star_etc] { z }] {
+        make_arguments(p, NULL, a, NULL, b, c) }
+    | a=plain_names b=[',' y=names_with_default { y }] c=[',' z=[star_etc] { z }] {
+        make_arguments(p, NULL, NULL, a, b, c) }
+    | a=names_with_default b=[',' z=[star_etc] { z }] { make_arguments(p, NULL, NULL, NULL, a, b)}
+    | a=star_etc { make_arguments(p, NULL, NULL, NULL, NULL, a) }
+slash_without_default[asdl_seq*]: a=plain_names ',' '/' { a }
+slash_with_default[SlashWithDefault*]: a=[n=plain_names ',' { n }] b=names_with_default ',' '/' {
+    slash_with_default(p, a, b) }
+star_etc[StarEtc*]:
+    | '*' a=plain_name b=name_with_optional_default* c=[',' d=kwds { d }] [','] {
+        star_etc(p, a, b, c) }
+    | '*' b=name_with_optional_default+ c=[',' d=kwds { d }] [','] {
+        star_etc(p, NULL, b, c) }
+    | a=kwds [','] { star_etc(p, NULL, NULL, a) }
+name_with_optional_default[NameDefaultPair*]:
+    | ',' a=plain_name b=['=' e=expression { e }] { name_default_pair(p, a, b) }
+names_with_default[asdl_seq*]: a=','.name_with_default+ { a }
+name_with_default[NameDefaultPair*]:
+    | n=plain_name '=' e=expression { name_default_pair(p, n, e) }
+plain_names[asdl_seq*]: a=','.(plain_name !'=')+ { a }
+plain_name[arg_ty]:
+    | a=NAME ':' b=annotation { _Py_arg(((expr_ty) a)->v.Name.id, b, NULL, EXTRA_EXPR(a, b)) }
+    | a=NAME { _Py_arg(((expr_ty) a)->v.Name.id, NULL, NULL, EXTRA_EXPR(a, a)) }
+kwds[arg_ty]:
+    | '**' a=NAME ':' b=annotation { _Py_arg(((expr_ty) a)->v.Name.id, b, NULL, EXTRA_EXPR(a, b)) }
+    | '**' a=NAME { _Py_arg(((expr_ty) a)->v.Name.id, NULL, NULL, EXTRA_EXPR(a, a)) }
+annotation[expr_ty]: expression
 
-decorators: ('@' factor NEWLINE)+
+decorators[asdl_seq*]: a=('@' f=factor NEWLINE { f })+ { a }
 
 class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
