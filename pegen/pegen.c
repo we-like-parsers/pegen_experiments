@@ -644,6 +644,9 @@ extract_orig_aliases(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
     for (int i = 0; i < len; i++) {
         PegenAlias *a = asdl_seq_GET(seq, i);
         asdl_seq_SET(new_seq, i, a->alias);
@@ -657,6 +660,9 @@ map_names_to_ids(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
     for (int i = 0; i < len; i++) {
         expr_ty e = asdl_seq_GET(seq, i);
         asdl_seq_SET(new_seq, i, e->v.Name.id);
@@ -682,6 +688,9 @@ _get_cmpops(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_int_seq *new_seq = _Py_asdl_int_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
     for (int i = 0; i < len; i++) {
         CmpopExprPair *pair = asdl_seq_GET(seq, i);
         asdl_seq_SET(new_seq, i, pair->cmpop);
@@ -694,6 +703,9 @@ _get_exprs(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
     for (int i = 0; i < len; i++) {
         CmpopExprPair *pair = asdl_seq_GET(seq, i);
         asdl_seq_SET(new_seq, i, pair->expr);
@@ -737,6 +749,9 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
 {
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
     for (int i = 0; i < len; i++) {
         expr_ty e = asdl_seq_GET(seq, i);
         assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
