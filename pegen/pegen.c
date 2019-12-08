@@ -559,6 +559,9 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
                                          PyBytes_GET_SIZE(str),
                                          NULL);
     Py_DECREF(str);
+    if (!uni) {
+        return NULL;
+    }
     PyUnicode_InternInPlace(&uni);
     if (PyArena_AddPyObject(p->arena, uni) < 0) {
         Py_DECREF(uni);
