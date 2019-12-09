@@ -36,6 +36,10 @@ typedef struct {
     expr_ty expr;
 } CmpopExprPair;
 
+typedef struct {
+    int kind;
+} AugOperator;
+
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
@@ -74,6 +78,7 @@ asdl_seq *seq_flatten(Parser *, asdl_seq *);
 expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);
 int seq_count_dots(asdl_seq *);
 alias_ty alias_for_star(Parser *);
+void *seq_get_head(void *, asdl_seq *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *extract_orig_aliases(Parser *, asdl_seq *);
@@ -82,6 +87,9 @@ CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty store_name(Parser *, expr_ty);
 asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
+int _set_context(expr_ty, expr_context_ty);
+AugOperator* augoperator(Parser*, operator_ty type);
+#define SET_CONTEXT(a,b) (_set_context(a, b), a)
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }

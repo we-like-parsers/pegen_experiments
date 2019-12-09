@@ -2,6 +2,22 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+int _set_context(expr_ty e, expr_context_ty ctx)
+{
+    // TODO: Check for valid names and the rest
+    // of the possibilities in the e->kind enum.
+    // Also, research a way to propagate errors.
+    switch (e->kind) {
+        case Name_kind:
+            e->v.Name.ctx = ctx;
+        default: {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static const char *
 token_name(int type)
 {
@@ -610,6 +626,16 @@ alias_for_star(Parser *p)
     return alias(str, NULL, p->arena);
 }
 
+/* Returns the first element of seq or previous if seq is empty */
+void *
+seq_get_head(void *previous, asdl_seq *seq)
+{
+    if (asdl_seq_LEN(seq) == 0) {
+        return previous;
+    }
+    return asdl_seq_GET(seq, 0);
+}
+
 /* Returns the last element of seq or previous if seq is empty */
 void *
 seq_get_tail(void *previous, asdl_seq *seq)
@@ -771,4 +797,15 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
         }
     }
     return new_seq;
+}
+
+
+AugOperator* augoperator(Parser* p, operator_ty kind)
+{
+    AugOperator *a = PyArena_Malloc(p->arena, sizeof(AugOperator));
+    if (!a) {
+        return NULL;
+    }
+    a->kind = kind;
+    return a;
 }
