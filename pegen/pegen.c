@@ -783,8 +783,9 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
-
-AugOperator* augoperator(Parser* p, operator_ty kind)
+/* Encapsulates the value of an operator_ty into an AugOperator struct */
+AugOperator *
+augoperator(Parser* p, operator_ty kind)
 {
     AugOperator *a = PyArena_Malloc(p->arena, sizeof(AugOperator));
     if (!a) {
