@@ -51,6 +51,34 @@ structure of the Compare AST Object.
 - cmpop: cmpop_ty, The comparison operator
 - expr: expr_ty, The expression that gets compared
 
+##### NameDefaultPair
+
+Needed so that rules that implement function parameters, can store
+names and their default values.
+
+- arg: arg_ty, The argument name
+- value: expr_ty, arg's default value
+
+##### SlashWithoutDefault
+
+This is used by the `slash_without_default` rule, which parses two
+different kinds of positional only arguments and stores those in this
+struct.
+
+- plain_names: `asdl_seq *` of `arg_ty`s or NULL, Positional only
+  arguments with no default values
+- names_with_defaults: `asdl_seq *` of `NameDefaultsPair`s, Positional
+  only arguments with default values
+
+##### StarEtc
+
+This is used by the `star_etc` rules, whose role is to parse the vararg,
+the keyword only arguments and the kwarg.
+
+- vararg: `arg_ty` or NULL, The vararg
+- kwonlyargs: `asdl_seq *` of `NameDefaultPair`s or NULL, Keyword only arguments
+- kwarg: `arg_ty` or NULL, The kwarg
+
 
 Helper Functions
 ----------------
@@ -96,3 +124,18 @@ Accepts a load name and creates an identical store name.
 
 ###### `asdl_seq *map_targets_to_del_names(Parser *p, asdl_seq *seq)`
 Creates an `asdl_seq *` where all the elements have been changed to have del as context.
+
+###### `NameDefaultPair *name_default_pair(Parser *p, arg_ty arg, expr_ty value)`
+Constructs a `NameDefaultPair`.
+
+###### `SlashWithDefault *slash_with_default(Parser *p, asdl_seq *plain_names, asdl_seq *names_with_defaults)`
+Constructs a `SlashWithDefault`.
+
+###### `StarEtc *star_etc(Parser *p, arg_ty vararg, asdl_seq *kwonlyargs, arg_ty kwarg)`
+Constructs a `StarEtc`.
+
+###### `arguments_ty make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *slash_with_default, asdl_seq *plain_names, asdl_seq *names_with_default, StarEtc *star_etc)`
+Constructs an `arguments_ty` object out of all the parsed constructs in the `parameters` rule.
+
+###### `arguments_ty empty_arguments(Parser *p)`
+Constructs an empty `arguments_ty` object, that gets used when a function accepts no arguments.

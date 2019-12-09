@@ -758,6 +758,7 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Constructs a NameDefaultPair */
 NameDefaultPair *
 name_default_pair(Parser *p, arg_ty arg, expr_ty value)
 {
@@ -770,6 +771,7 @@ name_default_pair(Parser *p, arg_ty arg, expr_ty value)
     return a;
 }
 
+/* Constructs a SlashWithDefault */
 SlashWithDefault *
 slash_with_default(Parser *p, asdl_seq *plain_names, asdl_seq *names_with_defaults)
 {
@@ -782,6 +784,7 @@ slash_with_default(Parser *p, asdl_seq *plain_names, asdl_seq *names_with_defaul
     return a;
 }
 
+/* Constructs a StarEtc */
 StarEtc *
 star_etc(Parser *p, arg_ty vararg, asdl_seq *kwonlyargs, arg_ty kwarg)
 {
@@ -846,6 +849,7 @@ _get_defaults(Parser *p, asdl_seq *names_with_defaults)
     return seq;
 }
 
+/* Constructs an arguments_ty object out of all the parsed constructs in the parameters rule */
 arguments_ty
 make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *slash_with_default,
                asdl_seq *plain_names, asdl_seq *names_with_default, StarEtc *star_etc)
@@ -959,6 +963,7 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
                          kwarg, posdefaults, p->arena);
 }
 
+/* Constructs an empty arguments_ty object, that gets used when a function accepts no arguments. */
 arguments_ty
 empty_arguments(Parser *p)
 {

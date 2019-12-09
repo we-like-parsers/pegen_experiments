@@ -43,12 +43,12 @@ typedef struct {
 
 typedef struct {
     asdl_seq *plain_names;
-    asdl_seq *names_with_defaults; // asdl_seq of NameDefaultsPair's
+    asdl_seq *names_with_defaults; // asdl_seq* of NameDefaultsPair's
 } SlashWithDefault;
 
 typedef struct {
     arg_ty vararg;
-    asdl_seq *kwonlyargs; // asdl_seq of NameDefaultsPair's
+    asdl_seq *kwonlyargs; // asdl_seq* of NameDefaultsPair's
     arg_ty kwarg;
 } StarEtc;
 
