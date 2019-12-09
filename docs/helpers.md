@@ -73,6 +73,9 @@ Counts the total number of dots in `seq`s tokens.
 ###### `alias_ty alias_for_star(Parser *p)`
 Creates an alias with `*` as the identifier name.
 
+###### `void *seq_get_head(void *previous, asdl_seq *seq)`
+Returns the first element of `seq` or `previous` if `seq` is empty.
+
 ###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
 Returns the last element of `seq` or `previous` if `seq` is empty.
 
