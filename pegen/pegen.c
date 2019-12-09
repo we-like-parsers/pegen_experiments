@@ -2,22 +2,6 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
-int _set_context(expr_ty e, expr_context_ty ctx)
-{
-    // TODO: Check for valid names and the rest
-    // of the possibilities in the e->kind enum.
-    // Also, research a way to propagate errors.
-    switch (e->kind) {
-        case Name_kind:
-            e->v.Name.ctx = ctx;
-        default: {
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
 static const char *
 token_name(int type)
 {

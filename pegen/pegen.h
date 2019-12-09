@@ -69,7 +69,6 @@ void *CONSTRUCTOR(Parser *p, ...);
                                                           tail_type_func##_tailline(tail), \
                                                           tail_type_func##_tailcol(tail), \
                                                           p->arena
-#define SET_CONTEXT(a,b) (_set_context(a, b), a)
 
 PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);
 PyObject *run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode);
@@ -88,7 +87,6 @@ CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty store_name(Parser *, expr_ty);
 asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
-int _set_context(expr_ty, expr_context_ty);
 AugOperator* augoperator(Parser*, operator_ty type);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
