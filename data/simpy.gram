@@ -345,7 +345,7 @@ atom[expr_ty]:
     | NAME
     | a=STRING+ { asdl_seq_GET(a, 0) }
     | NUMBER
-    | '...'
+    | a='...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA(a, token_type, a, token_type)) }
 list: '[' [star_full_expressions] ']'
 listcomp: '[' full_expression for_if_clauses ']'
 tuple: '(' [star_full_expression ',' [star_full_expressions]] ')'
