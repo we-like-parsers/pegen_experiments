@@ -239,10 +239,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         mode = int(self.rules["start"].type == "mod_ty")
         self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
-    def _set_up_rule_memoization(self, type, node):
+    def _set_up_rule_memoization(self, result_type, node):
         self.print("{")
         with self.indent():
-            self.print(f"{type} res = NULL;")
+            self.print(f"{result_type} res = NULL;")
             self.print(f"if (is_memoized(p, {node.name}_type, &res))")
             with self.indent():
                 self.print("return res;")
@@ -264,21 +264,25 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("p->mark = resmark;")
             self.print("return res;")
         self.print("}")
-        self.print(f"static {type}")
+        self.print(f"static {result_type}")
         self.print(f"{node.name}_raw(Parser *p)")
 
-    def _handle_default_rule_body(self, node, rhs, type):
+    def _handle_default_rule_body(self, node, rhs, result_type):
         memoize = not node.left_recursive
 
         with self.indent():
-            self.print(f"{type} res = NULL;")
+            self.print(f"{result_type} res = NULL;")
             if memoize:
                 self.print(f"if (is_memoized(p, {node.name}_type, &res))")
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
-            self.visit(rhs, is_loop=False, is_gather=node.is_gather(),
-                       rulename=node.name if memoize else None)
+            self.visit(
+                rhs,
+                is_loop=False,
+                is_gather=node.is_gather(),
+                rulename=node.name if memoize else None,
+            )
             if self.debug:
                 self.print(f'fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark);')
             self.print("res = NULL;")
@@ -302,8 +306,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("void **children = PyMem_Malloc(0);")
             self.out_of_memory_return(f"!children", "NULL")
             self.print("ssize_t n = 0;")
-            self.visit(rhs, is_loop=True, is_gather=node.is_gather(),
-                       rulename=node.name if memoize else None)
+            self.visit(
+                rhs,
+                is_loop=True,
+                is_gather=node.is_gather(),
+                rulename=node.name if memoize else None,
+            )
             if is_repeat1:
                 self.print("if (n == 0) {")
                 with self.indent():
@@ -323,28 +331,28 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         is_gather = node.is_gather()
         rhs = node.flatten()
         if is_loop or is_gather:
-            type = "asdl_seq *"
+            result_type = "asdl_seq *"
         elif node.type:
-            type = node.type
+            result_type = node.type
         else:
-            type = "void *"
+            result_type = "void *"
 
         for line in str(node).splitlines():
             self.print(f"// {line}")
         if node.left_recursive and node.leader:
-            self.print(f"static {type} {node.name}_raw(Parser *);")
+            self.print(f"static {result_type} {node.name}_raw(Parser *);")
 
-        self.print(f"static {type}")
+        self.print(f"static {result_type}")
         self.print(f"{node.name}_rule(Parser *p)")
 
         if node.left_recursive and node.leader:
-            self._set_up_rule_memoization(type, node)
+            self._set_up_rule_memoization(result_type, node)
 
         self.print("{")
         if is_loop:
             self._handle_loop_rule_body(node, rhs)
         else:
-            self._handle_default_rule_body(node, rhs, type)
+            self._handle_default_rule_body(node, rhs, result_type)
         self.print("}")
 
     def visit_NamedItem(self, node: NamedItem, names: List[str]) -> None:
