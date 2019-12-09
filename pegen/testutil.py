@@ -77,8 +77,10 @@ def generate_parser_c_extension(
     Returns a module object with a parse_string() method.
     TODO: express that using a Protocol.
     """
-    # Check that the working directory is empty: reusing non-empty temporary
+    # Make sure that the working directory is empty: reusing non-empty temporary
     # directories when generating extensions can lead to segmentation faults.
+    # Check issue #95 (https://github.com/gvanrossum/pegen/issues/95) for more
+    # context.
     assert not os.listdir(path)
     source = path / "parse.c"
     with open(source, "w") as file:
