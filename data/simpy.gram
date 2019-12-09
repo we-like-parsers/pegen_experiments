@@ -31,17 +31,9 @@ assignment:
     | a=target ':' b=expression {
          _Py_AnnAssign(SET_CONTEXT(a, Store), b, NULL, 1,
          EXTRA(a, expr_type, b, expr_type)) }
-    | a='='.star_targets+ '=' b=yield_expr {
+    | a='='.star_targets+ '=' b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA(seq_get_head(NULL, a), expr_type, b, expr_type)) }
-    | a='='.star_targets+ '=' b=expressions {
-         _Py_Assign(a, b, NULL, EXTRA(seq_get_head(NULL, a), expr_type, b, expr_type)) }
-    | a=target '=' b=yield_expression {
-         _Py_Assign(singleton_seq(p, SET_CONTEXT(a, Store)), b, NULL,
-         EXTRA(a, expr_type, b, expr_type)) }
-    | a=target b=augassign c=yield_expr {
-         _Py_AugAssign(SET_CONTEXT(a, Store), b->kind, c,
-         EXTRA(a, expr_type, c, expr_type)) }
-    | a=target b=augassign c=expressions {
+    | a=target b=augassign c=(yield_expr | expressions) {
          _Py_AugAssign(SET_CONTEXT(a, Store), b->kind, c,
          EXTRA(a, expr_type, c, expr_type)) }
 
