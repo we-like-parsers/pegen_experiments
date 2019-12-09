@@ -239,7 +239,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         mode = int(self.rules["start"].type == "mod_ty")
         self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
-    def _set_up_rule_memoization(self, result_type, node):
+    def _set_up_rule_memoization(self, node: Rule, result_type: str) -> None:
         self.print("{")
         with self.indent():
             self.print(f"{result_type} res = NULL;")
@@ -267,7 +267,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"static {result_type}")
         self.print(f"{node.name}_raw(Parser *p)")
 
-    def _handle_default_rule_body(self, node, rhs, result_type):
+    def _handle_default_rule_body(self, node: Rule, rhs: Rhs, result_type: str) -> None:
         memoize = not node.left_recursive
 
         with self.indent():
@@ -292,7 +292,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print(f"insert_memo(p, mark, {node.name}_type, res);")
             self.print("return res;")
 
-    def _handle_loop_rule_body(self, node, rhs):
+    def _handle_loop_rule_body(self, node: Rule, rhs: Rhs) -> None:
         memoize = not node.left_recursive
         is_repeat1 = node.name.startswith("_loop1")
 
@@ -346,7 +346,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"{node.name}_rule(Parser *p)")
 
         if node.left_recursive and node.leader:
-            self._set_up_rule_memoization(result_type, node)
+            self._set_up_rule_memoization(node, result_type)
 
         self.print("{")
         if is_loop:
