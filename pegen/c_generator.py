@@ -239,11 +239,88 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         mode = int(self.rules["start"].type == "mod_ty")
         self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
+    def _set_up_rule_memoization(self, type, node):
+        self.print("{")
+        with self.indent():
+            self.print(f"{type} res = NULL;")
+            self.print(f"if (is_memoized(p, {node.name}_type, &res))")
+            with self.indent():
+                self.print("return res;")
+            self.print("int mark = p->mark;")
+            self.print("int resmark = p->mark;")
+            self.print("while (1) {")
+            with self.indent():
+                self.call_with_errorcheck_return(
+                    f"update_memo(p, mark, {node.name}_type, res)", "res"
+                )
+                self.print("p->mark = mark;")
+                self.print(f"void *raw = {node.name}_raw(p);")
+                self.print("if (raw == NULL || p->mark <= resmark)")
+                with self.indent():
+                    self.print("break;")
+                self.print("resmark = p->mark;")
+                self.print("res = raw;")
+            self.print("}")
+            self.print("p->mark = resmark;")
+            self.print("return res;")
+        self.print("}")
+        self.print(f"static {type}")
+        self.print(f"{node.name}_raw(Parser *p)")
+
+    def _handle_default_rule_body(self, node, rhs, type):
+        memoize = not node.left_recursive
+
+        with self.indent():
+            self.print(f"{type} res = NULL;")
+            if memoize:
+                self.print(f"if (is_memoized(p, {node.name}_type, &res))")
+                with self.indent():
+                    self.print("return res;")
+            self.print("int mark = p->mark;")
+            self.visit(rhs, is_loop=False, is_gather=node.is_gather(),
+                       rulename=node.name if memoize else None)
+            if self.debug:
+                self.print(f'fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark);')
+            self.print("res = NULL;")
+        self.print("  done:")
+        with self.indent():
+            if memoize:
+                self.print(f"insert_memo(p, mark, {node.name}_type, res);")
+            self.print("return res;")
+
+    def _handle_loop_rule_body(self, node, rhs):
+        memoize = not node.left_recursive
+        is_repeat1 = node.name.startswith("_loop1")
+
+        with self.indent():
+            self.print(f"void *res = NULL;")
+            if memoize:
+                self.print(f"if (is_memoized(p, {node.name}_type, &res))")
+                with self.indent():
+                    self.print("return res;")
+            self.print("int mark = p->mark;")
+            self.print("void **children = PyMem_Malloc(0);")
+            self.out_of_memory_return(f"!children", "NULL")
+            self.print("ssize_t n = 0;")
+            self.visit(rhs, is_loop=True, is_gather=node.is_gather(),
+                       rulename=node.name if memoize else None)
+            if is_repeat1:
+                self.print("if (n == 0) {")
+                with self.indent():
+                    self.print("PyMem_Free(children);")
+                    self.print("return NULL;")
+                self.print("}")
+            self.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
+            self.out_of_memory_return(f"!seq", "NULL", message=f"asdl_seq_new {node.name}")
+            self.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
+            self.print("PyMem_Free(children);")
+            if node.name:
+                self.print(f"insert_memo(p, mark, {node.name}_type, seq);")
+            self.print("return seq;")
+
     def visit_Rule(self, node: Rule) -> None:
         is_loop = node.is_loop()
-        is_repeat1 = node.name.startswith("_loop1")
         is_gather = node.is_gather()
-        memoize = not node.left_recursive
         rhs = node.flatten()
         if is_loop or is_gather:
             type = "asdl_seq *"
@@ -261,75 +338,13 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"{node.name}_rule(Parser *p)")
 
         if node.left_recursive and node.leader:
-            self.print("{")
-            with self.indent():
-                self.print(f"{type} res = NULL;")
-                self.print(f"if (is_memoized(p, {node.name}_type, &res))")
-                with self.indent():
-                    self.print("return res;")
-                self.print("int mark = p->mark;")
-                self.print("int resmark = p->mark;")
-                self.print("while (1) {")
-                with self.indent():
-                    self.call_with_errorcheck_return(
-                        f"update_memo(p, mark, {node.name}_type, res)", "res"
-                    )
-                    self.print("p->mark = mark;")
-                    self.print(f"void *raw = {node.name}_raw(p);")
-                    self.print("if (raw == NULL || p->mark <= resmark)")
-                    with self.indent():
-                        self.print("break;")
-                    self.print("resmark = p->mark;")
-                    self.print("res = raw;")
-                self.print("}")
-                self.print("p->mark = resmark;")
-                self.print("return res;")
-            self.print("}")
-            self.print(f"static {type}")
-            self.print(f"{node.name}_raw(Parser *p)")
+            self._set_up_rule_memoization(type, node)
 
         self.print("{")
-        with self.indent():
-            if is_loop:
-                self.print(f"void *res = NULL;")
-            else:
-                self.print(f"{type} res = NULL;")
-            if memoize:
-                self.print(f"if (is_memoized(p, {node.name}_type, &res))")
-                with self.indent():
-                    self.print("return res;")
-            self.print("int mark = p->mark;")
-            if is_loop:
-                self.print("void **children = PyMem_Malloc(0);")
-                self.out_of_memory_return(f"!children", "NULL")
-                self.print("ssize_t n = 0;")
-            self.visit(
-                rhs, is_loop=is_loop, is_gather=is_gather, rulename=node.name if memoize else None
-            )
-            if is_loop:
-                if is_repeat1:
-                    self.print("if (n == 0) {")
-                    with self.indent():
-                        self.print("PyMem_Free(children);")
-                        self.print("return NULL;")
-                    self.print("}")
-                self.print("asdl_seq *seq = _Py_asdl_seq_new(n, p->arena);")
-                self.out_of_memory_return(f"!seq", "NULL", message=f"asdl_seq_new {node.name}")
-                self.print("for (int i = 0; i < n; i++) asdl_seq_SET(seq, i, children[i]);")
-                self.print("PyMem_Free(children);")
-                if node.name:
-                    self.print(f"insert_memo(p, mark, {node.name}_type, seq);")
-                self.print("return seq;")
-            else:
-                if self.debug:
-                    self.print(f'fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark);')
-                self.print("res = NULL;")
-        if not is_loop:
-            self.print("  done:")
-            with self.indent():
-                if memoize:
-                    self.print(f"insert_memo(p, mark, {node.name}_type, res);")
-                self.print("return res;")
+        if is_loop:
+            self._handle_loop_rule_body(node, rhs)
+        else:
+            self._handle_default_rule_body(node, rhs, type)
         self.print("}")
 
     def visit_NamedItem(self, node: NamedItem, names: List[str]) -> None:
