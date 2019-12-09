@@ -27,15 +27,15 @@ compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt |
 assignment:
     | a=target ':' b=expression '=' c=yield_expression {
          _Py_AnnAssign(SET_CONTEXT(a, Store), b, c, 1,
-         EXTRA(a, expr_type, c, expr_type)) }
+         EXTRA_EXPR(a, c)) }
     | a=target ':' b=expression {
          _Py_AnnAssign(SET_CONTEXT(a, Store), b, NULL, 1,
-         EXTRA(a, expr_type, b, expr_type)) }
-    | a='='.star_targets+ '=' b=(yield_expr | expressions) {
-         _Py_Assign(a, b, NULL, EXTRA(seq_get_head(NULL, a), expr_type, b, expr_type)) }
+         EXTRA_EXPR(a, b)) }
+    | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
+         _Py_Assign(a, b, NULL, EXTRA_EXPR(seq_get_head(NULL, a), b)) }
     | a=target b=augassign c=(yield_expr | expressions) {
          _Py_AugAssign(SET_CONTEXT(a, Store), b->kind, c,
-         EXTRA(a, expr_type, c, expr_type)) }
+         EXTRA_EXPR(a, c)) }
 
 augassign[AugOperator*]:
     | '+=' {augoperator(p, Add)}
