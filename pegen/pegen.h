@@ -101,7 +101,8 @@ asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
 NameDefaultPair *name_default_pair(Parser *, arg_ty, expr_ty);
 SlashWithDefault *slash_with_default(Parser *, asdl_seq *, asdl_seq *);
 StarEtc *star_etc(Parser *, arg_ty, asdl_seq *, arg_ty);
-arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *, asdl_seq *, asdl_seq *, StarEtc *);
+arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
+                            asdl_seq *, asdl_seq *, StarEtc *);
 arguments_ty empty_arguments(Parser *);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
