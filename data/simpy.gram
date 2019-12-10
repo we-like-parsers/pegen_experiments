@@ -192,17 +192,23 @@ class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
 
 block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
-star_full_expressions: ','.star_full_expression+ [',']
+expressions_list[asdl_seq*]: a=','.star_expression+ [','] { a }
 expressions[expr_ty]:
-    | '*' bitwise_or (',' ('*' bitwise_or | expression))+ [',']
-    | '*' bitwise_or ','
-    | '*' bitwise_or
-    | expression (',' ('*' bitwise_or | expression))+ [',']
-    | expression ','
+    | a=star_expression b=(',' c=star_expression { c })+ [','] {
+        _Py_Tuple(seq_insert_in_front(p, a, b), Load, EXTRA_EXPR(a, seq_get_tail(NULL, b))) }
+    | a=star_expression ',' { _Py_Tuple(singleton_seq(p, a), Load, EXTRA_EXPR(a, a)) }
+    | star_expression
+star_expression[expr_ty]:
+    | a='*' b=bitwise_or { _Py_Starred(b, Load, EXTRA(a, token_type, b, expr_type)) }
     | expression
 
-star_full_expression: '*' bitwise_or | full_expression
-full_expression: NAME ':=' expression | expression
+star_full_expressions[asdl_seq*]: a=','.star_full_expression+ [','] { a }
+star_full_expression[expr_ty]:
+    | a='*' b=bitwise_or { _Py_Starred(b, Load, EXTRA(a, token_type, b, expr_type)) }
+    | full_expression
+full_expression[expr_ty]:
+    | a=NAME ':=' b=expression { _Py_NamedExpr(a, b, EXTRA_EXPR(a, b)) }
+    | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
     | lambdef
@@ -321,18 +327,31 @@ atom[expr_ty]:
     | a=STRING+ { asdl_seq_GET(a, 0) }
     | NUMBER
     | a='...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA(a, token_type, a, token_type)) }
-list: '[' [star_full_expressions] ']'
-listcomp: '[' full_expression for_if_clauses ']'
-tuple: '(' [star_full_expression ',' [star_full_expressions]] ')'
-group: '(' (yield_expr | full_expression) ')'
-genexp: '(' expression for_if_clauses ')'
-set: '{' expressions '}'
-setcomp: '{' expression for_if_clauses '}'
-dict: '{' [kvpairs] '}'
-dictcomp: '{' kvpair for_if_clauses '}'
-kvpairs: kvpair (',' kvpair)* [',']
-kvpair: '**' bitwise_or | expression ':' expression
-for_if_clauses: ([ASYNC] 'for' star_targets 'in' expression ('if' expression)*)+
+
+list[expr_ty]:
+    | a='[' b=[star_full_expressions] c=']' { _Py_List(b, Load, EXTRA(a, token_type, c, token_type)) }
+listcomp[expr_ty]:
+    | a='[' b=full_expression c=for_if_clauses d=']' { _Py_ListComp(b, c, EXTRA(a, token_type, d, token_type)) }
+tuple[expr_ty]:
+    | a='(' b=[y=star_full_expression ',' z=[star_full_expressions] { seq_insert_in_front(p, y, z)} ] c=')' {
+        _Py_Tuple(b, Load, EXTRA(a, token_type, c, token_type)) }
+group[expr_ty]: '(' a=(yield_expr | full_expression) ')' { a }
+genexp[expr_ty]:
+    | a='(' b=expression c=for_if_clauses d=')' { _Py_GeneratorExp(b, c, EXTRA(a, token_type, d, token_type)) }
+set[expr_ty]: a='{' b=expressions_list c='}' { _Py_Set(b, EXTRA(a, token_type, c, token_type)) }
+setcomp[expr_ty]:
+    | a='{' b=expression c=for_if_clauses d='}' { _Py_SetComp(b, c, EXTRA(a, token_type, d, token_type)) }
+dict[expr_ty]:
+    | a='{' b=[kvpairs] c='}' { _Py_Dict(get_keys(p, b), get_values(p, b), EXTRA(a, token_type, c, token_type)) }
+dictcomp[expr_ty]:
+    | a='{' b=kvpair c=for_if_clauses d='}' { _Py_DictComp(b->key, b->value, c, EXTRA(a, token_type, d, token_type)) }
+kvpairs[asdl_seq*]: a=','.kvpair+ [','] { a }
+kvpair[KeyValuePair*]:
+    | '**' a=bitwise_or { key_value_pair(p, NULL, a) }
+    | a=expression ':' b=expression { key_value_pair(p, a, b) }
+for_if_clauses[asdl_seq*]:
+    | a=(y=[ASYNC] 'for' a=star_targets 'in' b=expression c=('if' z=expression { z })*
+        { _Py_comprehension(a, b, c, is_async(y), p->arena) })+ { a }
 
 yield_expr[expr_ty]:
     | a='yield' 'from' b=expression { _Py_YieldFrom(b, EXTRA(a, token_type, b, expr_type)) }

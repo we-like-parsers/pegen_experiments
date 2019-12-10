@@ -36,6 +36,11 @@ typedef struct {
     expr_ty expr;
 } CmpopExprPair;
 
+typedef struct {
+    expr_ty key;
+    expr_ty value;
+} KeyValuePair;
+
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
@@ -82,6 +87,10 @@ CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty store_name(Parser *, expr_ty);
 asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
+KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
+asdl_seq *get_keys(Parser *, asdl_seq *);
+asdl_seq *get_values(Parser *, asdl_seq *);
+int is_async(void *);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }

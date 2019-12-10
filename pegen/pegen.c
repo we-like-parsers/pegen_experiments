@@ -772,3 +772,53 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     }
     return new_seq;
 }
+
+KeyValuePair *
+key_value_pair(Parser *p, expr_ty key, expr_ty value)
+{
+    KeyValuePair *a = PyArena_Malloc(p->arena, sizeof(KeyValuePair));
+    if (!a) {
+        return NULL;
+    }
+    a->key = key;
+    a->value = value;
+    return a;
+}
+
+asdl_seq *
+get_keys(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        KeyValuePair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->key);
+    }
+    return new_seq;
+}
+
+asdl_seq *
+get_values(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        KeyValuePair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->value);
+    }
+    return new_seq;
+}
+
+int
+is_async(void *keyword)
+{
+    if (keyword == NULL)
+        return 0;
+    return 1;
+}

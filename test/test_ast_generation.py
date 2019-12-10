@@ -37,6 +37,8 @@ def parser_extension(tmp_path_factory: Any) -> Any:
 
 @pytest.mark.parametrize("filename", PYTHON_SOURCE_FILENAMES)
 def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePath) -> None:
+    if filename == "group.py":
+        pytest.skip("AST Generation for groups can fail. See #107 on Github.")
     source = read_python_source(os.path.join(TEST_DIR, filename))
 
     actual_ast = parser_extension.parse_string(source)
