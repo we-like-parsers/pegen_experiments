@@ -270,7 +270,7 @@ def test_ternary_operator(tmp_path: PurePath) -> None:
     verify_ast_generation(grammar_source, stmt, tmp_path)
 
 
-def test_syntax_error_for_string(tmp_path):
+def test_syntax_error_for_string(tmp_path: PurePath):
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: 'a' | 'b'
@@ -285,7 +285,7 @@ def test_syntax_error_for_string(tmp_path):
     assert 'a b error\n        ^' in tb
 
 
-def test_syntax_error_for_file(tmp_path):
+def test_syntax_error_for_file(tmp_path: PurePath):
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: 'a' | 'b'
@@ -302,7 +302,7 @@ def test_syntax_error_for_file(tmp_path):
     assert 'some_file.py", line 1' in tb
     assert 'a b error a b\n        ^' in tb
 
-def test_syntax_error_for_unicode_string(tmp_path):
+def test_syntax_error_for_unicode_string(tmp_path: PurePath):
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: NAME
