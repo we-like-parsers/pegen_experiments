@@ -251,3 +251,19 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
         "Module(body=[With(items=[withitem(context_expr=Name(id='a', ctx=Load()), optional_vars=Name(id='b', ctx=Store())), "
         "withitem(context_expr=Name(id='c', ctx=Load()), optional_vars=Name(id='d', ctx=Store()))]"
     )
+
+
+def test_ternary_operator(tmp_path: PurePath) -> None:
+    grammar_source = """
+    start[mod_ty]: a=expr ENDMARKER { Module(a, NULL, p->arena) }
+    expr[asdl_seq*]: a=listcomp NEWLINE { singleton_seq(p, _Py_Expr(a, EXTRA_EXPR(a, a))) }
+    listcomp[expr_ty]: (
+        a='[' b=NAME c=for_if_clauses d=']' { _Py_ListComp(b, c, EXTRA(a, token_type, d, token_type)) }
+    )
+    for_if_clauses[asdl_seq*]: (
+        a=(y=[ASYNC] 'for' a=NAME 'in' b=NAME c=('if' z=NAME { z })*
+            { _Py_comprehension(_Py_Name(((expr_ty) a)->v.Name.id, Store, EXTRA_EXPR(a, a)), b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
+    )
+    """
+    stmt = "[i for i in a if b]"
+    verify_ast_generation(grammar_source, stmt, tmp_path)
