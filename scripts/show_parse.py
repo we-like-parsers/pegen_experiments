@@ -30,6 +30,7 @@ import sys
 import tempfile
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-g", "--grammar-file", help="grammar to use (default: use the ast module)")
 parser.add_argument("-v", "--verbose", action="store_true", help="show line/column numbers")
 parser.add_argument("program", nargs="+", help="program to parse (will be concatenated)")
 
@@ -55,7 +56,20 @@ def print_parse(source: str, verbose: bool = False) -> None:
 
 def main() -> None:
     args = parser.parse_args()
-    print_parse(" ".join(args.program), args.verbose)
+    program = " ".join(args.program)
+    if args.grammar_file:
+        sys.path.insert(0, os.curdir)
+        from pegen.build import build_parser_and_generator
+
+        build_parser_and_generator(args.grammar_file, "pegen/parse.c")
+        from pegen.parse import parse_string  # type: ignore[import]
+
+        tree = parse_string(program)
+        print(f"# Parsed using {args.grammar_file}")
+    else:
+        tree = ast.parse(program)
+        print("# Parse using ast.parse()")
+    print(format_tree(tree, args.verbose))
 
 
 if __name__ == "__main__":
