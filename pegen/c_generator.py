@@ -1,5 +1,4 @@
 import ast
-import itertools
 import re
 from typing import Any, cast, Dict, IO, Optional, List, Text, Tuple
 
