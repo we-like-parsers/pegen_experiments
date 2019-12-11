@@ -112,4 +112,6 @@ target_atom[str]:
     | NAME { name.string }
     | NUMBER { number.string }
     | STRING { string.string }
+    | "?" { "?" }
+    | ":" { ":" }
     | !"}" OP { op.string }
