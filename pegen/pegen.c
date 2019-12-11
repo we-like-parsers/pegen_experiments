@@ -783,6 +783,7 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Constructs a KeyValuePair that is used when parsing a dict's key value pairs */
 KeyValuePair *
 key_value_pair(Parser *p, expr_ty key, expr_ty value)
 {
@@ -795,6 +796,7 @@ key_value_pair(Parser *p, expr_ty key, expr_ty value)
     return a;
 }
 
+/* Extracts all keys from an asdl_seq* of KeyValuePair*'s */
 asdl_seq *
 get_keys(Parser *p, asdl_seq *seq)
 {
@@ -810,6 +812,7 @@ get_keys(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Extracts all values from an asdl_seq* of KeyValuePair*'s */
 asdl_seq *
 get_values(Parser *p, asdl_seq *seq)
 {

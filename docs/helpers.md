@@ -51,6 +51,14 @@ structure of the Compare AST Object.
 - cmpop: cmpop_ty, The comparison operator
 - expr: expr_ty, The expression that gets compared
 
+##### KeyValuePair
+
+Used to hold a key value pair, that is needed when parsing the key
+value pairs of a dict.
+
+- key: expr_ty, The pair's key
+- value: expr_ty, The pair's value
+
 #### AugOperator
 
 Used to encapsulate the value of an operator_ty enum value.
@@ -105,6 +113,15 @@ Accepts a load name and creates an identical store name.
 
 ###### `asdl_seq *map_targets_to_del_names(Parser *p, asdl_seq *seq)`
 Creates an `asdl_seq *` where all the elements have been changed to have del as context.
+
+###### `KeyValuePair *key_value_pair(Parser *p, expr_ty key, expr_ty value)`
+Constructs a `KeyValuePair` that is used when parsing a dict's key value pairs.
+
+###### `asdl_seq *get_keys(Parser *p, asdl_seq *seq)`
+Extracts all keys from an `asdl_seq*` of `KeyValuePair*`s.
+
+###### `asdl_seq *get_values(Parser *p, asdl_seq *seq)`
+Extracts all values from an `asdl_seq*` of `KeyValuePair*`s.
 
 ###### `asdl_seq *augoperator(Parser *p, operator_ty kind)`
 Creates an `AugOperator` encapsulating the operator type provided in *kind*.
