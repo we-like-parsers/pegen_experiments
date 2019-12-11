@@ -2,10 +2,21 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+static inline Py_ssize_t
+byte_offset_to_character_offset(PyObject *line, int col_offset) {
+    const char *str = PyUnicode_AsUTF8(line);
+    PyObject *text = PyUnicode_DecodeUTF8(str, col_offset, NULL);
+    if (!text) {
+        return 0;
+    }
+    Py_ssize_t size = PyUnicode_GET_LENGTH(text);
+    Py_DECREF(text);
+    return size;
+}
+
 int
 raise_syntax_error(Parser *p, const char *errmsg, ...)
 {
-    // TODO: comvert from bytes offset to character offset
     PyObject *value = NULL;
     PyObject *errstr = NULL;
     PyObject *loc = NULL;
@@ -35,7 +46,8 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             goto error;
         }
     }
-    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, t->col_offset + 1, loc);
+    Py_ssize_t col_offset = byte_offset_to_character_offset(loc, t->col_offset + 1);
+    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_offset, loc);
     if (!tmp) {
         goto error;
     }

@@ -301,3 +301,20 @@ def test_syntax_error_for_file(tmp_path):
         tb = traceback.format_exc()
     assert 'some_file.py", line 1' in tb
     assert 'a b error a b\n        ^' in tb
+
+def test_syntax_error_for_unicode_string(tmp_path):
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: NAME
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    try:
+        extension.parse_string("名 名 42 名 名")
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'File "<string>", line 1' in tb
+    assert '名 名 42\n        ^' in tb
+
+
+
