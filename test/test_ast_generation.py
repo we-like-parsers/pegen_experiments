@@ -46,3 +46,14 @@ def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePat
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for file: {filename}"
+
+
+@pytest.mark.xfail(strict=True)
+def test_ast_generation_group(parser_extension: Any) -> None:
+    source = read_python_source(os.path.join(TEST_DIR, "group.py"))
+
+    actual_ast = parser_extension.parse_string(source)
+    expected_ast = ast.parse(source)
+    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+        expected_ast, include_attributes=True
+    ), f"Wrong AST generation for file: group.py"
