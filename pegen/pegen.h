@@ -70,7 +70,8 @@ int lookahead_with_int(int, Token *(func)(Parser *, int), Parser *, int);
 int lookahead(int, void *(func)(Parser *), Parser *);
 
 Token *expect_token(Parser *p, int type);
-
+Token *get_last_nonnwhitespace_token(Parser *);
+int fill_token(Parser *p);
 void *async_token(Parser *p);
 void *await_token(Parser *p);
 void *endmarker_token(Parser *p);
@@ -85,12 +86,8 @@ int raise_syntax_error(Parser *p, const char *errmsg, ...);
 
 void *CONSTRUCTOR(Parser *p, ...);
 
-#define EXTRA_EXPR(head, tail) EXTRA(head, expr_type, tail, expr_type)
-#define EXTRA(head, head_type_func, tail, tail_type_func) head_type_func##_headline(head), \
-                                                          head_type_func##_headcol(head), \
-                                                          tail_type_func##_tailline(tail), \
-                                                          tail_type_func##_tailcol(tail), \
-                                                          p->arena
+#define UNUSED(expr) do { (void)(expr); } while (0)
+#define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
 PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);
 PyObject *run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode);
@@ -120,24 +117,4 @@ arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
 arguments_ty empty_arguments(Parser *);
 AugOperator *augoperator(Parser*, operator_ty type);
 expr_ty construct_assign_target(Parser *p, expr_ty node);
-
-inline int expr_type_headline(expr_ty a) { return a->lineno; }
-inline int expr_type_headcol(expr_ty a) { return a->col_offset; }
-inline int expr_type_tailline(expr_ty a) { return a->end_lineno; }
-inline int expr_type_tailcol(expr_ty a) { return a->end_col_offset; }
-inline int stmt_type_headline(stmt_ty a) { return a->lineno; }
-inline int stmt_type_headcol(stmt_ty a) { return a->col_offset; }
-inline int stmt_type_tailline(stmt_ty a) { return a->end_lineno; }
-inline int stmt_type_tailcol(stmt_ty a) { return a->end_col_offset; }
-inline int excepthandler_type_headline(excepthandler_ty a) { return a->lineno; }
-inline int excepthandler_type_headcol(excepthandler_ty a) { return a->col_offset; }
-inline int excepthandler_type_tailline(excepthandler_ty a) { return a->end_lineno; }
-inline int excepthandler_type_tailcol(excepthandler_ty a) { return a->end_col_offset; }
-inline int token_type_headline(Token *a) { return a->lineno; }
-inline int token_type_headcol(Token *a) { return a->col_offset; }
-inline int token_type_tailline(Token *a) { return a->end_lineno; }
-inline int token_type_tailcol(Token *a) { return a->end_col_offset; }
-inline int alias_type_headline(PegenAlias *a) { return a->lineno; }
-inline int alias_type_headcol(PegenAlias *a) { return a->col_offset; }
-inline int alias_type_tailline(PegenAlias *a) { return a->end_lineno; }
-inline int alias_type_tailcol(PegenAlias *a) { return a->end_col_offset; }
+stmt_ty function_def_decorators(Parser *, asdl_seq *, stmt_ty);
