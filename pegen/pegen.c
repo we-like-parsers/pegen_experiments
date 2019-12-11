@@ -2,6 +2,62 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+int
+raise_syntax_error(Parser *p, const char *errmsg, ...)
+{
+    // TODO: comvert from bytes offset to character offset
+    PyObject *value = NULL;
+    PyObject *errstr = NULL;
+    PyObject *loc = NULL;
+    PyObject *tmp = NULL;
+    PyObject* filename = NULL;
+    Token *t = p->tokens[p->fill - 1];
+    va_list va;
+
+    va_start(va, errmsg);
+    errstr = PyUnicode_FromFormatV(errmsg, va);
+    va_end(va);
+    if (!errstr) {
+        goto error;
+    }
+    if (filename) {
+        filename = p->tok->filename;
+        loc = PyErr_ProgramTextObject(filename, t->lineno);
+        if (!loc) {
+            Py_INCREF(Py_None);
+            loc = Py_None;
+        }
+    } else {
+        Py_INCREF(Py_None);
+        filename = Py_None;
+        loc = PyUnicode_DecodeUTF8(p->tok->buf, (p->tok->cur)-(p->tok->buf), "replace");
+        if (!loc) {
+            goto error;
+        }
+    }
+    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, t->col_offset + 1, loc);
+    if (!tmp) {
+        goto error;
+    }
+    value = PyTuple_Pack(2, errstr, tmp);
+    Py_DECREF(tmp);
+    if (!value) {
+        goto error;
+    }
+    PyErr_SetObject(PyExc_SyntaxError, value);
+    Py_DECREF(errstr);
+    Py_DECREF(value);
+    return 0;
+
+error:
+    Py_XDECREF(errstr);
+    if (!p->tok->filename) {
+        Py_XDECREF(filename);
+    }
+    Py_XDECREF(loc);
+    return -1;
+}
+
 static const char *
 token_name(int type)
 {
@@ -65,7 +121,6 @@ fill_token(Parser *p)
     int type = PyTokenizer_Get(p->tok, &start, &end);
     if (type == ERRORTOKEN) {
         if (!PyErr_Occurred()) {
-            PyErr_Format(PyExc_ValueError, "Error token");
             PyErr_Format(PyExc_SyntaxError, "Tokenizer returned error token");
             // There is no reliable column information for this error
             PyErr_SyntaxLocationObject(p->tok->filename, p->tok->lineno, 0);
@@ -357,16 +412,10 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
             goto exit;
         }
         if (p->fill == 0) {
-            PyErr_Format(PyExc_SyntaxError, "error at start before reading any input");
-            PyErr_SyntaxLocationObject(p->tok->filename, 1, 1);
+            raise_syntax_error(p, "error at start before reading any input");
         }
         else {
-            Token *t = p->tokens[p->fill - 1];
-	    // TODO: comvert from bytes offset to character offset
-	    // TODO: set correct attributes on SyntaxError object
-            PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
-                         t->lineno, t->col_offset + 1, token_name(t->type));
-            PyErr_SyntaxLocationObject(p->tok->filename, t->lineno, t->col_offset + 1);
+            raise_syntax_error(p, "invalid syntax");
         }
         goto exit;
     }

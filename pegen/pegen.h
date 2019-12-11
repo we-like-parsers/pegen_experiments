@@ -60,6 +60,7 @@ void *dedent_token(Parser *p);
 expr_ty number_token(Parser *p);
 expr_ty string_token(Parser *p);
 void *keyword_token(Parser *p, const char *val);
+int raise_syntax_error(Parser *p, const char *errmsg, ...);
 
 void *CONSTRUCTOR(Parser *p, ...);
 
