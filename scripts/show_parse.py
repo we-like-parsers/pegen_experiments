@@ -1,5 +1,28 @@
 #!/usr/bin/env python3.8
 
+"""Show the parse tree for a given program, nicely formatted.
+
+Example:
+
+$ scripts/show_parse.py a+b
+Module(
+    body=[
+        Expr(
+            value=BinOp(
+                left=Name(id="a", ctx=Load()), op=Add(), right=Name(id="b", ctx=Load())
+            )
+        )
+    ],
+    type_ignores=[],
+)
+$
+
+Use -v to show line numbers and column offsets.
+
+The formatting is done using black.  You can also import this module
+and call one of its functions.
+"""
+
 import argparse
 import ast
 import os
