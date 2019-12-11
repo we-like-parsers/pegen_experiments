@@ -1,6 +1,7 @@
 import ast
 from pathlib import PurePath
 from typing import Optional, Sequence
+import traceback
 
 import pytest  # type: ignore
 
@@ -267,3 +268,36 @@ def test_ternary_operator(tmp_path: PurePath) -> None:
     """
     stmt = "[i for i in a if b]"
     verify_ast_generation(grammar_source, stmt, tmp_path)
+
+
+def test_syntax_error_for_string(tmp_path):
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: 'a' | 'b'
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    try:
+        extension.parse_string("a b error a b")
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'File "<string>", line 1' in tb
+    assert 'a b error\n        ^' in tb
+
+
+def test_syntax_error_for_file(tmp_path):
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: 'a' | 'b'
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    the_file = tmp_path / "some_file.py"
+    with open(the_file, 'w') as fd:
+        fd.write("a b error a b")
+    try:
+        extension.parse_file(str(the_file.resolve()))
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'some_file.py", line 1' in tb
+    assert 'a b error a b\n        ^' in tb

@@ -20,7 +20,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     if (!errstr) {
         goto error;
     }
-    if (filename) {
+    if (p->tok->filename) {
         filename = p->tok->filename;
         loc = PyErr_ProgramTextObject(filename, t->lineno);
         if (!loc) {
