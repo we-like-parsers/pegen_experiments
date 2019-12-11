@@ -51,6 +51,12 @@ structure of the Compare AST Object.
 - cmpop: cmpop_ty, The comparison operator
 - expr: expr_ty, The expression that gets compared
 
+#### AugOperator
+
+Used to encapsulate the value of an operator_ty enum value.
+
+- kind: operator_ty, The augmented assignment operator
+
 
 Helper Functions
 ----------------
@@ -72,6 +78,9 @@ Counts the total number of dots in `seq`s tokens.
 
 ###### `alias_ty alias_for_star(Parser *p)`
 Creates an alias with `*` as the identifier name.
+
+###### `void *seq_get_head(void *previous, asdl_seq *seq)`
+Returns the first element of `seq` or `previous` if `seq` is empty.
 
 ###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
 Returns the last element of `seq` or `previous` if `seq` is empty.
@@ -96,3 +105,6 @@ Accepts a load name and creates an identical store name.
 
 ###### `asdl_seq *map_targets_to_del_names(Parser *p, asdl_seq *seq)`
 Creates an `asdl_seq *` where all the elements have been changed to have del as context.
+
+###### `asdl_seq *augoperator(Parser *p, operator_ty kind)`
+Creates an `AugOperator` encapsulating the operator type provided in *kind*.

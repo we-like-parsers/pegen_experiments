@@ -24,11 +24,30 @@ small_stmt[stmt_ty]:
 compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
-assignment: 
-    | target ':' expression ['=' yield_expression]
-    | (star_targets '=')+ (yield_expr | expressions)
-    | target augassign (yield_expr | expressions)
-augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**=' | '//=')
+assignment:
+    | a=target ':' b=expression '=' c=yield_expression {
+         _Py_AnnAssign(store_name(p, a), b, c, 1, EXTRA_EXPR(a, c)) }
+    | a=target ':' b=expression {
+         _Py_AnnAssign(store_name(p, a), b, NULL, 1, EXTRA_EXPR(a, b)) }
+    | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
+         _Py_Assign(a, b, NULL, EXTRA_EXPR(seq_get_head(NULL, a), b)) }
+    | a=target b=augassign c=(yield_expr | expressions) {
+         _Py_AugAssign(store_name(p, a), b->kind, c, EXTRA_EXPR(a, c)) }
+
+augassign[AugOperator*]:
+    | '+=' {augoperator(p, Add)}
+    | '-=' {augoperator(p, Sub)}
+    | '*=' {augoperator(p, Mult)}
+    | '@=' {augoperator(p, MatMult)}
+    | '/=' {augoperator(p, Div)}
+    | '%=' {augoperator(p, Mod)}
+    | '&=' {augoperator(p, BitAnd)}
+    | '|=' {augoperator(p, BitOr)}
+    | '^=' {augoperator(p, BitXor)}
+    | '<<=' {augoperator(p, LShift)}
+    | '>>=' {augoperator(p, RShift)}
+    | '**=' {augoperator(p, Pow)}
+    | '//=' {augoperator(p, FloorDiv)}
 
 global_stmt[stmt_ty]: a='global' b=','.NAME+ {
     _Py_Global(map_names_to_ids(p, b), EXTRA(a, token_type, seq_get_tail(NULL, b), expr_type)) }
