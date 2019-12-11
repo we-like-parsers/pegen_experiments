@@ -61,7 +61,7 @@ def main() -> None:
         sys.path.insert(0, os.curdir)
         from pegen.build import build_parser_and_generator
 
-        build_parser_and_generator(args.grammar_file, "pegen/parse.c")
+        build_parser_and_generator(args.grammar_file, "pegen/parse.c", compile_extension=True)
         from pegen.parse import parse_string  # type: ignore[import]
 
         tree = parse_string(program)
