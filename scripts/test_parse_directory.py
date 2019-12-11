@@ -100,7 +100,7 @@ def main() -> None:
         print("A grammar file was not provided - attempting to use existing file...\n")
 
     try:
-        from pegen import parse  # type: ignore [attr-defined]
+        from pegen import parse
     except:
         print(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",

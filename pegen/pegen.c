@@ -610,6 +610,16 @@ alias_for_star(Parser *p)
     return alias(str, NULL, p->arena);
 }
 
+/* Returns the first element of seq or previous if seq is empty */
+void *
+seq_get_head(void *previous, asdl_seq *seq)
+{
+    if (asdl_seq_LEN(seq) == 0) {
+        return previous;
+    }
+    return asdl_seq_GET(seq, 0);
+}
+
 /* Returns the last element of seq or previous if seq is empty */
 void *
 seq_get_tail(void *previous, asdl_seq *seq)
@@ -821,4 +831,16 @@ is_async(void *keyword)
     if (keyword == NULL)
         return 0;
     return 1;
+}
+
+/* Encapsulates the value of an operator_ty into an AugOperator struct */
+AugOperator *
+augoperator(Parser* p, operator_ty kind)
+{
+    AugOperator *a = PyArena_Malloc(p->arena, sizeof(AugOperator));
+    if (!a) {
+        return NULL;
+    }
+    a->kind = kind;
+    return a;
 }
