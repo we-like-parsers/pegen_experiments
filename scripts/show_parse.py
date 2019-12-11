@@ -25,11 +25,17 @@ and call one of its functions.
 
 import argparse
 import ast
+import difflib
 import os
 import sys
 import tempfile
 
+from typing import List
+
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-d", "--diff", action="store_true", help="show diff between grammar and ast (requires -g)"
+)
 parser.add_argument("-g", "--grammar-file", help="grammar to use (default: use the ast module)")
 parser.add_argument("-v", "--verbose", action="store_true", help="show line/column numbers")
 parser.add_argument("program", nargs="+", help="program to parse (will be concatenated)")
@@ -45,6 +51,14 @@ def format_tree(tree: ast.AST, verbose: bool = False) -> str:
         return tf.read()
 
 
+def diff_trees(a: ast.AST, b: ast.AST, verbose: bool = False) -> List[str]:
+    sa = format_tree(a, verbose)
+    sb = format_tree(b, verbose)
+    la = sa.splitlines()
+    lb = sb.splitlines()
+    return list(difflib.unified_diff(la, lb, "a", "b", lineterm=""))
+
+
 def show_parse(source: str, verbose: bool = False) -> str:
     tree = ast.parse(source)
     return format_tree(tree, verbose).rstrip("\n")
@@ -56,6 +70,8 @@ def print_parse(source: str, verbose: bool = False) -> None:
 
 def main() -> None:
     args = parser.parse_args()
+    if args.diff and not args.grammar_file:
+        parser.error("--diff requires --grammar-file")
     program = " ".join(args.program)
     if args.grammar_file:
         sys.path.insert(0, os.curdir)
@@ -65,11 +81,23 @@ def main() -> None:
         from pegen.parse import parse_string  # type: ignore[import]
 
         tree = parse_string(program)
-        print(f"# Parsed using {args.grammar_file}")
+
+        if args.diff:
+            a = tree
+            b = ast.parse(program)
+            diff = diff_trees(a, b, args.verbose)
+            if diff:
+                for line in diff:
+                    print(line)
+            else:
+                print("# Trees are the same")
+        else:
+            print(f"# Parsed using {args.grammar_file}")
+            print(format_tree(tree, args.verbose))
     else:
         tree = ast.parse(program)
         print("# Parse using ast.parse()")
-    print(format_tree(tree, args.verbose))
+        print(format_tree(tree, args.verbose))
 
 
 if __name__ == "__main__":
