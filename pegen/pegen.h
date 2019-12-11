@@ -52,6 +52,10 @@ typedef struct {
     arg_ty kwarg;
 } StarEtc;
 
+typedef struct {
+    operator_ty kind;
+} AugOperator;
+
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
@@ -90,6 +94,7 @@ asdl_seq *seq_flatten(Parser *, asdl_seq *);
 expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);
 int seq_count_dots(asdl_seq *);
 alias_ty alias_for_star(Parser *);
+void *seq_get_head(void *, asdl_seq *);
 void *seq_get_tail(void *, asdl_seq *);
 PegenAlias *pegen_alias(alias_ty, int, int, int, int, PyArena *);
 asdl_seq *extract_orig_aliases(Parser *, asdl_seq *);
@@ -104,6 +109,7 @@ StarEtc *star_etc(Parser *, arg_ty, asdl_seq *, arg_ty);
 arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
                             asdl_seq *, asdl_seq *, StarEtc *);
 arguments_ty empty_arguments(Parser *);
+AugOperator *augoperator(Parser*, operator_ty type);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }

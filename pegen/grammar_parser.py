@@ -587,7 +587,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def target_atom(self) -> Optional[str]:
-        # target_atom: "{" ~ target_atoms "}" | NAME | NUMBER | STRING | !"}" OP
+        # target_atom: "{" ~ target_atoms "}" | NAME | NUMBER | STRING | "?" | ":" | !"}" OP
         mark = self.mark()
         cut = False
         if (
@@ -621,6 +621,20 @@ class GeneratedParser(Parser):
             (string := self.string())
         ):
             return string . string
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect("?"))
+        ):
+            return "?"
+        self.reset(mark)
+        if cut: return None
+        cut = False
+        if (
+            (literal := self.expect(":"))
+        ):
+            return ":"
         self.reset(mark)
         if cut: return None
         cut = False

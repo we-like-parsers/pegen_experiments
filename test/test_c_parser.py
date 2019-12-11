@@ -211,7 +211,8 @@ def test_if_stmt_action(tmp_path: PurePath) -> None:
     verify_ast_generation(grammar, stmt, tmp_path)
 
 
-def test_same_name_different_types(tmp_path: PurePath) -> None:
+@pytest.mark.parametrize("stmt", ["from a import b as c", "from . import a as b"])
+def test_same_name_different_types(stmt: str, tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=import_from+ NEWLINE ENDMARKER { Module(a, NULL, p->arena)}
     import_from[stmt_ty]: ( a='from' !'import' c=simple_name 'import' d=import_as_names_from {
@@ -223,10 +224,7 @@ def test_same_name_different_types(tmp_path: PurePath) -> None:
     import_as_names_from[asdl_seq*]: a=','.import_as_name_from+ { a }
     import_as_name_from[alias_ty]: a=NAME 'as' b=NAME { _Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena) }
     """
-    stmt1 = "from a import b as c"
-    stmt2 = "from . import a as b"
-    for stmt in (stmt1, stmt2):
-        verify_ast_generation(grammar, stmt, tmp_path)
+    verify_ast_generation(grammar, stmt, tmp_path)
 
 
 def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
@@ -253,3 +251,19 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
         "Module(body=[With(items=[withitem(context_expr=Name(id='a', ctx=Load()), optional_vars=Name(id='b', ctx=Store())), "
         "withitem(context_expr=Name(id='c', ctx=Load()), optional_vars=Name(id='d', ctx=Store()))]"
     )
+
+
+def test_ternary_operator(tmp_path: PurePath) -> None:
+    grammar_source = """
+    start[mod_ty]: a=expr ENDMARKER { Module(a, NULL, p->arena) }
+    expr[asdl_seq*]: a=listcomp NEWLINE { singleton_seq(p, _Py_Expr(a, EXTRA_EXPR(a, a))) }
+    listcomp[expr_ty]: (
+        a='[' b=NAME c=for_if_clauses d=']' { _Py_ListComp(b, c, EXTRA(a, token_type, d, token_type)) }
+    )
+    for_if_clauses[asdl_seq*]: (
+        a=(y=[ASYNC] 'for' a=NAME 'in' b=NAME c=('if' z=NAME { z })*
+            { _Py_comprehension(_Py_Name(((expr_ty) a)->v.Name.id, Store, EXTRA_EXPR(a, a)), b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
+    )
+    """
+    stmt = "[i for i in a if b]"
+    verify_ast_generation(grammar_source, stmt, tmp_path)

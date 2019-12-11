@@ -79,6 +79,12 @@ the keyword only arguments and the kwarg.
 - kwonlyargs: `asdl_seq *` of `NameDefaultPair`s or NULL, Keyword only arguments
 - kwarg: `arg_ty` or NULL, The kwarg
 
+#### AugOperator
+
+Used to encapsulate the value of an operator_ty enum value.
+
+- kind: operator_ty, The augmented assignment operator
+
 
 Helper Functions
 ----------------
@@ -100,6 +106,9 @@ Counts the total number of dots in `seq`s tokens.
 
 ###### `alias_ty alias_for_star(Parser *p)`
 Creates an alias with `*` as the identifier name.
+
+###### `void *seq_get_head(void *previous, asdl_seq *seq)`
+Returns the first element of `seq` or `previous` if `seq` is empty.
 
 ###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
 Returns the last element of `seq` or `previous` if `seq` is empty.
@@ -139,3 +148,6 @@ Constructs an `arguments_ty` object out of all the parsed constructs in the `par
 
 ###### `arguments_ty empty_arguments(Parser *p)`
 Constructs an empty `arguments_ty` object, that gets used when a function accepts no arguments.
+
+###### `asdl_seq *augoperator(Parser *p, operator_ty kind)`
+Creates an `AugOperator` encapsulating the operator type provided in *kind*.
