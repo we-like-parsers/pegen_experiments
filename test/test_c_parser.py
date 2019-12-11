@@ -271,7 +271,7 @@ def test_ternary_operator(tmp_path: PurePath) -> None:
 
 
 @pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
-def test_syntax_error_for_string(text: str, tmp_path: PurePath):
+def test_syntax_error_for_string(text: str, tmp_path: PurePath) -> None:
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: NAME
@@ -287,7 +287,7 @@ def test_syntax_error_for_string(text: str, tmp_path: PurePath):
 
 
 @pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
-def test_syntax_error_for_file(text: str, tmp_path: PurePath):
+def test_syntax_error_for_file(text: str, tmp_path: PurePath) -> None:
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: NAME
@@ -298,7 +298,7 @@ def test_syntax_error_for_file(text: str, tmp_path: PurePath):
     with open(the_file, 'w') as fd:
         fd.write(text)
     try:
-        extension.parse_file(str(the_file.resolve()))
+        extension.parse_file(str(the_file))
     except SyntaxError as e:
         tb = traceback.format_exc()
     assert 'some_file.py", line 1' in tb
