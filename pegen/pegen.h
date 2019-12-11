@@ -37,6 +37,22 @@ typedef struct {
 } CmpopExprPair;
 
 typedef struct {
+    arg_ty arg;
+    expr_ty value;
+} NameDefaultPair;
+
+typedef struct {
+    asdl_seq *plain_names;
+    asdl_seq *names_with_defaults; // asdl_seq* of NameDefaultsPair's
+} SlashWithDefault;
+
+typedef struct {
+    arg_ty vararg;
+    asdl_seq *kwonlyargs; // asdl_seq* of NameDefaultsPair's
+    arg_ty kwarg;
+} StarEtc;
+
+typedef struct {
     operator_ty kind;
 } AugOperator;
 
@@ -87,6 +103,12 @@ CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty store_name(Parser *, expr_ty);
 asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
+NameDefaultPair *name_default_pair(Parser *, arg_ty, expr_ty);
+SlashWithDefault *slash_with_default(Parser *, asdl_seq *, asdl_seq *);
+StarEtc *star_etc(Parser *, arg_ty, asdl_seq *, arg_ty);
+arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
+                            asdl_seq *, asdl_seq *, StarEtc *);
+arguments_ty empty_arguments(Parser *);
 AugOperator *augoperator(Parser*, operator_ty type);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
