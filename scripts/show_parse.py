@@ -71,7 +71,7 @@ def print_parse(source: str, verbose: bool = False) -> None:
 def main() -> None:
     args = parser.parse_args()
     if args.diff and not args.grammar_file:
-        parser.error("--diff requires --grammar-file")
+        parser.error("-d/--diff requires -g/--grammar-file")
     program = " ".join(args.program)
     if args.grammar_file:
         sys.path.insert(0, os.curdir)
