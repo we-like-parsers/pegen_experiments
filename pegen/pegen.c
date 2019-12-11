@@ -41,7 +41,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     } else {
         Py_INCREF(Py_None);
         filename = Py_None;
-        loc = PyUnicode_DecodeUTF8(p->tok->buf, (p->tok->cur)-(p->tok->buf), "replace");
+        loc = PyUnicode_FromString(p->tok->buf);
         if (!loc) {
             goto error;
         }

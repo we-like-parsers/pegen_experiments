@@ -270,39 +270,8 @@ def test_ternary_operator(tmp_path: PurePath) -> None:
     verify_ast_generation(grammar_source, stmt, tmp_path)
 
 
-def test_syntax_error_for_string(tmp_path: PurePath):
-    grammar_source = """
-    start: expr+ NEWLINE? ENDMARKER
-    expr: 'a' | 'b'
-    """
-    grammar = parse_string(grammar_source, GrammarParser)
-    extension = generate_parser_c_extension(grammar, tmp_path)
-    try:
-        extension.parse_string("a b error a b")
-    except SyntaxError as e:
-        tb = traceback.format_exc()
-    assert 'File "<string>", line 1' in tb
-    assert 'a b error\n        ^' in tb
-
-
-def test_syntax_error_for_file(tmp_path: PurePath):
-    grammar_source = """
-    start: expr+ NEWLINE? ENDMARKER
-    expr: 'a' | 'b'
-    """
-    grammar = parse_string(grammar_source, GrammarParser)
-    extension = generate_parser_c_extension(grammar, tmp_path)
-    the_file = tmp_path / "some_file.py"
-    with open(the_file, 'w') as fd:
-        fd.write("a b error a b")
-    try:
-        extension.parse_file(str(the_file.resolve()))
-    except SyntaxError as e:
-        tb = traceback.format_exc()
-    assert 'some_file.py", line 1' in tb
-    assert 'a b error a b\n        ^' in tb
-
-def test_syntax_error_for_unicode_string(tmp_path: PurePath):
+@pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
+def test_syntax_error_for_string(text: str, tmp_path: PurePath):
     grammar_source = """
     start: expr+ NEWLINE? ENDMARKER
     expr: NAME
@@ -310,11 +279,27 @@ def test_syntax_error_for_unicode_string(tmp_path: PurePath):
     grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
     try:
-        extension.parse_string("名 名 42 名 名")
+        extension.parse_string(text)
     except SyntaxError as e:
         tb = traceback.format_exc()
     assert 'File "<string>", line 1' in tb
-    assert '名 名 42\n        ^' in tb
+    assert f'{text}\n        ^' in tb
 
 
-
+@pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
+def test_syntax_error_for_file(text: str, tmp_path: PurePath):
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: NAME
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    the_file = tmp_path / "some_file.py"
+    with open(the_file, 'w') as fd:
+        fd.write(text)
+    try:
+        extension.parse_file(str(the_file.resolve()))
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'some_file.py", line 1' in tb
+    assert f'{text}\n        ^' in tb
