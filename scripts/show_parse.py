@@ -23,7 +23,7 @@ def format_tree(tree: ast.AST, verbose: bool = False) -> str:
 
 def show_parse(source: str, verbose: bool = False) -> str:
     tree = ast.parse(source)
-    return format_tree(tree, verbose)
+    return format_tree(tree, verbose).rstrip("\n")
 
 
 def print_parse(source: str, verbose: bool = False) -> None:
