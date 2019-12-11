@@ -30,7 +30,7 @@ def print_parse(source: str, verbose: bool = False) -> None:
     print(show_parse(source, verbose))
 
 
-def main():
+def main() -> None:
     args = parser.parse_args()
     print_parse(" ".join(args.program), args.verbose)
 
