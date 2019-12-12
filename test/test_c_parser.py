@@ -1,6 +1,7 @@
 import ast
 from pathlib import PurePath
 from typing import Optional, Sequence
+import traceback
 
 import pytest  # type: ignore
 
@@ -267,3 +268,38 @@ def test_ternary_operator(tmp_path: PurePath) -> None:
     """
     stmt = "[i for i in a if b]"
     verify_ast_generation(grammar_source, stmt, tmp_path)
+
+
+@pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
+def test_syntax_error_for_string(text: str, tmp_path: PurePath) -> None:
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: NAME
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    try:
+        extension.parse_string(text)
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'File "<string>", line 1' in tb
+    assert f"{text}\n        ^" in tb
+
+
+@pytest.mark.parametrize("text", ["a b 42 b a", "名 名 42 名 名"])
+def test_syntax_error_for_file(text: str, tmp_path: PurePath) -> None:
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: NAME
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    the_file = tmp_path / "some_file.py"
+    with open(the_file, "w") as fd:
+        fd.write(text)
+    try:
+        extension.parse_file(str(the_file))
+    except SyntaxError as e:
+        tb = traceback.format_exc()
+    assert 'some_file.py", line 1' in tb
+    assert f"{text}\n        ^" in tb
