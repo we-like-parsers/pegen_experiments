@@ -2,6 +2,74 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+static inline Py_ssize_t
+byte_offset_to_character_offset(PyObject *line, int col_offset) {
+    const char *str = PyUnicode_AsUTF8(line);
+    PyObject *text = PyUnicode_DecodeUTF8(str, col_offset, NULL);
+    if (!text) {
+        return 0;
+    }
+    Py_ssize_t size = PyUnicode_GET_LENGTH(text);
+    Py_DECREF(text);
+    return size;
+}
+
+int
+raise_syntax_error(Parser *p, const char *errmsg, ...)
+{
+    PyObject *value = NULL;
+    PyObject *errstr = NULL;
+    PyObject *loc = NULL;
+    PyObject *tmp = NULL;
+    PyObject* filename = NULL;
+    Token *t = p->tokens[p->fill - 1];
+    va_list va;
+
+    va_start(va, errmsg);
+    errstr = PyUnicode_FromFormatV(errmsg, va);
+    va_end(va);
+    if (!errstr) {
+        goto error;
+    }
+    if (p->tok->filename) {
+        filename = p->tok->filename;
+        loc = PyErr_ProgramTextObject(filename, t->lineno);
+        if (!loc) {
+            Py_INCREF(Py_None);
+            loc = Py_None;
+        }
+    } else {
+        Py_INCREF(Py_None);
+        filename = Py_None;
+        loc = PyUnicode_FromString(p->tok->buf);
+        if (!loc) {
+            goto error;
+        }
+    }
+    Py_ssize_t col_number = byte_offset_to_character_offset(loc, t->col_offset) + 1;
+    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_number, loc);
+    if (!tmp) {
+        goto error;
+    }
+    value = PyTuple_Pack(2, errstr, tmp);
+    Py_DECREF(tmp);
+    if (!value) {
+        goto error;
+    }
+    PyErr_SetObject(PyExc_SyntaxError, value);
+    Py_DECREF(errstr);
+    Py_DECREF(value);
+    return 0;
+
+error:
+    Py_XDECREF(errstr);
+    if (!p->tok->filename) {
+        Py_XDECREF(filename);
+    }
+    Py_XDECREF(loc);
+    return -1;
+}
+
 static const char *
 token_name(int type)
 {
@@ -65,7 +133,6 @@ fill_token(Parser *p)
     int type = PyTokenizer_Get(p->tok, &start, &end);
     if (type == ERRORTOKEN) {
         if (!PyErr_Occurred()) {
-            PyErr_Format(PyExc_ValueError, "Error token");
             PyErr_Format(PyExc_SyntaxError, "Tokenizer returned error token");
             // There is no reliable column information for this error
             PyErr_SyntaxLocationObject(p->tok->filename, p->tok->lineno, 0);
@@ -357,16 +424,10 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
             goto exit;
         }
         if (p->fill == 0) {
-            PyErr_Format(PyExc_SyntaxError, "error at start before reading any input");
-            PyErr_SyntaxLocationObject(p->tok->filename, 1, 1);
+            raise_syntax_error(p, "error at start before reading any input");
         }
         else {
-            Token *t = p->tokens[p->fill - 1];
-	    // TODO: comvert from bytes offset to character offset
-	    // TODO: set correct attributes on SyntaxError object
-            PyErr_Format(PyExc_SyntaxError, "error at line %d, col %d, token %s",
-                         t->lineno, t->col_offset + 1, token_name(t->type));
-            PyErr_SyntaxLocationObject(p->tok->filename, t->lineno, t->col_offset + 1);
+            raise_syntax_error(p, "invalid syntax");
         }
         goto exit;
     }
@@ -793,6 +854,18 @@ key_value_pair(Parser *p, expr_ty key, expr_ty value)
     }
     a->key = key;
     a->value = value;
+}
+
+/* Constructs a NameDefaultPair */
+NameDefaultPair *
+name_default_pair(Parser *p, arg_ty arg, expr_ty value)
+{
+    NameDefaultPair *a = PyArena_Malloc(p->arena, sizeof(NameDefaultPair));
+    if (!a) {
+        return NULL;
+    }
+    a->arg = arg;
+    a->value = value;
     return a;
 }
 
@@ -834,6 +907,244 @@ is_async(void *keyword)
     if (keyword == NULL)
         return 0;
     return 1;
+}
+
+/* Constructs a SlashWithDefault */
+SlashWithDefault *
+slash_with_default(Parser *p, asdl_seq *plain_names, asdl_seq *names_with_defaults)
+{
+    SlashWithDefault *a = PyArena_Malloc(p->arena, sizeof(SlashWithDefault));
+    if (!a) {
+        return NULL;
+    }
+    a->plain_names = plain_names;
+    a->names_with_defaults = names_with_defaults;
+    return a;
+}
+
+/* Constructs a StarEtc */
+StarEtc *
+star_etc(Parser *p, arg_ty vararg, asdl_seq *kwonlyargs, arg_ty kwarg)
+{
+    StarEtc *a = PyArena_Malloc(p->arena, sizeof(StarEtc));
+    if (!a) {
+        return NULL;
+    }
+    a->vararg = vararg;
+    a->kwonlyargs = kwonlyargs;
+    a->kwarg = kwarg;
+    return a;
+}
+
+asdl_seq *
+_join_seqs(Parser *p, asdl_seq *a, asdl_seq *b)
+{
+    int first_len = asdl_seq_LEN(a);
+    int second_len = asdl_seq_LEN(b);
+    asdl_seq *new_seq = _Py_asdl_seq_new(first_len + second_len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+
+    int k = 0;
+    for (int i = 0; i < first_len; i++) {
+        asdl_seq_SET(new_seq, k++, asdl_seq_GET(a, i));
+    }
+    for (int i = 0; i < second_len; i++) {
+        asdl_seq_SET(new_seq, k++, asdl_seq_GET(b, i));
+    }
+
+    return new_seq;
+}
+
+asdl_seq *
+_get_names(Parser *p, asdl_seq *names_with_defaults)
+{
+    int len = asdl_seq_LEN(names_with_defaults);
+    asdl_seq *seq = _Py_asdl_seq_new(len, p->arena);
+    if (!seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        NameDefaultPair *pair = asdl_seq_GET(names_with_defaults, i);
+        asdl_seq_SET(seq, i, pair->arg);
+    }
+    return seq;
+}
+
+asdl_seq *
+_get_defaults(Parser *p, asdl_seq *names_with_defaults)
+{
+    int len = asdl_seq_LEN(names_with_defaults);
+    asdl_seq *seq = _Py_asdl_seq_new(len, p->arena);
+    if (!seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        NameDefaultPair *pair = asdl_seq_GET(names_with_defaults, i);
+        asdl_seq_SET(seq, i, pair->value);
+    }
+    return seq;
+}
+
+/* Constructs an arguments_ty object out of all the parsed constructs in the parameters rule */
+arguments_ty
+make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *slash_with_default,
+               asdl_seq *plain_names, asdl_seq *names_with_default, StarEtc *star_etc)
+{
+    asdl_seq *posonlyargs;
+    if (slash_without_default != NULL) {
+        posonlyargs = slash_without_default;
+    } else if (slash_with_default != NULL) {
+        asdl_seq *slash_with_default_names = _get_names(p, slash_with_default->names_with_defaults);
+        if (!slash_with_default_names) {
+            return NULL;
+        }
+        posonlyargs = _join_seqs(p,
+                                 slash_with_default->plain_names,
+                                 slash_with_default_names);
+        if (!posonlyargs) {
+            return NULL;
+        }
+    } else {
+        posonlyargs = _Py_asdl_seq_new(0, p->arena);
+        if (!posonlyargs) {
+            return NULL;
+        }
+    }
+
+    asdl_seq *posargs;
+    if (plain_names != NULL && names_with_default != NULL) {
+        asdl_seq *names_with_default_names = _get_names(p, names_with_default);
+        if (!names_with_default_names) {
+            return NULL;
+        }
+        posargs = _join_seqs(p,
+                             plain_names,
+                             names_with_default_names);
+        if (!posargs) {
+            return NULL;
+        }
+    } else if (plain_names == NULL && names_with_default != NULL) {
+        posargs = _get_names(p, names_with_default);
+        if (!posargs) {
+            return NULL;
+        }
+    } else if (plain_names != NULL && names_with_default == NULL) {
+        posargs = plain_names;
+    } else {
+        posargs = _Py_asdl_seq_new(0, p->arena);
+        if (!posargs) {
+            return NULL;
+        }
+    }
+
+    asdl_seq *posdefaults;
+    if (slash_with_default != NULL && names_with_default != NULL) {
+        asdl_seq *slash_with_default_values = _get_defaults(
+            p,
+            slash_with_default->names_with_defaults
+        );
+        if (!slash_with_default_values) {
+            return NULL;
+        }
+        asdl_seq *names_with_default_values = _get_defaults(
+            p,
+            names_with_default
+        );
+        if (!names_with_default_values) {
+            return NULL;
+        }
+        posdefaults = _join_seqs(p,
+                                 slash_with_default_values,
+                                 names_with_default_values);
+        if (!posdefaults) {
+            return NULL;
+        }
+    } else if (slash_with_default == NULL && names_with_default != NULL) {
+        posdefaults = _get_defaults(p, names_with_default);
+        if (!posdefaults) {
+            return NULL;
+        }
+    } else if (slash_with_default != NULL && names_with_default == NULL) {
+        posdefaults = _get_defaults(p, slash_with_default->names_with_defaults);
+        if (!posdefaults) {
+            return NULL;
+        }
+    } else {
+        posdefaults = _Py_asdl_seq_new(0, p->arena);
+        if (!posdefaults) {
+            return NULL;
+        }
+    }
+
+    arg_ty vararg = NULL;
+    if (star_etc != NULL && star_etc->vararg != NULL) {
+        vararg = star_etc->vararg;
+    }
+
+    asdl_seq *kwonlyargs;
+    if (star_etc != NULL && star_etc->kwonlyargs != NULL) {
+        kwonlyargs = _get_names(p, star_etc->kwonlyargs);
+        if (!kwonlyargs) {
+            return NULL;
+        }
+    } else {
+        kwonlyargs = _Py_asdl_seq_new(0, p->arena);
+        if (!kwonlyargs) {
+            return NULL;
+        }
+    }
+
+    asdl_seq *kwdefaults;
+    if (star_etc != NULL && star_etc->kwonlyargs != NULL) {
+        kwdefaults = _get_defaults(p, star_etc->kwonlyargs);
+        if (!kwdefaults) {
+            return NULL;
+        }
+    } else {
+        kwdefaults = _Py_asdl_seq_new(0, p->arena);
+        if (!kwdefaults) {
+            return NULL;
+        }
+    }
+
+    arg_ty kwarg = NULL;
+    if (star_etc != NULL && star_etc->kwarg != NULL) {
+        kwarg = star_etc->kwarg;
+    }
+
+    return _Py_arguments(posonlyargs, posargs, vararg, kwonlyargs, kwdefaults,
+                         kwarg, posdefaults, p->arena);
+}
+
+/* Constructs an empty arguments_ty object, that gets used when a function accepts no arguments. */
+arguments_ty
+empty_arguments(Parser *p)
+{
+    asdl_seq *posonlyargs = _Py_asdl_seq_new(0, p->arena);
+    if (!posonlyargs) {
+        return NULL;
+    }
+    asdl_seq *posargs = _Py_asdl_seq_new(0, p->arena);
+    if (!posargs) {
+        return NULL;
+    }
+    asdl_seq *posdefaults = _Py_asdl_seq_new(0, p->arena);
+    if (!posdefaults) {
+        return NULL;
+    }
+    asdl_seq *kwonlyargs = _Py_asdl_seq_new(0, p->arena);
+    if (!kwonlyargs) {
+        return NULL;
+    }
+    asdl_seq *kwdefaults = _Py_asdl_seq_new(0, p->arena);
+    if (!kwdefaults) {
+        return NULL;
+    }
+
+    return _Py_arguments(posonlyargs, posargs, NULL, kwonlyargs,
+                         kwdefaults, NULL, kwdefaults, p->arena);
 }
 
 /* Encapsulates the value of an operator_ty into an AugOperator struct */
