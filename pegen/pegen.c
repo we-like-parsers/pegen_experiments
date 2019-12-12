@@ -46,8 +46,8 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             goto error;
         }
     }
-    Py_ssize_t col_offset = byte_offset_to_character_offset(loc, t->col_offset + 1);
-    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_offset, loc);
+    Py_ssize_t col_number = byte_offset_to_character_offset(loc, t->col_offset) + 1;
+    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_number, loc);
     if (!tmp) {
         goto error;
     }
