@@ -3,7 +3,8 @@
 #include "v38tokenizer.h"
 
 static inline Py_ssize_t
-byte_offset_to_character_offset(PyObject *line, int col_offset) {
+byte_offset_to_character_offset(PyObject *line, int col_offset)
+{
     const char *str = PyUnicode_AsUTF8(line);
     PyObject *text = PyUnicode_DecodeUTF8(str, col_offset, NULL);
     if (!text) {
@@ -854,6 +855,7 @@ key_value_pair(Parser *p, expr_ty key, expr_ty value)
     }
     a->key = key;
     a->value = value;
+    return a;
 }
 
 /* Constructs a NameDefaultPair */
@@ -899,14 +901,6 @@ get_values(Parser *p, asdl_seq *seq)
         asdl_seq_SET(new_seq, i, pair->value);
     }
     return new_seq;
-}
-
-int
-is_async(void *keyword)
-{
-    if (keyword == NULL)
-        return 0;
-    return 1;
 }
 
 /* Constructs a SlashWithDefault */

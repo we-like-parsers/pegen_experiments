@@ -395,7 +395,7 @@ kvpair[KeyValuePair*]:
     | a=expression ':' b=expression { key_value_pair(p, a, b) }
 for_if_clauses[asdl_seq*]:
     | a=(y=[ASYNC] 'for' a=star_targets 'in' b=expression c=('if' z=expression { z })*
-        { _Py_comprehension(a, b, c, is_async(y), p->arena) })+ { a }
+        { _Py_comprehension(a, b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
 
 yield_expr[expr_ty]:
     | a='yield' 'from' b=expression { _Py_YieldFrom(b, EXTRA(a, token_type, b, expr_type)) }

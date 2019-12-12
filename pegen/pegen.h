@@ -112,7 +112,6 @@ asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
 KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
 asdl_seq *get_keys(Parser *, asdl_seq *);
 asdl_seq *get_values(Parser *, asdl_seq *);
-int is_async(void *);
 NameDefaultPair *name_default_pair(Parser *, arg_ty, expr_ty);
 SlashWithDefault *slash_with_default(Parser *, asdl_seq *, asdl_seq *);
 StarEtc *star_etc(Parser *, arg_ty, asdl_seq *, arg_ty);
