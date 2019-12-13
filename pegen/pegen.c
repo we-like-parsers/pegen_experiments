@@ -797,6 +797,32 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
+/* Receives a expr_ty and creates the appropiate node for assignment targets */
+expr_ty
+construct_assign_target(Parser *p, expr_ty node)
+{
+    if (!node) {
+        return NULL;
+    }
+    expr_ty name;
+    switch(node->kind) {
+        case Name_kind:
+            return _Py_Name(node->v.Name.id,
+                            Store,
+                            EXTRA_EXPR(node, node));
+        case Tuple_kind:
+            assert(asdl_seq_LEN(node->v.Tuple.elts) == 1);
+            name = asdl_seq_GET(node->v.Tuple.elts, 0);
+            return _Py_Name(name->v.Name.id,
+                            Store,
+                            EXTRA_EXPR(name, name));
+        default:
+            //TODO: Support more types of nodes when the target rule is
+            // ready.
+            return NULL;
+    }
+}
+
 /* Accepts a load name and creates an identical store name */
 expr_ty
 store_name(Parser *p, expr_ty load_name)
@@ -804,21 +830,9 @@ store_name(Parser *p, expr_ty load_name)
     if (!load_name) {
         return NULL;
     }
-    expr_ty name;
-    switch(load_name->kind) {
-        case Name_kind:
-            return _Py_Name(load_name->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(load_name, load_name));
-        case Tuple_kind:
-            assert(asdl_seq_LEN(load_name->v.Tuple.elts) == 1);
-            name = asdl_seq_GET(load_name->v.Tuple.elts, 0);
-            return _Py_Name(name->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(name, name));
-        default:
-            return NULL;
-    }
+    return _Py_Name(load_name->v.Name.id,
+                    Store,
+                    EXTRA_EXPR(load_name, load_name));
 }
 
 expr_ty

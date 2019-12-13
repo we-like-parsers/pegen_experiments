@@ -111,6 +111,7 @@ arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
                             asdl_seq *, asdl_seq *, StarEtc *);
 arguments_ty empty_arguments(Parser *);
 AugOperator *augoperator(Parser*, operator_ty type);
+expr_ty construct_assign_target(Parser *p, expr_ty node);
 
 inline int expr_type_headline(expr_ty a) { return a->lineno; }
 inline int expr_type_headcol(expr_ty a) { return a->col_offset; }
