@@ -82,8 +82,10 @@ def compare_trees(
     expected_text = ast.dump(expected_tree, include_attributes=include_attributes)
     actual_text = ast.dump(actual_tree, include_attributes=include_attributes)
     if actual_text == expected_text:
-        if not verbose:
-            return
+        if verbose:
+            print("Tree for {file}:")
+            print(show_parse.format_tree(actual_tree, include_attributes))
+        return
 
     print(f"Diffing ASTs for {file} ...")
 
