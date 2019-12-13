@@ -37,6 +37,12 @@ parser.add_argument(
     "-d", "--diff", action="store_true", help="show diff between grammar and ast (requires -g)"
 )
 parser.add_argument("-g", "--grammar-file", help="grammar to use (default: use the ast module)")
+parser.add_argument(
+    "-m",
+    "--multiline",
+    action="store_true",
+    help="concatenate program arguments using newline instead of space",
+)
 parser.add_argument("-v", "--verbose", action="store_true", help="show line/column numbers")
 parser.add_argument("program", nargs="+", help="program to parse (will be concatenated)")
 
@@ -72,7 +78,11 @@ def main() -> None:
     args = parser.parse_args()
     if args.diff and not args.grammar_file:
         parser.error("-d/--diff requires -g/--grammar-file")
-    program = " ".join(args.program)
+    if args.multiline:
+        sep = "\n"
+    else:
+        sep = " "
+    program = sep.join(args.program)
     if args.grammar_file:
         sys.path.insert(0, os.curdir)
         from pegen.build import build_parser_and_generator
