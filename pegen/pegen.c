@@ -804,9 +804,18 @@ store_name(Parser *p, expr_ty load_name)
     if (!load_name) {
         return NULL;
     }
-    return _Py_Name(load_name->v.Name.id,
-                    Store,
-                    EXTRA_EXPR(load_name, load_name));
+    expr_ty name;
+    switch(load_name->kind) {
+        case Name_kind:
+            return _Py_Name(load_name->v.Name.id,
+                            Store,
+                            EXTRA_EXPR(load_name, load_name));
+        case Tuple_kind:
+            name = asdl_seq_GET(load_name->v.Tuple.elts, 0);
+            return _Py_Name(name->v.Name.id,
+                            Store,
+                            EXTRA_EXPR(name, name));
+    }
 }
 
 expr_ty
