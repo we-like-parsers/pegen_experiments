@@ -6,6 +6,7 @@ GRAMMAR = data/cprog.gram
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 TESTDIR = .
+TESTFLAGS = --short
 
 build: pegen/parse.c
 
@@ -42,7 +43,7 @@ simpy:
 	$(PYTHON) scripts/test_parse_directory.py \
 		-g data/simpy.gram \
 		-d $(TESTDIR) \
-		--short \
+		$(TESTFLAGS) \
 		--exclude "*/failset/*" \
 		--exclude "*/failset/**" \
 		--exclude "*/failset/**/*"
@@ -51,7 +52,7 @@ simpy_cpython:
 	$(PYTHON) scripts/test_parse_directory.py \
 		-g data/simpy.gram \
 		-d $(CPYTHON) \
-		--short \
+		$(TESTFLAGS) \
 		--exclude "*/test2to3/*" \
 		--exclude "*/test2to3/**/*" \
 		--exclude "*/bad*" \

@@ -1,18 +1,21 @@
 #!/usr/bin/env python3.8
 
 import argparse
+import ast
 import os
 import sys
+import tempfile
 import time
 import traceback
 from glob import glob
 from pathlib import PurePath
 
-from typing import Optional
+from typing import List, Optional
 
 sys.path.insert(0, ".")
 from pegen.build import build_parser_and_generator
 from pegen.testutil import print_memstats
+from scripts import show_parse
 
 SUCCESS = "\033[92m"
 FAIL = "\033[91m"
@@ -31,8 +34,9 @@ argparser.add_argument(
     "-s", "--short", action="store_true", help="Only show errors, in a more Emacs-friendly format"
 )
 argparser.add_argument(
-    "-v", "--verbose", action="store_true", default=0, help="Display detailed errors for failures"
+    "-v", "--verbose", action="store_true", help="Display detailed errors for failures"
 )
+argparser.add_argument("-t", "--tree", action="count", help="Compare parse tree to official AST")
 
 
 def report_status(
@@ -67,6 +71,37 @@ def report_status(
 
         if error and verbose:
             print(f"  {str(error.__class__.__name__)}: {error}")
+
+
+def compare_trees(
+    actual_tree: ast.AST, file: str, verbose: bool, include_attributes: bool = False,
+) -> None:
+    with open(file) as f:
+        expected_tree = ast.parse(f.read())
+
+    expected_text = ast.dump(expected_tree, include_attributes=include_attributes)
+    actual_text = ast.dump(actual_tree, include_attributes=include_attributes)
+    if actual_text == expected_text:
+        if verbose:
+            print("Tree for {file}:")
+            print(show_parse.format_tree(actual_tree, include_attributes))
+        return
+
+    print(f"Diffing ASTs for {file} ...")
+
+    expected = show_parse.format_tree(expected_tree, include_attributes)
+    actual = show_parse.format_tree(actual_tree, include_attributes)
+
+    if verbose:
+        print("Expected for {file}:")
+        print(expected)
+        print("Actual for {file}:")
+        print(actual)
+        print(f"Diff for {file}:")
+
+    diff = show_parse.diff_trees(expected_tree, actual_tree, include_attributes)
+    for line in diff:
+        print(line)
 
 
 def main() -> None:
@@ -112,6 +147,7 @@ def main() -> None:
     # - Output success/failure for each file
     errors = 0
     files = []
+    trees = {}  # Trees to compare (after everything else is done)
 
     t0 = time.time()
     for file in sorted(glob(f"{directory}/**/*.py", recursive=True)):
@@ -124,7 +160,9 @@ def main() -> None:
 
         if not should_exclude_file:
             try:
-                parse.parse_file(file)
+                tree = parse.parse_file(file)
+                if args.tree:
+                    trees[file] = tree
                 if not args.short:
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
@@ -161,6 +199,14 @@ def main() -> None:
 
     if errors:
         print(f"Encountered {errors} failures.", file=sys.stderr)
+
+    # Compare trees (the dict is empty unless -t is given)
+    for file, tree in trees.items():
+        if not args.short:
+            print("Comparing ASTs for", file)
+        compare_trees(tree, file, verbose, args.tree >= 2)
+
+    if errors:
         sys.exit(1)
 
 

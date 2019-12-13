@@ -52,7 +52,10 @@ def format_tree(tree: ast.AST, verbose: bool = False) -> str:
         tf.write(ast.dump(tree, include_attributes=verbose))
         tf.write("\n")
         tf.flush()
-        os.system(f"black -q {tf.name}")
+        cmd = f"black -q {tf.name}"
+        sts = os.system(cmd)
+        if sts:
+            raise RuntimeError(f"Command {cmd!r} failed with status 0x{sts:x}")
         tf.seek(0)
         return tf.read()
 
