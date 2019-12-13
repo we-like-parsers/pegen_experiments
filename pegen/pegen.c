@@ -811,10 +811,13 @@ store_name(Parser *p, expr_ty load_name)
                             Store,
                             EXTRA_EXPR(load_name, load_name));
         case Tuple_kind:
+            assert(asdl_seq_LEN(load_name->v.Tuple.elts) == 1);
             name = asdl_seq_GET(load_name->v.Tuple.elts, 0);
             return _Py_Name(name->v.Name.id,
                             Store,
                             EXTRA_EXPR(name, name));
+        default:
+            return NULL;
     }
 }
 
