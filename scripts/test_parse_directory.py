@@ -36,9 +36,7 @@ argparser.add_argument(
 argparser.add_argument(
     "-v", "--verbose", action="store_true", help="Display detailed errors for failures"
 )
-argparser.add_argument(
-    "-t", "--tree", action="store_true", help="Compare parse tree to official AST"
-)
+argparser.add_argument("-t", "--tree", action="count", help="Compare parse tree to official AST")
 
 
 def report_status(
@@ -75,36 +73,33 @@ def report_status(
             print(f"  {str(error.__class__.__name__)}: {error}")
 
 
-def compare_trees(actual_tree: ast.AST, file: str, verbose: bool) -> None:
+def compare_trees(
+    actual_tree: ast.AST, file: str, verbose: bool, include_attributes: bool = False,
+) -> None:
     with open(file) as f:
         expected_tree = ast.parse(f.read())
 
-    if ast.dump(actual_tree, include_attributes=verbose) == ast.dump(
-        expected_tree, include_attributes=verbose
-    ):
+    expected_text = ast.dump(expected_tree, include_attributes=include_attributes)
+    actual_text = ast.dump(actual_tree, include_attributes=include_attributes)
+    if actual_text == expected_text:
         if not verbose:
             return
 
-    print(f"Diffing ASTs for {file}")
+    print(f"Diffing ASTs for {file} ...")
 
-    expected = show_parse.format_tree(expected_tree, verbose)
-    actual = show_parse.format_tree(actual_tree, verbose)
+    expected = show_parse.format_tree(expected_tree, include_attributes)
+    actual = show_parse.format_tree(actual_tree, include_attributes)
 
     if verbose:
-        print("Expected:")
+        print("Expected for {file}:")
         print(expected)
-        print("Actual:")
+        print("Actual for {file}:")
         print(actual)
+        print(f"Diff for {file}:")
 
-    diff = show_parse.diff_trees(expected_tree, actual_tree, verbose)
-
-    if verbose:
-        print("Diff:")
+    diff = show_parse.diff_trees(expected_tree, actual_tree, include_attributes)
     for line in diff:
         print(line)
-
-    # One is enough, let's just exit after the first one.
-    sys.exit(1)
 
 
 def main() -> None:
@@ -150,7 +145,7 @@ def main() -> None:
     # - Output success/failure for each file
     errors = 0
     files = []
-    trees = {}
+    trees = {}  # Trees to compare (after everything else is done)
 
     t0 = time.time()
     for file in sorted(glob(f"{directory}/**/*.py", recursive=True)):
@@ -203,10 +198,11 @@ def main() -> None:
     if errors:
         print(f"Encountered {errors} failures.", file=sys.stderr)
 
+    # Compare trees (the dict is empty unless -t is given)
     for file, tree in trees.items():
         if not args.short:
             print("Comparing ASTs for", file)
-        compare_trees(tree, file, verbose)
+        compare_trees(tree, file, verbose, args.tree >= 2)
 
     if errors:
         sys.exit(1)
