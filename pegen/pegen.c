@@ -3,7 +3,8 @@
 #include "v38tokenizer.h"
 
 static inline Py_ssize_t
-byte_offset_to_character_offset(PyObject *line, int col_offset) {
+byte_offset_to_character_offset(PyObject *line, int col_offset)
+{
     const char *str = PyUnicode_AsUTF8(line);
     PyObject *text = PyUnicode_DecodeUTF8(str, col_offset, NULL);
     if (!text) {
@@ -844,6 +845,19 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     return new_seq;
 }
 
+/* Constructs a KeyValuePair that is used when parsing a dict's key value pairs */
+KeyValuePair *
+key_value_pair(Parser *p, expr_ty key, expr_ty value)
+{
+    KeyValuePair *a = PyArena_Malloc(p->arena, sizeof(KeyValuePair));
+    if (!a) {
+        return NULL;
+    }
+    a->key = key;
+    a->value = value;
+    return a;
+}
+
 /* Constructs a NameDefaultPair */
 NameDefaultPair *
 name_default_pair(Parser *p, arg_ty arg, expr_ty value)
@@ -855,6 +869,38 @@ name_default_pair(Parser *p, arg_ty arg, expr_ty value)
     a->arg = arg;
     a->value = value;
     return a;
+}
+
+/* Extracts all keys from an asdl_seq* of KeyValuePair*'s */
+asdl_seq *
+get_keys(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        KeyValuePair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->key);
+    }
+    return new_seq;
+}
+
+/* Extracts all values from an asdl_seq* of KeyValuePair*'s */
+asdl_seq *
+get_values(Parser *p, asdl_seq *seq)
+{
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        KeyValuePair *pair = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, pair->value);
+    }
+    return new_seq;
 }
 
 /* Constructs a SlashWithDefault */

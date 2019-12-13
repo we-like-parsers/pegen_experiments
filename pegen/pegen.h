@@ -37,6 +37,11 @@ typedef struct {
 } CmpopExprPair;
 
 typedef struct {
+    expr_ty key;
+    expr_ty value;
+} KeyValuePair;
+
+typedef struct {
     arg_ty arg;
     expr_ty value;
 } NameDefaultPair;
@@ -104,6 +109,9 @@ CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty store_name(Parser *, expr_ty);
 asdl_seq *map_targets_to_del_names(Parser *, asdl_seq *);
+KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
+asdl_seq *get_keys(Parser *, asdl_seq *);
+asdl_seq *get_values(Parser *, asdl_seq *);
 NameDefaultPair *name_default_pair(Parser *, arg_ty, expr_ty);
 SlashWithDefault *slash_with_default(Parser *, asdl_seq *, asdl_seq *);
 StarEtc *star_etc(Parser *, arg_ty, asdl_seq *, arg_ty);
