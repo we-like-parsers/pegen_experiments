@@ -3,7 +3,7 @@
 #include "v38tokenizer.h"
 
 static PyObject *
-create_dummy_identifier(Parser *p) {
+_create_dummy_identifier(Parser *p) {
     PyObject *id = PyUnicode_FromStringAndSize("", 0);
     if (id == NULL) {
         return NULL;
@@ -130,7 +130,7 @@ void *
 CONSTRUCTOR(Parser *p, ...)
 {
 
-    PyObject *id = create_dummy_identifier(p);
+    PyObject *id = _create_dummy_identifier(p);
     if (!id) {
         return NULL;
     }
@@ -826,7 +826,7 @@ construct_assign_target(Parser *p, expr_ty node)
                 PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
                 //TODO: We need to return a dummy here because we don't have a way to correctly
                 // buble up exceptions for now.
-               return _Py_Name(create_dummy_identifier(p),
+               return _Py_Name(_create_dummy_identifier(p),
                             Store,
                             EXTRA_EXPR(node, node));
             }
