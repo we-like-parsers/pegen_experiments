@@ -2,6 +2,19 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+static PyObject *
+create_dummy_identifier(Parser *p) {
+    PyObject *id = PyUnicode_FromStringAndSize("", 0);
+    if (id == NULL) {
+        return NULL;
+    }
+    if (PyArena_AddPyObject(p->arena, id) < 0) {
+        Py_DECREF(id);
+        return NULL;
+    }
+    return id;
+}
+
 static inline Py_ssize_t
 byte_offset_to_character_offset(PyObject *line, int col_offset) {
     const char *str = PyUnicode_AsUTF8(line);
@@ -116,11 +129,9 @@ update_memo(Parser *p, int mark, int type, void *node)
 void *
 CONSTRUCTOR(Parser *p, ...)
 {
-    PyObject *id = PyUnicode_FromStringAndSize("", 0);
-    if (id == NULL)
-        return NULL;
-    if (PyArena_AddPyObject(p->arena, id) < 0) {
-        Py_DECREF(id);
+
+    PyObject *id = create_dummy_identifier(p);
+    if (!id) {
         return NULL;
     }
     return Name(id, Load, 1, 0, 1, 0,p->arena);
@@ -811,7 +822,14 @@ construct_assign_target(Parser *p, expr_ty node)
                             Store,
                             EXTRA_EXPR(node, node));
         case Tuple_kind:
-            assert(asdl_seq_LEN(node->v.Tuple.elts) == 1);
+            if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
+                PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
+                //TODO: We need to return a dummy here because we don't have a way to correctly
+                // buble up exceptions for now.
+               return _Py_Name(create_dummy_identifier(p),
+                            Store,
+                            EXTRA_EXPR(node, node));
+            }
             name = asdl_seq_GET(node->v.Tuple.elts, 0);
             return _Py_Name(name->v.Name.id,
                             Store,
