@@ -26,9 +26,11 @@ compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt |
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
     | a=target ':' b=expression '=' c=yield_expression {
-         _Py_AnnAssign(store_name(p, a), b, c, 1, EXTRA_EXPR(a, c)) }
+         _Py_AnnAssign(construct_assign_target(p, a), b, c,
+         a->kind == Name_kind ? 1 : 0, EXTRA_EXPR(a, c)) }
     | a=target ':' b=expression {
-         _Py_AnnAssign(store_name(p, a), b, NULL, 1, EXTRA_EXPR(a, b)) }
+         _Py_AnnAssign(construct_assign_target(p, a), b, NULL,
+         a->kind == Name_kind ? 1 : 0, EXTRA_EXPR(a, b)) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA_EXPR(seq_get_head(NULL, a), b)) }
     | a=target b=augassign c=(yield_expr | expressions) {
