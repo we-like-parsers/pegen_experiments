@@ -260,23 +260,34 @@ expression[expr_ty]:
     | lambdef
     | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA_EXPR(a, c)) }
     | disjunction
-lambdef: 'lambda' [lambda_parameters] ':' expression
 
-lambda_parameters: ( lambda_slash_without_default [',' lambda_plain_names] [',' lambda_names_with_default] [',' [lambda_star_etc]]
-                   | lambda_slash_with_default [',' lambda_names_with_default] [',' [lambda_star_etc]]
-                   | lambda_plain_names [',' lambda_names_with_default] [',' [lambda_star_etc]]
-                   | lambda_names_with_default [',' [lambda_star_etc]]
-                   | lambda_star_etc
-                   )
-lambda_slash_without_default: lambda_plain_names ',' '/'
-lambda_slash_with_default: [lambda_plain_names ','] lambda_names_with_default ',' '/'
-lambda_names_with_default: ','.lambda_name_with_default+
-lambda_plain_names: ','.(NAME !'=')+
-lambda_star_etc: ( '*' NAME (',' NAME ['=' expression])* [',' '**' NAME] [',']
-                 | '*' (',' NAME ['=' expression])+ [',' '**' NAME] [',']
-                 | '**' NAME [',']
-                 )
-lambda_name_with_default: NAME '=' expression
+lambdef[expr_ty]: a='lambda' b=[lambda_parameters] ':' c=expression {_Py_Lambda(b, c, EXTRA(a, token_type, c, expr_type))}
+lambda_parameters[arguments_ty]:
+    | a=lambda_slash_without_default b=[',' x=lambda_plain_names { x }] c=[',' y=lambda_names_with_default { y }] d=[',' z=[lambda_star_etc] { z }] {
+        make_arguments(p, a, NULL, b, c, d) }
+    | a=lambda_slash_with_default b=[',' y=lambda_names_with_default { y }] c=[',' z=[lambda_star_etc] { z }] {
+        make_arguments(p, NULL, a, NULL, b, c) }
+    | a=lambda_plain_names b=[',' y=lambda_names_with_default { y }] c=[',' z=[lambda_star_etc] { z }] {
+        make_arguments(p, NULL, NULL, a, b, c) }
+    | a=lambda_names_with_default b=[',' z=[lambda_star_etc] { z }] { make_arguments(p, NULL, NULL, NULL, a, b)}
+    | a=lambda_star_etc { make_arguments(p, NULL, NULL, NULL, NULL, a) }
+lambda_slash_without_default[asdl_seq*]: a=lambda_plain_names ',' '/' { a }
+lambda_slash_with_default[SlashWithDefault*]: a=[n=lambda_plain_names ',' { n }] b=lambda_names_with_default ',' '/' {
+    slash_with_default(p, a, b) }
+lambda_star_etc[StarEtc*]:
+    | '*' a=lambda_plain_name b=lambda_name_with_optional_default* c=[',' d=lambda_kwds { d }] [','] {
+        star_etc(p, a, b, c) }
+    | '*' b=lambda_name_with_optional_default+ c=[',' d=lambda_kwds { d }] [','] {
+        star_etc(p, NULL, b, c) }
+    | a=lambda_kwds [','] { star_etc(p, NULL, NULL, a) }
+lambda_name_with_optional_default[NameDefaultPair*]:
+    | ',' a=lambda_plain_name b=['=' e=expression { e }] { name_default_pair(p, a, b) }
+lambda_names_with_default[asdl_seq*]: a=','.lambda_name_with_default+ { a }
+lambda_name_with_default[NameDefaultPair*]:
+    | n=lambda_plain_name '=' e=expression { name_default_pair(p, n, e) }
+lambda_plain_names[asdl_seq*]: a=','.(lambda_plain_name !'=')+ { a }
+lambda_plain_name[arg_ty]: a=NAME { _Py_arg(((expr_ty) a)->v.Name.id, NULL, NULL, EXTRA_EXPR(a, a)) }
+lambda_kwds[arg_ty]: '**' a=NAME { _Py_arg(((expr_ty) a)->v.Name.id, NULL, NULL, EXTRA_EXPR(a, a)) }
 
 disjunction[expr_ty]:
     | a=conjunction b=('or' c=conjunction { c })+ { _Py_BoolOp(
