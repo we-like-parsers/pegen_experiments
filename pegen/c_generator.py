@@ -281,9 +281,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print("if (fill_token(p) < 0) return NULL;")
             self.print("}")
             self.print("int start_lineno = p->tokens[mark]->lineno;")
-            self.print("UNUSED(start_lineno);")
+            self.print("UNUSED(start_lineno); // Only used by EXTRA macro")
             self.print("int start_col_offset = p->tokens[mark]->col_offset;")
-            self.print("UNUSED(start_col_offset);")
+            self.print("UNUSED(start_col_offset); // Only used by EXTRA macro")
             self.visit(
                 rhs,
                 is_loop=False,
