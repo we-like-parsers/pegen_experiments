@@ -44,4 +44,3 @@ def test_ast_generation_on_source_files(parser_extension: Any, filename: PurePat
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for file: {filename}"
-
