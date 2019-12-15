@@ -313,9 +313,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("void **children = PyMem_Malloc(0);")
             self.out_of_memory_return(f"!children", "NULL")
             self.print("ssize_t n = 0;")
-            self.print("if (p->mark == p->fill) {")
+            self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
             with self.indent():
-                self.print("if (fill_token(p) < 0) return NULL;")
+                self.print("return NULL;")
             self.print("}")
             self.print("int start_lineno = p->tokens[mark]->lineno;")
             self.print("UNUSED(start_lineno); // Only used by EXTRA macro")
