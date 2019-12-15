@@ -87,6 +87,7 @@ int raise_syntax_error(Parser *p, const char *errmsg, ...);
 void *CONSTRUCTOR(Parser *p, ...);
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
+#define EXTRA_EXPR(head, tail) head->lineno, head->col_offset, tail->end_lineno, tail->end_col_offset, p->arena
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
 PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);

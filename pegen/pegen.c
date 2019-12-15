@@ -265,14 +265,13 @@ expect_token(Parser *p, int type)
 Token *
 get_last_nonnwhitespace_token(Parser *p)
 {
-    int i = 1;
+    assert(p->mark >= 0);
     Token *token = NULL;
-    while (i <= p->mark) {
-        token = p->tokens[p->mark-i];
-        if (token->type != 0 && (token->type < 4 || token->type > 6)) {
+    for (int m = p->mark - 1; m >= 0; m--) {
+        token = p->tokens[m];
+        if (token->type != ENDMARKER && (token->type < NEWLINE || token->type > DEDENT)) {
             break;
         }
-        i++;
     }
     return token;
 }
@@ -656,13 +655,9 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
         return NULL;
     }
 
-    return Name(uni,
-                Load,
-                first_name->lineno,
-                first_name->col_offset,
-                second_name->end_lineno,
-                second_name->end_col_offset,
-                p->arena);
+    return _Py_Name(uni,
+                    Load,
+                    EXTRA_EXPR(first_name, second_name));
 }
 
 /* Counts the total number of dots in seq's tokens */
@@ -821,11 +816,7 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
     return _Py_Compare(expr,
                        _get_cmpops(p, pairs),
                        _get_exprs(p, pairs),
-                       expr->lineno,
-                       expr->col_offset,
-                       ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr->end_lineno,
-                       ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr->end_col_offset,
-                       p->arena);
+                       EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
 /* Receives a expr_ty and creates the appropiate node for assignment targets */
@@ -840,11 +831,7 @@ construct_assign_target(Parser *p, expr_ty node)
         case Name_kind:
             return _Py_Name(node->v.Name.id,
                             Store,
-                            node->lineno,
-                            node->col_offset,
-                            node->end_lineno,
-                            node->end_col_offset,
-                            p->arena);
+                            EXTRA_EXPR(node, node));
         case Tuple_kind:
             if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
                 PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
@@ -852,20 +839,12 @@ construct_assign_target(Parser *p, expr_ty node)
                 // buble up exceptions for now.
                return _Py_Name(_create_dummy_identifier(p),
                             Store,
-                            node->lineno,
-                            node->col_offset,
-                            node->end_lineno,
-                            node->end_col_offset,
-                            p->arena);
+                            EXTRA_EXPR(node, node));
             }
             name = asdl_seq_GET(node->v.Tuple.elts, 0);
             return _Py_Name(name->v.Name.id,
                             Store,
-                            name->lineno,
-                            name->col_offset,
-                            name->end_lineno,
-                            name->end_col_offset,
-                            p->arena);
+                            EXTRA_EXPR(name, name));
         default:
             //TODO: Support more types of nodes when the target rule is
             // ready.
@@ -882,11 +861,7 @@ store_name(Parser *p, expr_ty load_name)
     }
     return _Py_Name(load_name->v.Name.id,
                     Store,
-                    load_name->lineno,
-                    load_name->col_offset,
-                    load_name->end_lineno,
-                    load_name->end_col_offset,
-                    p->arena);
+                    EXTRA_EXPR(load_name, load_name));
 }
 
 expr_ty
@@ -894,11 +869,7 @@ _del_name(Parser *p, expr_ty load_name)
 {
     return _Py_Name(load_name->v.Name.id,
                     Del,
-                    load_name->lineno,
-                    load_name->col_offset,
-                    load_name->end_lineno,
-                    load_name->end_col_offset,
-                    p->arena);
+                    EXTRA_EXPR(load_name, load_name));
 }
 
 /* Creates an asdl_seq* where all the elements have been changed to have del as context */
@@ -918,19 +889,11 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
         } else if (e->kind == Tuple_kind) {
             asdl_seq_SET(new_seq, i, _Py_Tuple(map_targets_to_del_names(p, e->v.Tuple.elts),
                                                Del,
-                                               e->lineno,
-                                               e->col_offset,
-                                               e->end_lineno,
-                                               e->end_col_offset,
-                                               p->arena));
+                                               EXTRA_EXPR(e, e)));
         } else if (e->kind == List_kind) {
             asdl_seq_SET(new_seq, i, _Py_List(map_targets_to_del_names(p, e->v.List.elts),
                                               Del,
-                                              e->lineno,
-                                              e->col_offset,
-                                              e->end_lineno,
-                                              e->end_col_offset,
-                                              p->arena));
+                                              EXTRA_EXPR(e, e)));
         }
     }
     return new_seq;

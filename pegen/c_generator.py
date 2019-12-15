@@ -276,9 +276,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
-            self.print("if (p->mark == p->fill) {")
+            self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
             with self.indent():
-                self.print("if (fill_token(p) < 0) return NULL;")
+                self.print("return NULL;")
             self.print("}")
             self.print("int start_lineno = p->tokens[mark]->lineno;")
             self.print("UNUSED(start_lineno); // Only used by EXTRA macro")
@@ -415,7 +415,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                     self.visit(item, names=names)
             self.print(") {")
             with self.indent():
-                self.print("assert(p->mark > 0);")
                 self.print("Token *token = get_last_nonnwhitespace_token(p);")
                 self.print("if (token == NULL) {")
                 with self.indent():
