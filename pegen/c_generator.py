@@ -258,7 +258,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("UNUSED(end_lineno); // Only used by EXTRA macro")
             self.print(f"int end_col_offset = token->end_col_offset;")
             self.print("UNUSED(end_col_offset); // Only used by EXTRA macro")
-        
 
     def _set_up_rule_memoization(self, node: Rule, result_type: str) -> None:
         self.print("{")
