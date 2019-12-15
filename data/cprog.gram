@@ -2,12 +2,12 @@ start[mod_ty]: a=stmt* ENDMARKER { Module(a, NULL, p->arena) }
 stmt[stmt_ty]: compound_stmt | simple_stmt
 compound_stmt[stmt_ty]: pass_stmt | if_stmt
 
-pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
+pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA) }
 
 if_stmt[stmt_ty]:
-    | 'if' c=expression ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA_EXPR(c, c)) }
+    | 'if' c=expression ':' t=suite e=[else_clause] { _Py_If(c, t, e, EXTRA) }
 else_clause[asdl_seq*]:
-    | 'elif' c=expression ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA_EXPR(c, c))) }
+    | 'elif' c=expression ':' t=suite e=[else_clause] { singleton_seq(p, _Py_If(c, t, e, EXTRA)) }
     | 'else' ':' s=suite { s }
 
 suite[asdl_seq*]:
@@ -16,21 +16,21 @@ suite[asdl_seq*]:
 
 simple_stmt[stmt_ty]: a=expr_stmt NEWLINE { a }
 
-expr_stmt[stmt_ty]: a=expression { _Py_Expr(a, EXTRA_EXPR(a, a)) }
+expr_stmt[stmt_ty]: a=expression { _Py_Expr(a, EXTRA) }
 
 expression[expr_ty]:
-    | l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA_EXPR(l, r)) }
-    | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA_EXPR(l, r)) }
+    | l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA) }
+    | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA) }
     | term
 term[expr_ty]:
-    | l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA_EXPR(l, r)) }
-    | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA_EXPR(l, r)) }
+    | l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA) }
+    | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA) }
     | factor
 factor[expr_ty]:
-    | l=primary '**' r=factor { _Py_BinOp(l, Pow, r, EXTRA_EXPR(l, r)) }
+    | l=primary '**' r=factor { _Py_BinOp(l, Pow, r, EXTRA) }
     | primary
 primary[expr_ty]:
-    | f=primary '(' e=expression ')' { _Py_Call(f, singleton_seq(p, e), NULL, EXTRA_EXPR(f, e)) }
+    | f=primary '(' e=expression ')' { _Py_Call(f, singleton_seq(p, e), NULL, EXTRA) }
     | atom
 atom[expr_ty]:
     | '(' e=expression ')' { e }
