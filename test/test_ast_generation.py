@@ -31,6 +31,37 @@ TEST_CASES = [
     ('binop_boolop_comp', '1 + 1 == 2 or 1 + 1 == 3 and not b'),
     ('boolop_or', 'a or b'),
     ('boolop_or_multiple', 'a or b or c'),
+    ('class_def_bases',
+     '''
+        class C(A, B):
+            pass
+     '''),
+    ('class_def_decorators',
+     '''
+        @a
+        class C:
+            pass
+     '''),
+    ('class_def_keywords',
+     '''
+        class C(keyword=a+b, **c):
+            pass
+     '''),
+    ('class_def_mixed',
+     '''
+        class C(A, B, keyword=0, **a):
+            pass
+     '''),
+    ('class_def_simple',
+     '''
+        class C:
+            pass
+     '''),
+    ('class_def_starred_in_kwargs',
+     '''
+        class C(A, x=2, *[B, C], y=3):
+            pass
+     '''),
     ('comp', 'a == b'),
     ('comp_multiple', 'a == b == c'),
     ('decorator',
