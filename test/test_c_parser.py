@@ -41,13 +41,13 @@ def test_c_parser(tmp_path: PurePath) -> None:
     grammar_source = """
     start[mod_ty]: a=stmt* $ { Module(a, NULL, p->arena) }
     stmt[stmt_ty]: a=expr_stmt { a }
-    expr_stmt[stmt_ty]: a=expression NEWLINE { _Py_Expr(a, EXTRA_EXPR(a, a)) }
-    expression[expr_ty]: ( l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA_EXPR(l, r)) }
-                         | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA_EXPR(l, r)) }
+    expr_stmt[stmt_ty]: a=expression NEWLINE { _Py_Expr(a, EXTRA) }
+    expression[expr_ty]: ( l=expression '+' r=term { _Py_BinOp(l, Add, r, EXTRA) }
+                         | l=expression '-' r=term { _Py_BinOp(l, Sub, r, EXTRA) }
                          | t=term { t }
                          )
-    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA_EXPR(l, r)) }
-                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA_EXPR(l, r)) }
+    term[expr_ty]: ( l=term '*' r=factor { _Py_BinOp(l, Mult, r, EXTRA) }
+                   | l=term '/' r=factor { _Py_BinOp(l, Div, r, EXTRA) }
                    | f=factor { f }
                    )
     factor[expr_ty]: ('(' e=expression ')' { e }
@@ -159,7 +159,7 @@ def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     statement[stmt_ty]: simple_stmt
     simple_stmt[stmt_ty]: small_stmt
     small_stmt[stmt_ty]: return_stmt
-    return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA(a, token_type, a, token_type)) }
+    return_stmt[stmt_ty]: a='return' NEWLINE { _Py_Return(NULL, EXTRA) }
     """
     stmt = "return"
     verify_ast_generation(grammar, stmt, tmp_path)
@@ -168,7 +168,7 @@ def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
 def test_gather_action_ast(tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=';'.pass_stmt+ NEWLINE ENDMARKER { Module(a, NULL, p->arena) }
-    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type))}
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA)}
     """
     stmt = "pass; pass"
     verify_ast_generation(grammar, stmt, tmp_path)
@@ -181,7 +181,7 @@ def test_pass_stmt_action(tmp_path: PurePath) -> None:
     statement[stmt_ty]: simple_stmt
     simple_stmt[stmt_ty]: small_stmt
     small_stmt[stmt_ty]: pass_stmt
-    pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
+    pass_stmt[stmt_ty]: a='pass' NEWLINE { _Py_Pass(EXTRA) }
     """
     stmt = "pass"
     verify_ast_generation(grammar, stmt, tmp_path)
@@ -200,11 +200,11 @@ def test_if_stmt_action(tmp_path: PurePath) -> None:
 
     compound_stmt: if_stmt
 
-    if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA_EXPR(a, b)) }
+    if_stmt: 'if' a=full_expression ':' b=block { _Py_If(a, b, NULL, EXTRA) }
 
     small_stmt[stmt_ty]: pass_stmt
 
-    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA) }
 
     full_expression: NAME
     """
@@ -217,9 +217,9 @@ def test_same_name_different_types(stmt: str, tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=import_from+ NEWLINE ENDMARKER { Module(a, NULL, p->arena)}
     import_from[stmt_ty]: ( a='from' !'import' c=simple_name 'import' d=import_as_names_from {
-                              _Py_ImportFrom(c->v.Name.id, d, 0, EXTRA(a, token_type, asdl_seq_GET(d, 0), expr_type)) }
+                              _Py_ImportFrom(c->v.Name.id, d, 0, EXTRA) }
                           | a='from' '.' 'import' c=import_as_names_from {
-                              _Py_ImportFrom(NULL, c, 1, EXTRA(a, token_type, asdl_seq_GET(c, 0), expr_type)) }
+                              _Py_ImportFrom(NULL, c, 1, EXTRA) }
                           )
     simple_name[expr_ty]: NAME
     import_as_names_from[asdl_seq*]: a=','.import_as_name_from+ { a }
@@ -236,13 +236,13 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
     compound_stmt[stmt_ty]: with_stmt
     with_stmt[stmt_ty]: (
         a='with' '(' b=','.with_item+ ')' ':' c=block {
-            _Py_With(b, singleton_seq(p, c), NULL, EXTRA(a, token_type, c, stmt_type)) }
+            _Py_With(b, singleton_seq(p, c), NULL, EXTRA) }
     )
     with_item[withitem_ty]: (
         e=NAME o=['as' t=NAME { t }] { _Py_withitem(e, store_name(p, o), p->arena) }
     )
     block[stmt_ty]: a=pass_stmt NEWLINE { a } | NEWLINE INDENT a=pass_stmt DEDENT { a }
-    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA(a, token_type, a, token_type)) }
+    pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA) }
     """
     stmt = "with (\n    a as b,\n    c as d\n): pass"
     grammar = parse_string(grammar_source, GrammarParser)
@@ -257,13 +257,13 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
 def test_ternary_operator(tmp_path: PurePath) -> None:
     grammar_source = """
     start[mod_ty]: a=expr ENDMARKER { Module(a, NULL, p->arena) }
-    expr[asdl_seq*]: a=listcomp NEWLINE { singleton_seq(p, _Py_Expr(a, EXTRA_EXPR(a, a))) }
+    expr[asdl_seq*]: a=listcomp NEWLINE { singleton_seq(p, _Py_Expr(a, EXTRA)) }
     listcomp[expr_ty]: (
-        a='[' b=NAME c=for_if_clauses d=']' { _Py_ListComp(b, c, EXTRA(a, token_type, d, token_type)) }
+        a='[' b=NAME c=for_if_clauses d=']' { _Py_ListComp(b, c, EXTRA) }
     )
     for_if_clauses[asdl_seq*]: (
         a=(y=[ASYNC] 'for' a=NAME 'in' b=NAME c=('if' z=NAME { z })*
-            { _Py_comprehension(_Py_Name(((expr_ty) a)->v.Name.id, Store, EXTRA_EXPR(a, a)), b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
+            { _Py_comprehension(_Py_Name(((expr_ty) a)->v.Name.id, Store, EXTRA), b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
     )
     """
     stmt = "[i for i in a if b]"

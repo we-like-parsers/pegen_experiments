@@ -138,7 +138,7 @@ CONSTRUCTOR(Parser *p, ...)
     return Name(id, Load, 1, 0, 1, 0,p->arena);
 }
 
-static int
+int
 fill_token(Parser *p)
 {
     char *start, *end;
@@ -260,6 +260,20 @@ expect_token(Parser *p, int type)
     // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
 
     return t;
+}
+
+Token *
+get_last_nonnwhitespace_token(Parser *p)
+{
+    assert(p->mark >= 0);
+    Token *token = NULL;
+    for (int m = p->mark - 1; m >= 0; m--) {
+        token = p->tokens[m];
+        if (token->type != ENDMARKER && (token->type < NEWLINE || token->type > DEDENT)) {
+            break;
+        }
+    }
+    return token;
 }
 
 void *
@@ -641,13 +655,9 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
         return NULL;
     }
 
-    return Name(uni,
-                Load,
-                first_name->lineno,
-                first_name->col_offset,
-                second_name->end_lineno,
-                second_name->end_col_offset,
-                p->arena);
+    return _Py_Name(uni,
+                    Load,
+                    EXTRA_EXPR(first_name, second_name));
 }
 
 /* Counts the total number of dots in seq's tokens */
@@ -1195,4 +1205,22 @@ augoperator(Parser* p, operator_ty kind)
     }
     a->kind = kind;
     return a;
+}
+
+stmt_ty
+function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
+{
+    return _Py_FunctionDef(
+        function_def->v.FunctionDef.name,
+        function_def->v.FunctionDef.args,
+        function_def->v.FunctionDef.body,
+        decorators,
+        function_def->v.FunctionDef.returns,
+        function_def->v.FunctionDef.type_comment,
+        function_def->lineno,
+        function_def->col_offset,
+        function_def->end_lineno,
+        function_def->end_col_offset,
+        p->arena
+    );
 }

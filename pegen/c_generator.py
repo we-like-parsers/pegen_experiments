@@ -238,6 +238,27 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         mode = int(self.rules["start"].type == "mod_ty")
         self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
 
+    def _set_up_token_start_metadata_extraction(self) -> None:
+        self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
+        with self.indent():
+            self.print("return NULL;")
+        self.print("}")
+        self.print("int start_lineno = p->tokens[mark]->lineno;")
+        self.print("UNUSED(start_lineno); // Only used by EXTRA macro")
+        self.print("int start_col_offset = p->tokens[mark]->col_offset;")
+        self.print("UNUSED(start_col_offset); // Only used by EXTRA macro")
+
+    def _set_up_token_end_metadata_extraction(self) -> None:
+        self.print("Token *token = get_last_nonnwhitespace_token(p);")
+        self.print("if (token == NULL) {")
+        with self.indent():
+            self.print("return NULL;")
+        self.print("}")
+        self.print(f"int end_lineno = token->end_lineno;")
+        self.print("UNUSED(end_lineno); // Only used by EXTRA macro")
+        self.print(f"int end_col_offset = token->end_col_offset;")
+        self.print("UNUSED(end_col_offset); // Only used by EXTRA macro")
+
     def _set_up_rule_memoization(self, node: Rule, result_type: str) -> None:
         self.print("{")
         with self.indent():
@@ -276,6 +297,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
+            self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=False,
@@ -305,6 +327,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("void **children = PyMem_Malloc(0);")
             self.out_of_memory_return(f"!children", "NULL")
             self.print("ssize_t n = 0;")
+            self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=True,
@@ -399,6 +422,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                     self.visit(item, names=names)
             self.print(") {")
             with self.indent():
+                self._set_up_token_end_metadata_extraction()
                 action = node.action
                 if not action:
                     if len(names) > 1:
