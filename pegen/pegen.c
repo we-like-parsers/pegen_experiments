@@ -713,43 +713,6 @@ seq_get_tail(void *previous, asdl_seq *seq)
     return asdl_seq_GET(seq, asdl_seq_LEN(seq) - 1);
 }
 
-/* Constructs a PegenAlias */
-PegenAlias *
-pegen_alias(alias_ty alias,
-            int lineno,
-            int col_offset,
-            int end_lineno,
-            int end_col_offset,
-            PyArena *arena)
-{
-    PegenAlias *a = PyArena_Malloc(arena, sizeof(PegenAlias));
-    if (!a) {
-        return NULL;
-    }
-    a->alias = alias;
-    a->lineno = lineno;
-    a->col_offset = col_offset;
-    a->end_lineno = end_lineno;
-    a->end_col_offset = end_col_offset;
-    return a;
-}
-
-/* Extracts alias_ty's from an asdl_seq* of PegenAlias*s */
-asdl_seq *
-extract_orig_aliases(Parser *p, asdl_seq *seq)
-{
-    int len = asdl_seq_LEN(seq);
-    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
-    if (!new_seq) {
-        return NULL;
-    }
-    for (int i = 0; i < len; i++) {
-        PegenAlias *a = asdl_seq_GET(seq, i);
-        asdl_seq_SET(new_seq, i, a->alias);
-    }
-    return new_seq;
-}
-
 /* Creates a new asdl_seq* with the identifiers of all the names in seq */
 asdl_seq *
 map_names_to_ids(Parser *p, asdl_seq *seq)
