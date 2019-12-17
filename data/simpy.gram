@@ -69,15 +69,9 @@ import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(a, EXTRA) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | 'from' a=('.' | '...')* !'import' b=dotted_name 'import' c=import_from_targets {
-        _Py_ImportFrom(b->v.Name.id,
-                       c,
-                       seq_count_dots(a),
-                       EXTRA) }
+        _Py_ImportFrom(b->v.Name.id, c, seq_count_dots(a), EXTRA) }
     | 'from' a=('.' | '...')+ 'import' b=import_from_targets {
-        _Py_ImportFrom(NULL,
-                       b,
-                       seq_count_dots(a),
-                       EXTRA) }
+        _Py_ImportFrom(NULL, b, seq_count_dots(a), EXTRA) }
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
@@ -152,19 +146,11 @@ function_def_raw[stmt_ty]:
     | ASYNC 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
         _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id,
                              (params) ? params : empty_arguments(p),
-                             b,
-                             NULL,
-                             a,
-                             NULL,
-                             EXTRA) }
+                             b, NULL, a, NULL, EXTRA) }
     | 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
         _Py_FunctionDef(((expr_ty) n)->v.Name.id,
                         (params) ? params : empty_arguments(p),
-                        b,
-                        NULL,
-                        a,
-                        NULL,
-                        EXTRA) }
+                        b, NULL, a, NULL, EXTRA) }
 
 parameters[arguments_ty]:
     | a=slash_without_default b=[',' x=plain_names { x }] c=[',' y=names_with_default { y }] d=[',' z=[star_etc] { z }] {
