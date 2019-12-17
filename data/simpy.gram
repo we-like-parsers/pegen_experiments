@@ -25,11 +25,8 @@ compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt |
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
-    | !'lambda' a=target ':' b=expression '=' c=yield_expression {
+    | !'lambda' a=target ':' b=expression c=['=' d=yield_expression { d }] {
          _Py_AnnAssign(construct_assign_target(p, a), b, c,
-         a->kind == Name_kind ? 1 : 0, EXTRA) }
-    | !'lambda' a=target ':' b=expression {
-         _Py_AnnAssign(construct_assign_target(p, a), b, NULL,
          a->kind == Name_kind ? 1 : 0, EXTRA) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA) }
@@ -51,16 +48,12 @@ augassign[AugOperator*]:
     | '**=' {augoperator(p, Pow)}
     | '//=' {augoperator(p, FloorDiv)}
 
-global_stmt[stmt_ty]: 'global' a=','.NAME+ {
-    _Py_Global(map_names_to_ids(p, a), EXTRA) }
-nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ {
-    _Py_Nonlocal(map_names_to_ids(p, a), EXTRA) }
+global_stmt[stmt_ty]: 'global' a=','.NAME+ { _Py_Global(map_names_to_ids(p, a), EXTRA) }
+nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ { _Py_Nonlocal(map_names_to_ids(p, a), EXTRA) }
 
 yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 
-assert_stmt[stmt_ty]:
-    | 'assert' a=expression ',' b=expression { _Py_Assert(a, b, EXTRA) }
-    | 'assert' a=expression { _Py_Assert(a, NULL, EXTRA) }
+assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
 
 del_stmt[stmt_ty]: 'del' a=targets { # TODO: exclude *target
     _Py_Delete(map_targets_to_del_names(p, a), EXTRA) }
@@ -72,74 +65,55 @@ break_stmt[stmt_ty]: 'break' { _Py_Break(EXTRA) }
 continue_stmt[stmt_ty]: 'continue' { _Py_Continue(EXTRA) }
 
 import_stmt[stmt_ty]: import_name | import_from
-import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(extract_orig_aliases(p, a), EXTRA) }
+import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(a, EXTRA) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
 import_from[stmt_ty]:
     | 'from' a=('.' | '...')* !'import' b=dotted_name 'import' c=import_from_targets {
         _Py_ImportFrom(b->v.Name.id,
-                       extract_orig_aliases(p, c),
+                       c,
                        seq_count_dots(a),
                        EXTRA) }
     | 'from' a=('.' | '...')+ 'import' b=import_from_targets {
         _Py_ImportFrom(NULL,
-                       extract_orig_aliases(p, b),
+                       b,
                        seq_count_dots(a),
                        EXTRA) }
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | '*' { singleton_seq(p, pegen_alias(alias_for_star(p), EXTRA)) }
+    | '*' { singleton_seq(p, alias_for_star(p)) }
 import_from_as_names[asdl_seq*]:
     | a=','.import_from_as_name+ [','] { a }
-import_from_as_name[PegenAlias*]:
-    | a=NAME 'as' b=NAME {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena), EXTRA) }
-    | a=NAME {
-        pegen_alias(_Py_alias(((expr_ty) a)->v.Name.id, NULL, p->arena), EXTRA) }
-dotted_as_names[asdl_seq*]: 
+import_from_as_name[alias_ty]:
+    | a=NAME b=['as' z=NAME { z }] { _Py_alias(((expr_ty) a)->v.Name.id,
+                                               (b) ? ((expr_ty) b)->v.Name.id : NULL,
+                                               p->arena) }
+dotted_as_names[asdl_seq*]:
     | a=','.dotted_as_name+ { a }
-dotted_as_name[PegenAlias*]:
-    | a=dotted_name 'as' b=NAME {
-        pegen_alias(_Py_alias(a->v.Name.id, ((expr_ty) b)->v.Name.id, p->arena),
-                    EXTRA) }
-    | a=dotted_name {
-        pegen_alias(_Py_alias(a->v.Name.id, NULL, p->arena),
-                    EXTRA) }
+dotted_as_name[alias_ty]:
+    | a=dotted_name b=['as' z=NAME { z }] { _Py_alias(a->v.Name.id,
+                                                      (b) ? ((expr_ty) b)->v.Name.id : NULL,
+                                                      p->arena) }
 dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
 
 if_stmt[stmt_ty]:
-    | 'if' a=named_expression ':' b=block c=else_block {
-        _Py_If(a, b, c, EXTRA) }
-    | 'if' a=named_expression ':' b=block c=elif_stmt {
-        _Py_If(a, b, singleton_seq(p, c), EXTRA) }
-    | 'if' a=named_expression ':' b=block {
-        _Py_If(a, b, NULL, EXTRA) }
+    | 'if' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA) }
+    | 'if' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
 elif_stmt[stmt_ty]:
-    | 'elif' a=named_expression ':' b=block c=else_block {
-        _Py_If(a, b, c, EXTRA) }
-    | 'elif' a=named_expression ':' b=block c=elif_stmt {
-        _Py_If(a, b, singleton_seq(p, c), EXTRA) }
-    | 'elif' a=named_expression ':' b=block {
-        _Py_If(a, b, NULL, EXTRA) }
+    | 'elif' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, singleton_seq(p, c), EXTRA) }
+    | 'elif' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
 else_block[asdl_seq*]: 'else' ':' b=block { b }
 
 while_stmt[stmt_ty]:
-    | 'while' a=named_expression ':' b=block c=else_block {
-        _Py_While(a, b, c, EXTRA) }
-    | 'while' a=named_expression ':' b=block {
-        _Py_While(a, b, NULL, EXTRA) }
+    | 'while' a=named_expression ':' b=block c=[else_block] { _Py_While(a, b, c, EXTRA) }
 
 for_stmt[stmt_ty]:
-    | ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block el=else_block {
+    | ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block el=[else_block] {
         _Py_AsyncFor(t, ex, b, el, NULL, EXTRA) }
-    | ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block {
-        _Py_AsyncFor(t, ex, b, NULL, NULL, EXTRA) }
-    | 'for' t=star_targets 'in' ex=expressions ':' b=block el=else_block {
+    | 'for' t=star_targets 'in' ex=expressions ':' b=block el=[else_block] {
         _Py_For(t, ex, b, el, NULL, EXTRA) }
-    | 'for' t=star_targets 'in' ex=expressions ':' b=block {
-        _Py_For(t, ex, b, NULL, NULL, EXTRA) }
 
 with_stmt[stmt_ty]:
     | ASYNC 'with' '(' a=','.with_item+ ')' ':' b=block {
@@ -154,23 +128,12 @@ with_item[withitem_ty]:
     | e=expression o=['as' t=target { t }] { _Py_withitem(e, store_name(p, o), p->arena) }
 
 try_stmt[stmt_ty]:
-    | 'try' ':' b=block ex=except_block+ el=else_block f=finally_block {
-        _Py_Try(b, ex, el, f, EXTRA) }
-    | 'try' ':' b=block ex=except_block+ el=else_block {
-        _Py_Try(b, ex, el, NULL, EXTRA) }
-    | 'try' ':' b=block ex=except_block+ f=finally_block {
-        _Py_Try(b, ex, NULL, f, EXTRA) }
-    | 'try' ':' b=block ex=except_block+ {
-        _Py_Try(b, ex, NULL, NULL, EXTRA) }
-    | 'try' ':' b=block f=finally_block {
-        _Py_Try(b, NULL, NULL, f, EXTRA) }
+    | 'try' ':' b=block f=finally_block { _Py_Try(b, NULL, NULL, f, EXTRA) }
+    | 'try' ':' b=block ex=except_block+ el=[else_block] f=[finally_block] { _Py_Try(b, ex, el, f, EXTRA) }
 except_block[excepthandler_ty]:
-    | 'except' e=expression 'as' t=target ':' b=block {
-        _Py_ExceptHandler(e, t->v.Name.id, b, EXTRA) }
-    | 'except' e=expression ':' b=block {
-        _Py_ExceptHandler(e, NULL, b, EXTRA) }
-    | 'except' ':' b=block {
-        _Py_ExceptHandler(NULL, NULL, b, EXTRA) }
+    | 'except' e=expression t=['as' z=target { z }] ':' b=block {
+        _Py_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
+    | 'except' ':' b=block { _Py_ExceptHandler(NULL, NULL, b, EXTRA) }
 finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
 return_stmt[stmt_ty]:
@@ -178,8 +141,7 @@ return_stmt[stmt_ty]:
     | 'return' { _Py_Return(NULL, EXTRA) }
 
 raise_stmt[stmt_ty]:
-    | 'raise' a=expression 'from' b=expression { _Py_Raise(a, b, EXTRA) }
-    | 'raise' a=expression { _Py_Raise(a, NULL, EXTRA) }
+    | 'raise' a=expression b=['from' z=expression { z }] { _Py_Raise(a, b, EXTRA) }
     | 'raise' { _Py_Raise(NULL, NULL, EXTRA) }
 
 function_def[stmt_ty]:
@@ -187,14 +149,22 @@ function_def[stmt_ty]:
     | function_def_raw
 
 function_def_raw[stmt_ty]:
-    | ASYNC 'def' n=NAME '(' params=parameters ')' a=['->' z=annotation { z }] ':' b=block {
-        _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id, params, b, NULL, a, NULL, EXTRA) }
-    | ASYNC 'def' n=NAME '(' ')' a=['->' z=annotation { z }] ':' b=block {
-        _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id, empty_arguments(p), b, NULL, a, NULL, EXTRA) }
-    | 'def' n=NAME '(' params=parameters ')' a=['->' z=annotation { z }] ':' b=block {
-        _Py_FunctionDef(((expr_ty) n)->v.Name.id, params, b, NULL, a, NULL, EXTRA) }
-    | 'def' n=NAME '(' ')' a=['->' z=annotation { z }] ':' b=block {
-        _Py_FunctionDef(((expr_ty) n)->v.Name.id, empty_arguments(p), b, NULL, a, NULL, EXTRA) }
+    | ASYNC 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_AsyncFunctionDef(((expr_ty) n)->v.Name.id,
+                             (params) ? params : empty_arguments(p),
+                             b,
+                             NULL,
+                             a,
+                             NULL,
+                             EXTRA) }
+    | 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
+        _Py_FunctionDef(((expr_ty) n)->v.Name.id,
+                        (params) ? params : empty_arguments(p),
+                        b,
+                        NULL,
+                        a,
+                        NULL,
+                        EXTRA) }
 
 parameters[arguments_ty]:
     | a=slash_without_default b=[',' x=plain_names { x }] c=[',' y=names_with_default { y }] d=[',' z=[star_etc] { z }] {
@@ -221,8 +191,7 @@ name_with_default[NameDefaultPair*]:
     | n=plain_name '=' e=expression { name_default_pair(p, n, e) }
 plain_names[asdl_seq*]: a=','.(plain_name !'=')+ { a }
 plain_name[arg_ty]:
-    | a=NAME ':' b=annotation { _Py_arg(((expr_ty) a)->v.Name.id, b, NULL, EXTRA) }
-    | a=NAME { _Py_arg(((expr_ty) a)->v.Name.id, NULL, NULL, EXTRA) }
+    | a=NAME b=[':' z=annotation { z }] { _Py_arg(((expr_ty) a)->v.Name.id, b, NULL, EXTRA) }
 kwds[arg_ty]:
     | '**' a=plain_name { a }
 annotation[expr_ty]: expression
@@ -257,8 +226,7 @@ expression[expr_ty]:
     | disjunction
 
 lambdef[expr_ty]:
-    | 'lambda' ':' a=expression { _Py_Lambda(empty_arguments(p), a, EXTRA) }
-    | 'lambda' a=lambda_parameters ':' b=expression { _Py_Lambda(a, b, EXTRA) }
+    | 'lambda' a=[lambda_parameters] ':' b=expression { _Py_Lambda((a) ? a : empty_arguments(p), b, EXTRA) }
 lambda_parameters[arguments_ty]:
     | a=lambda_slash_without_default b=[',' x=lambda_plain_names { x }] c=[',' y=lambda_names_with_default { y }] d=[',' z=[lambda_star_etc] { z }] {
         make_arguments(p, a, NULL, b, c, d) }
@@ -332,10 +300,10 @@ bitwise_or[expr_ty]:
     | bitwise_xor
 bitwise_xor[expr_ty]:
     | a=bitwise_xor '^' b=bitwise_and { _Py_BinOp(a, BitXor, b, EXTRA) }
-    | bitwise_and 
+    | bitwise_and
 bitwise_and[expr_ty]:
     | a=bitwise_and '&' b=shift_expr { _Py_BinOp(a, BitAnd, b, EXTRA) }
-    | shift_expr 
+    | shift_expr
 shift_expr[expr_ty]:
     | a=shift_expr '<<' b=sum { _Py_BinOp(a, LShift, b, EXTRA) }
     | a=shift_expr '>>' b=sum { _Py_BinOp(a, RShift, b, EXTRA) }
@@ -409,8 +377,7 @@ for_if_clauses[asdl_seq*]:
 
 yield_expr[expr_ty]:
     | 'yield' 'from' a=expression { _Py_YieldFrom(a, EXTRA) }
-    | 'yield' a=expressions { _Py_Yield(a, EXTRA) }
-    | 'yield' { _Py_Yield(NULL, EXTRA) }
+    | 'yield' a=[expressions] { _Py_Yield(a, EXTRA) }
 
 arguments: expression for_if_clauses | args [',']
 args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work

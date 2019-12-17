@@ -33,16 +33,6 @@ other things.
 - size: total number of entries in array of Tokens
 - arena: memory allocation arena (owns all AST, Token, Memo structures allocated)
 
-##### PegenAlias
-
-Needed because alias_ty does not hold line and column offset info.
-When a rule needs to return an alias_ty, it returns a PegenAlias*
-instead so that line and column info get propagated to the caller,
-which extracts this info together with the alias_ty.
-
-- alias: alias_ty
-- lineno, col_offset, end_lineno, end_col_offset: int
-
 ##### CmpopExprPair
 
 This gets used by the rules that implement comparison, due to the
@@ -120,12 +110,6 @@ Returns the first element of `seq` or `previous` if `seq` is empty.
 
 ###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
 Returns the last element of `seq` or `previous` if `seq` is empty.
-
-###### `PegenAlias *pegen_alias(alias_ty alias, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)`
-Constructs a `PegenAlias`.
-
-###### `asdl_seq *extract_orig_aliases(Parser *p, asdl_seq *seq)`
-Extracts `alias_ty`s from an `asdl_seq *` of `PegenAlias *`s.
 
 ###### `asdl_seq *map_names_to_ids(Parser *p, asdl_seq *seq)`
 Creates a new `asdl_seq *` with the identifiers of all the names in `seq`.
