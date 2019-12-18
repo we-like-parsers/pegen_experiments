@@ -120,11 +120,11 @@ Constructs a `CmpopExprPair`.
 ###### `expr_ty Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)`
 Wrapper for `_Py_Compare`, so that the call in the grammar stays concise.
 
-###### `expr_ty store_name(Parser *p, expr_ty load_name)`
-Accepts a load name and creates an identical store name.
+###### `expr_ty set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)`
+Creates an `expr_ty` equivalent to `expr` but with `ctx` as context.
 
-###### `asdl_seq *map_targets_to_del_names(Parser *p, asdl_seq *seq)`
-Creates an `asdl_seq *` where all the elements have been changed to have del as context.
+###### `asdl_seq *map_seq_to_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)`
+Creates an `asdl_seq *` where all the elements have been changed to have `ctx` as context.
 
 ###### `KeyValuePair *key_value_pair(Parser *p, expr_ty key, expr_ty value)`
 Constructs a `KeyValuePair` that is used when parsing a dict's key value pairs.

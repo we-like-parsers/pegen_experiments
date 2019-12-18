@@ -31,7 +31,7 @@ assignment:
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA) }
     | a=target b=augassign c=(yield_expr | expressions) {
-         _Py_AugAssign(map_to_context(p, a, Store), b->kind, c, EXTRA) }
+         _Py_AugAssign(set_expr_context(p, a, Store), b->kind, c, EXTRA) }
 
 augassign[AugOperator*]:
     | '+=' {augoperator(p, Add)}
@@ -119,7 +119,7 @@ with_stmt[stmt_ty]:
     | 'with' a=','.with_item+ ':' b=block {
         _Py_With(a, b, NULL, EXTRA) }
 with_item[withitem_ty]:
-    | e=expression o=['as' t=target { t }] { _Py_withitem(e, map_to_context(p, o, Store), p->arena) }
+    | e=expression o=['as' t=target { t }] { _Py_withitem(e, set_expr_context(p, o, Store), p->arena) }
 
 try_stmt[stmt_ty]:
     | 'try' ':' b=block f=finally_block { _Py_Try(b, NULL, NULL, f, EXTRA) }
@@ -376,7 +376,7 @@ kwarg: NAME '=' expression | '*' expression | '**' expression
 # TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets: a=star_target (',' !'in' star_target)* [','] { a }
 star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
-star_atom: a=NAME { map_to_context(p, a, Store) } | '(' [star_targets] ')' | '[' [star_targets] ']'
+star_atom: a=NAME { set_expr_context(p, a, Store) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }

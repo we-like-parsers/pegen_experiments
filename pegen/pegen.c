@@ -782,39 +782,6 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
-/* Receives a expr_ty and creates the appropiate node for assignment targets */
-expr_ty
-construct_assign_target(Parser *p, expr_ty node)
-{
-    if (!node) {
-        return NULL;
-    }
-    expr_ty name;
-    switch(node->kind) {
-        case Name_kind:
-            return _Py_Name(node->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(node, node));
-        case Tuple_kind:
-            if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
-                PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
-                //TODO: We need to return a dummy here because we don't have a way to correctly
-                // buble up exceptions for now.
-               return _Py_Name(_create_dummy_identifier(p),
-                            Store,
-                            EXTRA_EXPR(node, node));
-            }
-            name = asdl_seq_GET(node->v.Tuple.elts, 0);
-            return _Py_Name(name->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(name, name));
-        default:
-            //TODO: Support more types of nodes when the target rule is
-            // ready.
-            return NULL;
-    }
-}
-
 expr_ty
 _set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
@@ -837,24 +804,54 @@ _set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
                     EXTRA_EXPR(e, e));
 }
 
+/* Receives a expr_ty and creates the appropiate node for assignment targets */
 expr_ty
-map_to_context(Parser *p, expr_ty e, expr_context_ty ctx)
+construct_assign_target(Parser *p, expr_ty node)
 {
-    if (!e) {
+    if (!node) {
         return NULL;
     }
-    assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
+    expr_ty name;
+    switch(node->kind) {
+        case Name_kind:
+            return _set_name_context(p, node, Store);
+        case Tuple_kind:
+            if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
+                PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
+                //TODO: We need to return a dummy here because we don't have a way to correctly
+                // buble up exceptions for now.
+               return _Py_Name(_create_dummy_identifier(p),
+                            Store,
+                            EXTRA_EXPR(node, node));
+            }
+            name = asdl_seq_GET(node->v.Tuple.elts, 0);
+            return _set_name_context(p, name, Store);
+        default:
+            //TODO: Support more types of nodes when the target rule is
+            // ready.
+            return NULL;
+    }
+}
+
+/* Creates an `expr_ty` equivalent to `expr` but with `ctx` as context */
+expr_ty
+set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
+{
+    if (!expr) {
+        return NULL;
+    }
+    assert(expr->kind == Name_kind || expr->kind == Tuple_kind || expr->kind == List_kind); // For now!
 
     expr_ty new = NULL;
-    switch (e->kind) {
+    switch (expr->kind) {
         case Name_kind:
-            new = _set_name_context(p, e, ctx);
+            new = _set_name_context(p, expr, ctx);
             break;
         case Tuple_kind:
-            new = _set_tuple_context(p, e, ctx);
+            new = _set_tuple_context(p, expr, ctx);
             break;
         case List_kind:
-            new = _set_list_context(p, e, ctx);
+            new = _set_list_context(p, expr, ctx);
             break;
         default: // To avoid warnings
             break;
@@ -877,7 +874,7 @@ map_seq_to_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
     }
     for (int i = 0; i < len; i++) {
         expr_ty e = asdl_seq_GET(seq, i);
-        asdl_seq_SET(new_seq, i, map_to_context(p, e, ctx));
+        asdl_seq_SET(new_seq, i, set_expr_context(p, e, ctx));
     }
     return new_seq;
 }
