@@ -239,7 +239,7 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
             _Py_With(b, singleton_seq(p, c), NULL, EXTRA) }
     )
     with_item[withitem_ty]: (
-        e=NAME o=['as' t=NAME { t }] { _Py_withitem(e, map_to_context(p, o, Store), p->arena) }
+        e=NAME o=['as' t=NAME { t }] { _Py_withitem(e, set_expr_context(p, o, Store), p->arena) }
     )
     block[stmt_ty]: a=pass_stmt NEWLINE { a } | NEWLINE INDENT a=pass_stmt DEDENT { a }
     pass_stmt[stmt_ty]: a='pass' { _Py_Pass(EXTRA) }
