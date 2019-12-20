@@ -56,7 +56,7 @@ yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
 
 del_stmt[stmt_ty]: 'del' a=targets { # TODO: exclude *target
-    _Py_Delete(map_seq_to_context(p, a, Del), EXTRA) }
+    _Py_Delete(set_seq_context(p, a, Del), EXTRA) }
 
 pass_stmt[stmt_ty]: 'pass' { _Py_Pass(EXTRA) }
 

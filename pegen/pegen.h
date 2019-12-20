@@ -99,7 +99,7 @@ asdl_seq *map_names_to_ids(Parser *, asdl_seq *);
 CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
 expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
 expr_ty set_expr_context(Parser *, expr_ty, expr_context_ty);
-asdl_seq *map_seq_to_context(Parser *, asdl_seq *, expr_context_ty);
+asdl_seq *set_seq_context(Parser *, asdl_seq *, expr_context_ty);
 KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
 asdl_seq *get_keys(Parser *, asdl_seq *);
 asdl_seq *get_values(Parser *, asdl_seq *);

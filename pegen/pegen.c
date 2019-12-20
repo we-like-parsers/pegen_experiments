@@ -791,7 +791,7 @@ _set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)
 expr_ty
 _set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Tuple(map_seq_to_context(p, e->v.Tuple.elts, ctx),
+    return _Py_Tuple(set_seq_context(p, e->v.Tuple.elts, ctx),
                      ctx,
                      EXTRA_EXPR(e, e));
 }
@@ -799,7 +799,7 @@ _set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)
 expr_ty
 _set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_List(map_seq_to_context(p, e->v.List.elts, ctx),
+    return _Py_List(set_seq_context(p, e->v.List.elts, ctx),
                     ctx,
                     EXTRA_EXPR(e, e));
 }
@@ -861,7 +861,7 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
 
 /* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
 asdl_seq *
-map_seq_to_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
+set_seq_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
 {
     if (!seq) {
         return NULL;
