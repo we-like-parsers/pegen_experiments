@@ -2,9 +2,9 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
-static PyObject *
-_create_dummy_identifier(Parser *p) {
-    PyObject *id = PyUnicode_FromStringAndSize("", 0);
+static inline PyObject *
+new_identifier(Parser *p, char* identifier) {
+    PyObject *id = PyUnicode_FromString(identifier);
     if (id == NULL) {
         return NULL;
     }
@@ -13,6 +13,11 @@ _create_dummy_identifier(Parser *p) {
         return NULL;
     }
     return id;
+}
+
+static PyObject *
+_create_dummy_identifier(Parser *p) {
+    return new_identifier(p, "");
 }
 
 static inline Py_ssize_t
@@ -386,9 +391,9 @@ string_token(Parser *p)
     Py_ssize_t len = 0;
     if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
         return NULL;
-    // Strip quotes.
-    // TODO: Properly handle all forms of string quotes and backslashes.
-    PyObject *c = PyUnicode_FromStringAndSize(s+1, len-2);
+    // TODO: Creating an AST constant here and joining the strings afterwards is
+    // ineficient. We should just move around the char*.
+    PyObject *c = PyUnicode_FromStringAndSize(s, len);
     if (!c)
         return NULL;
     if (PyArena_AddPyObject(p->arena, c) < 0) {
@@ -1206,6 +1211,7 @@ function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
     );
 }
 
+
 /* Construct a ClassDef equivalent to class_def, but with decorators */
 stmt_ty
 class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)
@@ -1294,4 +1300,351 @@ seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
         }
     }
     return new_seq;
+}
+
+
+//// STRING HANDLING FUNCTIONS ////
+
+
+static int
+warn_invalid_escape_sequence(Parser *p, unsigned char first_invalid_escape_char)
+{
+    PyObject *msg = PyUnicode_FromFormat("invalid escape sequence \\%c",
+                                         first_invalid_escape_char);
+    if (msg == NULL) {
+        return -1;
+    }
+    if (PyErr_WarnExplicitObject(PyExc_DeprecationWarning, msg,
+                                   p->tok->filename, p->tok->lineno,
+                                   NULL, NULL) < 0)
+    {
+        if (PyErr_ExceptionMatches(PyExc_DeprecationWarning)) {
+            /* Replace the DeprecationWarning exception with a SyntaxError
+               to get a more accurate error report */
+            PyErr_Clear();
+            raise_syntax_error(p, "invalid escape sequence \\%c",
+                               first_invalid_escape_char);
+        }
+        Py_DECREF(msg);
+        return -1;
+    }
+    Py_DECREF(msg);
+    return 0;
+}
+
+static PyObject *
+decode_utf8(const char **sPtr, const char *end)
+{
+    const char *s, *t;
+    t = s = *sPtr;
+    while (s < end && (*s & 0x80)) s++;
+    *sPtr = s;
+    return PyUnicode_DecodeUTF8(t, s - t, NULL);
+}
+
+
+static PyObject *
+decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
+{
+    PyObject *v, *u;
+    char *buf;
+    char *p;
+    const char *end;
+
+    /* check for integer overflow */
+    if (len > SIZE_MAX / 6)
+        return NULL;
+    /* "ä" (2 bytes) may become "\U000000E4" (10 bytes), or 1:5
+       "\ä" (3 bytes) may become "\u005c\U000000E4" (16 bytes), or ~1:6 */
+    u = PyBytes_FromStringAndSize((char *)NULL, len * 6);
+    if (u == NULL)
+        return NULL;
+    p = buf = PyBytes_AsString(u);
+    end = s + len;
+    while (s < end) {
+        if (*s == '\\') {
+            *p++ = *s++;
+            if (s >= end || *s & 0x80) {
+                strcpy(p, "u005c");
+                p += 5;
+                if (s >= end)
+                    break;
+            }
+        }
+        if (*s & 0x80) {
+            PyObject *w;
+            int kind;
+            void *data;
+            Py_ssize_t len, i;
+            w = decode_utf8(&s, end);
+            if (w == NULL) {
+                Py_DECREF(u);
+                return NULL;
+            }
+            kind = PyUnicode_KIND(w);
+            data = PyUnicode_DATA(w);
+            len = PyUnicode_GET_LENGTH(w);
+            for (i = 0; i < len; i++) {
+                Py_UCS4 chr = PyUnicode_READ(kind, data, i);
+                sprintf(p, "\\U%08x", chr);
+                p += 10;
+            }
+            /* Should be impossible to overflow */
+            assert(p - buf <= PyBytes_GET_SIZE(u));
+            Py_DECREF(w);
+        } else {
+            *p++ = *s++;
+        }
+    }
+    len = p - buf;
+    s = buf;
+
+    const char *first_invalid_escape;
+    v = _PyUnicode_DecodeUnicodeEscape(s, len, NULL, &first_invalid_escape);
+
+    if (v != NULL && first_invalid_escape != NULL) {
+        if (warn_invalid_escape_sequence(parser, *first_invalid_escape) < 0) {
+            /* We have not decref u before because first_invalid_escape points
+               inside u. */
+            Py_XDECREF(u);
+            Py_DECREF(v);
+            return NULL;
+        }
+    }
+    Py_XDECREF(u);
+    return v;
+}
+
+static PyObject *
+decode_bytes_with_escapes(Parser* p, const char *s, Py_ssize_t len)
+{
+    const char *first_invalid_escape;
+    PyObject *result = _PyBytes_DecodeEscape(s, len, NULL, 0, NULL, &first_invalid_escape);
+    if (result == NULL)
+        return NULL;
+
+    if (first_invalid_escape != NULL) {
+        if (warn_invalid_escape_sequence(p, *first_invalid_escape) < 0) {
+            Py_DECREF(result);
+            return NULL;
+        }
+    }
+    return result;
+}
+
+
+/* s must include the bracketing quote characters, and r, b, u,
+   &/or f prefixes (if any), and embedded escape sequences (if any).
+   parsestr parses it, and sets *result to decoded Python string object.
+   If the string is an f-string, set *fstr and *fstrlen to the unparsed
+   string object.  Return 0 if no errors occurred.  */
+static int
+parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
+         PyObject **result, const char **fstr, Py_ssize_t *fstrlen)
+{
+    size_t len;
+    int quote = Py_CHARMASK(*s);
+    int fmode = 0;
+    *bytesmode = 0;
+    *rawmode = 0;
+    *result = NULL;
+    *fstr = NULL;
+    if (Py_ISALPHA(quote)) {
+        while (!*bytesmode || !*rawmode) {
+            if (quote == 'b' || quote == 'B') {
+                quote = *++s;
+                *bytesmode = 1;
+            }
+            else if (quote == 'u' || quote == 'U') {
+                quote = *++s;
+            }
+            else if (quote == 'r' || quote == 'R') {
+                quote = *++s;
+                *rawmode = 1;
+            }
+            else if (quote == 'f' || quote == 'F') {
+                quote = *++s;
+                fmode = 1;
+            }
+            else {
+                break;
+            }
+        }
+    }
+
+    if (fmode && *bytesmode) {
+        PyErr_BadInternalCall();
+        return -1;
+    }
+    if (quote != '\'' && quote != '\"') {
+        PyErr_BadInternalCall();
+        return -1;
+    }
+    /* Skip the leading quote char. */
+    s++;
+    len = strlen(s);
+    if (len > INT_MAX) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "string to parse is too long");
+        return -1;
+    }
+    if (s[--len] != quote) {
+        /* Last quote char must match the first. */
+        PyErr_BadInternalCall();
+        return -1;
+    }
+    if (len >= 4 && s[0] == quote && s[1] == quote) {
+        /* A triple quoted string. We've already skipped one quote at
+           the start and one at the end of the string. Now skip the
+           two at the start. */
+        s += 2;
+        len -= 2;
+        /* And check that the last two match. */
+        if (s[--len] != quote || s[--len] != quote) {
+            PyErr_BadInternalCall();
+            return -1;
+        }
+    }
+
+    if (fmode) {
+        /* Just return the bytes. The caller will parse the resulting
+           string. */
+        *fstr = s;
+        *fstrlen = len;
+        return 0;
+    }
+
+    /* Not an f-string. */
+    /* Avoid invoking escape decoding routines if possible. */
+    *rawmode = *rawmode || strchr(s, '\\') == NULL;
+    if (*bytesmode) {
+        /* Disallow non-ASCII characters. */
+        const char *ch;
+        for (ch = s; *ch; ch++) {
+            if (Py_CHARMASK(*ch) >= 0x80) {
+                raise_syntax_error(p, "bytes can only contain ASCII "
+                          "literal characters.");
+                return -1;
+            }
+        }
+        if (*rawmode)
+            *result = PyBytes_FromStringAndSize(s, len);
+        else
+            *result = decode_bytes_with_escapes(p, s, len);
+    } else {
+        if (*rawmode)
+            *result = PyUnicode_DecodeUTF8Stateful(s, len, NULL, NULL);
+        else
+            *result = decode_unicode_with_escapes(p, s, len);
+    }
+    return *result == NULL ? -1 : 0;
+}
+
+expr_ty
+concatenate_strings(Parser *p, asdl_seq *strings)
+{
+    int len = asdl_seq_LEN(strings);
+    assert(len > 0);
+
+    expr_ty first = asdl_seq_GET(strings, 0);
+    expr_ty last = asdl_seq_GET(strings, len-1);
+
+    int bytesmode = 0;
+    PyObject *u_kind = NULL;
+    int kind_unicode = 0;
+    PyObject *final_str = NULL;
+
+    for (int i = 0; i < len; i++) {
+        int this_bytesmode;
+        int this_rawmode;
+        PyObject *s;
+        const char *fstr;
+        Py_ssize_t fstrlen = -1;  /* Silence a compiler warning. */
+
+        expr_ty cons = asdl_seq_GET(strings, i);
+        assert(const->kind == Constant_kind);
+        const char* the_str = PyUnicode_AsUTF8(cons->v.Constant.value);
+        if (parsestr(p, the_str, &this_bytesmode, &this_rawmode, &s,
+                     &fstr, &fstrlen) != 0) {
+            goto error;
+        }
+
+        /* Check if it has a 'u' prefix */
+        if (the_str[0] == 'u') {
+            kind_unicode = 1;
+        }
+
+        /* Check that we're not mixing bytes with unicode. */
+        if (i != 0 && bytesmode != this_bytesmode) {
+            raise_syntax_error(p, "cannot mix bytes and nonbytes literals");
+            /* s is NULL if the current string part is an f-string. */
+            Py_XDECREF(s);
+            goto error;
+        }
+        bytesmode = this_bytesmode;
+
+        if (fstr != NULL) {
+            /* This is an f-string. We need to parse and concatenate it. */
+            assert(s == NULL && !bytesmode);
+
+            // TODO: We still don't support f-strings so let's return some
+            // dummy here to not make the parsing tests fail.
+            final_str = new_identifier(p, "f-strings not supported yet!!");
+            return _Py_Constant(final_str, NULL, EXTRA_EXPR(first, last));
+        } else {
+            /* A string or byte string. */
+            assert(s != NULL && fstr == NULL);
+
+            assert(bytesmode ? PyBytes_CheckExact(s) :
+                   PyUnicode_CheckExact(s));
+
+            if (bytesmode) {
+                /* For bytes, concat as we go. */
+                if (i == 0) {
+                    /* First time, just remember this value. */
+                    final_str = s;
+                } else {
+                    PyBytes_ConcatAndDel(&final_str, s);
+                    if (!final_str) {
+                        goto error;
+                    }
+                }
+            } else {
+                if (i == 0) {
+                    /* First time, just remember this value. */
+                    final_str = s;
+                } else {
+                    PyUnicode_AppendAndDel(&final_str, s);
+                    if (!final_str) {
+                        goto error;
+                    }
+                }
+            }
+        }
+    }
+
+    if (bytesmode) {
+        /* Just return the bytes object and we're done. */
+        if (PyArena_AddPyObject(p->arena, final_str) < 0) {
+            goto error;
+        }
+        return _Py_Constant(final_str, NULL, EXTRA_EXPR(first, last));
+    }
+
+    // This code will change when we support f-strings
+    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
+        goto error;
+    }
+
+    if (kind_unicode) {
+        //TODO: Intern this string when we decide how we will
+        // handle static constants in the module.
+        u_kind = new_identifier(p, "u");
+    }
+
+    return _Py_Constant(final_str, u_kind, EXTRA_EXPR(first, last));
+
+error:
+    Py_XDECREF(final_str);
+    return NULL;
 }

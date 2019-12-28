@@ -121,3 +121,4 @@ stmt_ty class_def_decorators(Parser *, asdl_seq *, stmt_ty);
 KeywordOrStarred *keyword_or_starred(Parser *, void *, int);
 asdl_seq *seq_extract_starred_exprs(Parser *, asdl_seq *);
 asdl_seq *seq_delete_starred_exprs(Parser *, asdl_seq *);
+expr_ty concatenate_strings(Parser *p, asdl_seq *);
