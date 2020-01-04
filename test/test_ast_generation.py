@@ -1,7 +1,7 @@
 import ast
 import os
 from pathlib import PurePath
-from typing import Any
+from typing import Any, Union, Iterable, Tuple
 from textwrap import dedent
 
 import pytest  # type: ignore
@@ -275,9 +275,12 @@ TEST_CASES = [
 ]
 
 
-def prepare_test_cases(test_cases):
-    test_ids, test_sources = zip(*TEST_CASES)
-    test_sources = list(test_sources)
+def prepare_test_cases(
+    test_cases: Iterable[Tuple[str, Union[str, Iterable[str]]]]
+) -> Tuple[Iterable[str], Iterable[str]]:
+
+    test_ids, _test_sources = zip(*TEST_CASES)
+    test_sources = list(_test_sources)
     for index, source in enumerate(test_sources):
         if isinstance(source, str):
             result = dedent(source)
