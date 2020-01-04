@@ -2,6 +2,7 @@ import ast
 import os
 from pathlib import PurePath
 from typing import Any
+from textwrap import dedent
 
 import pytest  # type: ignore
 
@@ -9,121 +10,287 @@ from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
 TEST_CASES = [
-    ('annotated_assignment', 'x: int = 42\n'),
-    ('annotated_assignment_with_parens', '(paren): int = 3+2\n'),
-    ('annotated_assignment_with_yield', 'x: int = yield 42\n'),
-    ('annotated_no_assignment', 'x: int\n'),
-    ('annotation_with_parens', '(parens): int\n'),
-    ('assert', 'assert a\n'),
-    ('assert_message', 'assert a, b\n'),
-    ('asyncfor', 'async for i in a:\n    pass\n'),
-    ('augmented_assignment', 'x += 42\n'),
-    ('binop_add', '1 + 1\n'),
-    ('binop_add_multiple', '1 + 1 + 1 + 1\n'),
-    ('binop_all', '1 + 2 * 5 + 3 ** 2 - -3\n'),
-    ('binop_boolop_comp', '1 + 1 == 2 or 1 + 1 == 3 and not b\n'),
-    ('boolop_or', 'a or b\n'),
-    ('boolop_or_multiple', 'a or b or c\n'),
-    ('comp', 'a == b\n'),
-    ('comp_multiple', 'a == b == c\n'),
-    ('decorator', '@a\ndef f():\n    pass\n'),
-    ('del_list', 'del a, [b, c]\n'),
-    ('del_multiple', 'del a, b\n'),
-    ('del_tuple', 'del a, (b, c)\n'),
-    ('delete', 'del a\n'),
-    ('dict', '{\n    a: 1,\n    b: 2,\n    c: 3\n}\n'),
-    ('dict_comp', '{x:1 for x in a}\n'),
-    ('dict_comp_if', '{x:1+2 for x in a if b}\n'),
-    ('for', 'for i in a:\n    pass\n'),
-    ('for_else', 'for i in a:\n    pass\nelse:\n    pass\n'),
-    ('for_underscore', 'for _ in a:\n    pass\n'),
-    ('function_return_type', 'def f() -> Any:\n    pass\n'),
-    ('global', 'global a, b\n'),
-    ('group', '(yield a)\n'),
-    ('if_elif', 'if a:\n    pass\nelif b:\n    pass\n'),
-    ('if_elif_elif', 'if a:\n    pass\nelif b:\n    pass\nelif c:\n    pass\n'),
-    ('if_elif_else', 'if a:\n    pass\nelif b:\n    pass\nelse:\n    pass\n'),
-    ('if_else', 'if a:\n    pass\nelse:\n    pass\n'),
-    ('if_simple', 'if a: pass\n'),
-    ('import', 'import a\n'),
-    ('import_alias', 'import a as b\n'),
-    ('import_dotted', 'import a.b\n'),
-    ('import_dotted_alias', 'import a.b as c\n'),
-    ('import_dotted_multichar', 'import ab.cd\n'),
-    ('import_from', 'from a import b\n'),
-    ('import_from_alias', 'from a import b as c\n'),
-    ('import_from_dotted', 'from a.b import c\n'),
-    ('import_from_dotted_alias', 'from a.b import c as d\n'),
-    ('import_from_multiple_aliases', 'from a import b as c, d as e\n'),
-    ('import_from_one_dot', 'from .a import b\n'),
-    ('import_from_one_dot_alias', 'from .a import b as c\n'),
-    ('import_from_star', 'from a import *\n'),
-    ('import_from_three_dots', 'from ...a import b\n'),
-    ('kwarg', 'def f(**a):\n    pass\n'),
-    ('kwonly_args', 'def f(*, a, b):\n    pass\n'),
-    ('kwonly_args_with_default', 'def f(*, a=2, b):\n    pass\n'),
-    ('lambda_kwarg', 'lambda **a: 42\n'),
-    ('lambda_kwonly_args', 'lambda *, a, b: 42\n'),
-    ('lambda_kwonly_args_with_default', 'lambda *, a=2, b: 42\n'),
-    ('lambda_mixed_args', 'lambda a, /, b, *, c: 42\n'),
-    ('lambda_mixed_args_with_default', 'lambda a, b=2, /, c=3, *e, f, **g: 42\n'),
-    ('lambda_no_args', 'lambda: 42\n'),
-    ('lambda_pos_args', 'lambda a,b: 42\n'),
-    ('lambda_pos_args_with_default', 'lambda a, b=2: 42\n'),
-    ('lambda_pos_only_args', 'lambda a, /: 42\n'),
-    ('lambda_pos_only_args_with_default', 'lambda a=0, /: 42\n'),
-    ('lambda_pos_posonly_args', 'lambda a, b, /, c, d: 42\n'),
-    ('lambda_pos_posonly_args_with_default', 'lambda a, b=0, /, c=2: 42\n'),
-    ('lambda_vararg', 'lambda *a: 42\n'),
-    ('lambda_vararg_kwonly_args', 'lambda *a, b: 42\n'),
-    ('list', '[1, 2, a]\n'),
-    ('list_comp', '[i for i in a]\n'),
-    ('list_comp_if', '[i for i in a if b]\n'),
-    ('list_trailing_comma', '[1+2, a, 3+4,]\n'),
-    ('mixed_args', 'def f(a, /, b, *, c):\n    pass\n'),
-    ('mixed_args_with_default', 'def f(a, b=2, /, c=3, *e, f, **g):\n    pass'),
-    ('multiple_assignments', 'x = y = z = 42\n'),
-    ('multiple_assignments_with_yield', 'x = y = z = yield 42\n'),
-    ('multiple_pass', 'pass; pass\npass\n'),
-    ('nonlocal', 'nonlocal a, b\n'),
-    ('pass', 'pass\n'),
-    ('pos_args', 'def f(a, b):\n    pass\n'),
-    ('pos_args_with_default', 'def f(a, b=2):\n    pass\n'),
-    ('pos_only_args', 'def f(a, /):\n    pass\n'),
-    ('pos_only_args_with_default', 'def f(a=0, /):\n    pass\n'),
-    ('pos_posonly_args', 'def f(a, b, /, c, d):\n    pass\n'),
-    ('pos_posonly_args_with_default', 'def f(a, b=0, /, c=2):\n    pass\n'),
-    ('raise', 'raise\n'),
-    ('raise_ellipsis', 'raise ...\n'),
-    ('raise_expr', 'raise a\n'),
-    ('raise_from', 'raise a from b\n'),
-    ('return', 'return\n'),
-    ('return_expr', 'return a\n'),
-    ('set', '{1, 2+4, 3+5}\n'),
-    ('set_comp', '{i for i in a}\n'),
-    ('set_trailing_comma', '{1, 2, 3,}\n'),
-    ('simple_assignment', 'x = 42\n'),
-    ('simple_assignment_with_yield', 'x = yield 42\n'),
-    ('try_except', 'try:\n    pass\nexcept:\n    pass\n'),
-    ('try_except_else', 'try:\n    pass\nexcept:\n    pass\nelse:\n    pass\n'),
-    ('try_except_else_finally', 'try:\n    pass\nexcept:\n    pass\nelse:\n    pass\nfinally:\n    pass\n'),
-    ('try_except_expr', 'try:\n    pass\nexcept a:\n    pass\n'),
-    ('try_except_expr_target', 'try:\n    pass\nexcept a as b:\n    pass\n'),
-    ('try_except_finally', 'try:\n    pass\nexcept:\n    pass\nfinally:\n    pass\n'),
-    ('try_finally', 'try:\n    pass\nfinally:\n    pass\n'),
-    ('tuple', '(1, 2, 3)\n'),
-    ('vararg', 'def f(*a):\n    pass\n'),
-    ('vararg_kwonly_args', 'def f(*a, b):\n    pass\n'),
-    ('while', 'while a:\n    pass\n'),
-    ('while_else', 'while a:\n    pass\nelse:\n    pass\n'),
-    ('with', 'with a:\n    pass\n'),
-    ('with_as', 'with a as b:\n    pass\n'),
-    ('yield', 'yield\n'),
-    ('yield_expr', 'yield a\n'),
-    ('yield_from', 'yield from a\n'),
+    ('annotated_assignment', 'x: int = 42'),
+    ('annotated_assignment_with_parens', '(paren): int = 3+2'),
+    ('annotated_assignment_with_yield', 'x: int = yield 42'),
+    ('annotated_no_assignment', 'x: int'),
+    ('annotation_with_parens', '(parens): int'),
+    ('assert', 'assert a'),
+    ('assert_message', 'assert a, b'),
+    ('asyncfor', '''\
+        async for i in a:
+            pass
+    '''),
+    ('augmented_assignment', 'x += 42'),
+    ('binop_add', '1 + 1'),
+    ('binop_add_multiple', '1 + 1 + 1 + 1'),
+    ('binop_all', '1 + 2 * 5 + 3 ** 2 - -3'),
+    ('binop_boolop_comp', '1 + 1 == 2 or 1 + 1 == 3 and not b'),
+    ('boolop_or', 'a or b'),
+    ('boolop_or_multiple', 'a or b or c'),
+    ('comp', 'a == b'),
+    ('comp_multiple', 'a == b == c'),
+    ('decorator', '''\
+        @a
+        def f():
+            pass
+    '''),
+    ('del_list', 'del a, [b, c]'),
+    ('del_multiple', 'del a, b'),
+    ('del_tuple', 'del a, (b, c)'),
+    ('delete', 'del a'),
+    ('dict', '''\
+        {
+            a: 1,
+            b: 2,
+            c: 3
+        }
+    '''),
+    ('dict_comp', '{x:1 for x in a}'),
+    ('dict_comp_if', '{x:1+2 for x in a if b}'),
+    ('for', '''\
+        for i in a:
+            pass
+    '''),
+    ('for_else', '''\
+        for i in a:
+            pass
+        else:
+            pass
+    '''),
+    ('for_underscore', '''\
+        for _ in a:
+            pass
+    '''),
+    ('function_return_type', '''
+        def f() -> Any:
+            pass
+    '''),
+    ('global', 'global a, b'),
+    ('group', '(yield a)'),
+    ('if_elif', '''\
+        if a:
+            pass
+        elif b:
+            pass
+    '''),
+    ('if_elif_elif', '''
+        if a:
+            pass
+        elif b:
+            pass
+        elif c:
+            pass
+    '''),
+    ('if_elif_else', '''\
+        if a:
+            pass
+        elif b:
+            pass
+        else:
+           pass
+    '''),
+    ('if_else', '''\
+        if a:
+            pass
+        else:
+            pass
+    '''),
+    ('if_simple', 'if a: pass'),
+    ('import', 'import a'),
+    ('import_alias', 'import a as b'),
+    ('import_dotted', 'import a.b'),
+    ('import_dotted_alias', 'import a.b as c'),
+    ('import_dotted_multichar', 'import ab.cd'),
+    ('import_from', 'from a import b'),
+    ('import_from_alias', 'from a import b as c'),
+    ('import_from_dotted', 'from a.b import c'),
+    ('import_from_dotted_alias', 'from a.b import c as d'),
+    ('import_from_multiple_aliases', 'from a import b as c, d as e'),
+    ('import_from_one_dot', 'from .a import b'),
+    ('import_from_one_dot_alias', 'from .a import b as c'),
+    ('import_from_star', 'from a import *'),
+    ('import_from_three_dots', 'from ...a import b'),
+    ('kwarg', '''\
+        def f(**a):
+            pass
+    '''),
+    ('kwonly_args', '''\
+        def f(*, a, b):
+            pass
+    '''),
+    ('kwonly_args_with_default', '''\
+        def f(*, a=2, b):
+            pass
+    '''),
+    ('lambda_kwarg', 'lambda **a: 42'),
+    ('lambda_kwonly_args', 'lambda *, a, b: 42'),
+    ('lambda_kwonly_args_with_default', 'lambda *, a=2, b: 42'),
+    ('lambda_mixed_args', 'lambda a, /, b, *, c: 42'),
+    ('lambda_mixed_args_with_default', 'lambda a, b=2, /, c=3, *e, f, **g: 42'),
+    ('lambda_no_args', 'lambda: 42'),
+    ('lambda_pos_args', 'lambda a,b: 42'),
+    ('lambda_pos_args_with_default', 'lambda a, b=2: 42'),
+    ('lambda_pos_only_args', 'lambda a, /: 42'),
+    ('lambda_pos_only_args_with_default', 'lambda a=0, /: 42'),
+    ('lambda_pos_posonly_args', 'lambda a, b, /, c, d: 42'),
+    ('lambda_pos_posonly_args_with_default', 'lambda a, b=0, /, c=2: 42'),
+    ('lambda_vararg', 'lambda *a: 42'),
+    ('lambda_vararg_kwonly_args', 'lambda *a, b: 42'),
+    ('list', '[1, 2, a]'),
+    ('list_comp', '[i for i in a]'),
+    ('list_comp_if', '[i for i in a if b]'),
+    ('list_trailing_comma', '[1+2, a, 3+4,]'),
+    ('mixed_args', '''\
+        def f(a, /, b, *, c):
+            pass
+    '''),
+    ('mixed_args_with_default', '''\
+        def f(a, b=2, /, c=3, *e, f, **g):
+            pass
+    '''),
+    ('multiple_assignments', 'x = y = z = 42'),
+    ('multiple_assignments_with_yield', 'x = y = z = yield 42'),
+    ('multiple_pass', '''\
+        pass; pass
+        pass
+    '''),
+    ('nonlocal', 'nonlocal a, b'),
+    ('pass', 'pass'),
+    ('pos_args', '''\
+        def f(a, b):
+            pass
+    '''),
+    ('pos_args_with_default', '''\
+        def f(a, b=2):
+            pass
+    '''),
+    ('pos_only_args', '''\
+        def f(a, /):
+            pass
+    '''),
+    ('pos_only_args_with_default', '''\
+        def f(a=0, /):
+            pass
+    '''),
+    ('pos_posonly_args', '''\
+        def f(a, b, /, c, d):
+            pass
+    '''),
+    ('pos_posonly_args_with_default', '''\
+        def f(a, b=0, /, c=2):
+            pass
+    '''),
+    ('raise', 'raise'),
+    ('raise_ellipsis', 'raise ...'),
+    ('raise_expr', 'raise a'),
+    ('raise_from', 'raise a from b'),
+    ('return', 'return'),
+    ('return_expr', 'return a'),
+    ('set', '{1, 2+4, 3+5}'),
+    ('set_comp', '{i for i in a}'),
+    ('set_trailing_comma', '{1, 2, 3,}'),
+    ('simple_assignment', 'x = 42'),
+    ('simple_assignment_with_yield', 'x = yield 42'),
+    ('try_except', '''\
+        try:
+            pass
+        except:
+            pass
+    '''),
+    ('try_except_else', '''\
+        try:
+            pass
+        except:
+            pass
+        else:
+            pass
+    '''),
+    ('try_except_else_finally', '''\
+        try:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+    '''),
+    ('try_except_expr', '''\
+        try:
+            pass
+        except a:
+            pass
+    '''),
+    ('try_except_expr_target', '''\
+        try:
+            pass
+        except a as b:
+            pass
+    '''),
+    ('try_except_finally', '''\
+        try:
+            pass
+        except:
+            pass
+        finally:
+            pass
+    '''),
+    ('try_finally', '''\
+        try:
+            pass
+        finally:
+            pass
+    '''),
+    ('tuple', '(1, 2, 3)'),
+    ('vararg', '''\
+        def f(*a):
+            pass
+    '''),
+    ('vararg_kwonly_args', '''\
+        def f(*a, b):
+            pass
+    '''),
+    ('while', '''\
+        while a:
+            pass
+    '''),
+    ('while_else', '''\
+        while a:
+            pass
+        else:
+            pass
+    '''),
+    ('with', '''\
+        with a:
+            pass
+    '''),
+    ('with_as', '''\
+        with a as b:
+            pass
+    '''),
+    ('yield', 'yield'),
+    ('yield_expr', 'yield a'),
+    ('yield_from', 'yield from a'),
 ]
 
-TEST_IDS, TEST_SOURCES = zip(*TEST_CASES)
+
+def prepare_test_cases(test_cases):
+    test_ids, test_sources = zip(*TEST_CASES)
+    test_sources = list(test_sources)
+    for index, source in enumerate(test_sources):
+        if isinstance(source, str):
+            result = dedent(source)
+        elif not isinstance(source, (list, tuple)):
+            result = "\n".join(source)
+        else:
+            raise ValueError(f"Invalid test source: {source}")
+        test_sources[index] = result
+    return test_ids, test_sources
+
+
+TEST_IDS, TEST_SOURCES = prepare_test_cases(TEST_CASES)
+
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
     with open(os.path.join("data", "simpy.gram"), "r") as grammar_file:
