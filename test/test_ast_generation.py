@@ -323,7 +323,7 @@ def prepare_test_cases(
         elif not isinstance(source, (list, tuple)):
             result = "\n".join(source)
         else:
-            raise ValueError(f"Invalid test source: {source}")
+            raise TypeError(f"Invalid type for test source: {source}")
         test_sources[index] = result
     return test_ids, test_sources
 
