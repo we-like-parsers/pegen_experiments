@@ -9,6 +9,8 @@ import pytest  # type: ignore
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
+# fmt: off
+
 TEST_CASES = [
     ('annotated_assignment', 'x: int = 42'),
     ('annotated_assignment_with_parens', '(paren): int = 3+2'),
@@ -309,6 +311,8 @@ TEST_CASES = [
     ('yield_expr', 'yield a'),
     ('yield_from', 'yield from a'),
 ]
+
+# fmt: on
 
 
 def prepare_test_cases(
