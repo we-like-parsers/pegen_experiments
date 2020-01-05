@@ -782,6 +782,28 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
+expr_ty
+_set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_Name(e->v.Name.id, ctx, EXTRA_EXPR(e, e));
+}
+
+expr_ty
+_set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_Tuple(set_seq_context(p, e->v.Tuple.elts, ctx),
+                     ctx,
+                     EXTRA_EXPR(e, e));
+}
+
+expr_ty
+_set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_List(set_seq_context(p, e->v.List.elts, ctx),
+                    ctx,
+                    EXTRA_EXPR(e, e));
+}
+
 /* Receives a expr_ty and creates the appropiate node for assignment targets */
 expr_ty
 construct_assign_target(Parser *p, expr_ty node)
@@ -792,9 +814,7 @@ construct_assign_target(Parser *p, expr_ty node)
     expr_ty name;
     switch(node->kind) {
         case Name_kind:
-            return _Py_Name(node->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(node, node));
+            return _set_name_context(p, node, Store);
         case Tuple_kind:
             if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
                 PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
@@ -805,9 +825,7 @@ construct_assign_target(Parser *p, expr_ty node)
                             EXTRA_EXPR(node, node));
             }
             name = asdl_seq_GET(node->v.Tuple.elts, 0);
-            return _Py_Name(name->v.Name.id,
-                            Store,
-                            EXTRA_EXPR(name, name));
+            return _set_name_context(p, name, Store);
         default:
             //TODO: Support more types of nodes when the target rule is
             // ready.
@@ -815,30 +833,40 @@ construct_assign_target(Parser *p, expr_ty node)
     }
 }
 
-/* Accepts a load name and creates an identical store name */
+/* Creates an `expr_ty` equivalent to `expr` but with `ctx` as context */
 expr_ty
-store_name(Parser *p, expr_ty load_name)
+set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
 {
-    if (!load_name) {
+    if (!expr) {
         return NULL;
     }
-    return _Py_Name(load_name->v.Name.id,
-                    Store,
-                    EXTRA_EXPR(load_name, load_name));
+    assert(expr->kind == Name_kind || expr->kind == Tuple_kind || expr->kind == List_kind); // For now!
+
+    expr_ty new = NULL;
+    switch (expr->kind) {
+        case Name_kind:
+            new = _set_name_context(p, expr, ctx);
+            break;
+        case Tuple_kind:
+            new = _set_tuple_context(p, expr, ctx);
+            break;
+        case List_kind:
+            new = _set_list_context(p, expr, ctx);
+            break;
+        default: // To avoid warnings
+            break;
+    }
+    return new;
 }
 
-expr_ty
-_del_name(Parser *p, expr_ty load_name)
-{
-    return _Py_Name(load_name->v.Name.id,
-                    Del,
-                    EXTRA_EXPR(load_name, load_name));
-}
-
-/* Creates an asdl_seq* where all the elements have been changed to have del as context */
+/* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
 asdl_seq *
-map_targets_to_del_names(Parser *p, asdl_seq *seq)
+set_seq_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
 {
+    if (!seq) {
+        return NULL;
+    }
+
     int len = asdl_seq_LEN(seq);
     asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
     if (!new_seq) {
@@ -846,18 +874,7 @@ map_targets_to_del_names(Parser *p, asdl_seq *seq)
     }
     for (int i = 0; i < len; i++) {
         expr_ty e = asdl_seq_GET(seq, i);
-        assert(e->kind == Name_kind || e->kind == Tuple_kind || e->kind == List_kind); // For now!
-        if (e->kind == Name_kind) {
-            asdl_seq_SET(new_seq, i, _del_name(p, e));
-        } else if (e->kind == Tuple_kind) {
-            asdl_seq_SET(new_seq, i, _Py_Tuple(map_targets_to_del_names(p, e->v.Tuple.elts),
-                                               Del,
-                                               EXTRA_EXPR(e, e)));
-        } else if (e->kind == List_kind) {
-            asdl_seq_SET(new_seq, i, _Py_List(map_targets_to_del_names(p, e->v.List.elts),
-                                              Del,
-                                              EXTRA_EXPR(e, e)));
-        }
+        asdl_seq_SET(new_seq, i, set_expr_context(p, e, ctx));
     }
     return new_seq;
 }
