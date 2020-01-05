@@ -1,3 +1,0 @@
-@a
-def f():
-    pass
