@@ -83,6 +83,14 @@ Used to encapsulate the value of an operator_ty enum value.
 
 - kind: operator_ty, The augmented assignment operator
 
+#### KeywordOrStarred
+
+This is needed by the `arguments` rule, because a starred expression can appear
+after the first keyword argument has been parsed.
+
+- elem: `void *`, The keyword argument or starred expression itself
+- is_keyword: `int` (`bool`), Flag if elem is a keyword argument or a starred expression
+
 
 Helper Functions
 ----------------
@@ -152,3 +160,18 @@ Constructs an empty `arguments_ty` object, that gets used when a function accept
 
 ###### `asdl_seq *augoperator(Parser *p, operator_ty kind)`
 Creates an `AugOperator` encapsulating the operator type provided in *kind*.
+
+###### `stmt_ty function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)`
+Construct a `FunctionDef` equivalent to `function_def`, but with `decorators`.
+
+###### `stmt_ty class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)`
+Construct a `ClassDef` equivalent to `class_def`, but with `decorators`.
+
+###### `int _seq_number_of_starred_exprs(asdl_seq *seq)`
+Get the number of starred expressions in an `asdl_seq*` of `KeywordOrStarred*`s.
+
+###### `asdl_seq *seq_extract_starred_exprs(Parser *p, asdl_seq *kwargs)`
+Extract the starred expressions of an `asdl_seq*` of `KeywordOrStarred*`s.
+
+###### `asdl_seq *seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)`
+Return a new `asdl_seq*` with only the keywords in `kwargs`.

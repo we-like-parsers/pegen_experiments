@@ -1187,6 +1187,7 @@ augoperator(Parser* p, operator_ty kind)
     return a;
 }
 
+/* Construct a FunctionDef equivalent to function_def, but with decorators */
 stmt_ty
 function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
 {
@@ -1205,6 +1206,7 @@ function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
     );
 }
 
+/* Construct a ClassDef equivalent to class_def, but with decorators */
 stmt_ty
 class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)
 {
@@ -1222,6 +1224,7 @@ class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)
     );
 }
 
+/* Construct a KeywordOrStarred */
 KeywordOrStarred *
 keyword_or_starred(Parser *p, void *element, int is_keyword)
 {
@@ -1234,7 +1237,7 @@ keyword_or_starred(Parser *p, void *element, int is_keyword)
     return a;
 }
 
-
+/* Get the number of starred expressions in an asdl_seq* of KeywordOrStarred*s */
 int
 _seq_number_of_starred_exprs(asdl_seq *seq)
 {
@@ -1246,6 +1249,7 @@ _seq_number_of_starred_exprs(asdl_seq *seq)
     return n;
 }
 
+/* Extract the starred expressions of an asdl_seq* of KeywordOrStarred*s */
 asdl_seq *
 seq_extract_starred_exprs(Parser *p, asdl_seq *kwargs)
 {
@@ -1268,6 +1272,7 @@ seq_extract_starred_exprs(Parser *p, asdl_seq *kwargs)
     return new_seq;
 }
 
+/* Return a new asdl_seq* with only the keywords in kwargs */
 asdl_seq *
 seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
 {
