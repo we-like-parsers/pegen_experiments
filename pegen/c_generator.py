@@ -217,7 +217,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
     def generate(self, filename: str) -> None:
         self.collect_todo()
-        self.print(EXTENSION_PREFIX.format(filename=filename))
+        header = self.grammar.metas.get("header", EXTENSION_PREFIX)
+        if header is not None:
+            self.print(header.rstrip("\n") % dict(filename=filename))
+        subheader = self.grammar.metas.get("subheader", "")
+        if subheader:
+            self.print(subheader % dict(filename=filename))
         for i, rulename in enumerate(self.todo, 1000):
             self.print(f"#define {rulename}_type {i}")
         self.print()
@@ -236,7 +241,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print()
                 self.visit(rule)
         mode = int(self.rules["start"].type == "mod_ty")
-        self.print(EXTENSION_SUFFIX.rstrip("\n") % dict(mode=mode))
+        trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
+        if trailer is not None:
+            self.print(trailer.rstrip("\n") % dict(mode=mode))
 
     def _set_up_token_start_metadata_extraction(self) -> None:
         self.print("if (p->mark == p->fill && fill_token(p) < 0) {")

@@ -1,5 +1,6 @@
 import ast
 from pathlib import PurePath
+import textwrap
 from typing import Optional, Sequence
 import traceback
 
@@ -7,6 +8,7 @@ import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
+from pegen.c_generator import EXTENSION_PREFIX, EXTENSION_SUFFIX
 
 
 def check_input_strings_for_grammar(
@@ -303,3 +305,31 @@ def test_syntax_error_for_file(text: str, tmp_path: PurePath) -> None:
         tb = traceback.format_exc()
     assert 'some_file.py", line 1' in tb
     assert f"{text}\n        ^" in tb
+
+
+def test_metas(tmp_path: PurePath) -> None:
+    grammar_source = f"""
+    @header '''\
+        {textwrap.indent(EXTENSION_PREFIX, "    ")}
+        expr_ty identity_3(expr_ty x);
+        expr_ty identity_1(expr_ty x) {{
+            return identity_3(x);
+        }}
+    '''
+    @subheader '''
+        expr_ty identity(expr_ty x) {{
+            return identity_1(x);
+        }}
+    '''
+    @trailer '''
+        expr_ty identity_3(expr_ty x) {{
+            return x;
+        }}
+        {textwrap.indent(EXTENSION_SUFFIX, "    ")}
+    '''
+    start: expr+ NEWLINE? ENDMARKER
+    expr: x=NAME {{identity(x)}}
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    extension.parse_string("a b c")
