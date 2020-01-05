@@ -324,10 +324,22 @@ power[expr_ty]:
     | primary 
 primary[expr_ty]:
     | !'await' a=atom !'.' !'(' !'[' { a }
-    | [AWAIT] atom ('.' NAME | '[' slices ']' | '(' [arguments] ')')*
+    | AWAIT a=primary_raw { _Py_Await(a, EXTRA) }
+    | primary_raw
+primary_raw[expr_ty]:
+    | a=primary_raw '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=primary_raw '[' b=slices ']' { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=primary_raw '(' b=[arguments] ')' {
+        _Py_Call(a,
+                 (b) ? ((expr_ty) b)->v.Call.args : NULL,
+                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                 EXTRA) }
+    | atom
 
-slices: ','.slice+ [',']
-slice: [expression] ':' [expression] [':' [expression]] | expression
+slices[slice_ty]: a=','.slice+ [','] { (asdl_seq_LEN(a) == 1) ? asdl_seq_GET(a, 0) : _Py_ExtSlice(a, p->arena) }
+slice[slice_ty]:
+    | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { _Py_Slice(a, b, c, p->arena) }
+    | a=expression { _Py_Index(a, p->arena) }
 # STRING+'s output is just a hack for now 
 atom[expr_ty]:
     | list
