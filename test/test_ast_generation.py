@@ -57,6 +57,11 @@ TEST_CASES = [
         class C:
             pass
      '''),
+    ('class_def_starred_and_kwarg',
+     '''
+        class C(A, B, *x, **y):
+            pass
+     '''),
     ('class_def_starred_in_kwargs',
      '''
         class C(A, x=2, *[B, C], y=3):
