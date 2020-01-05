@@ -307,6 +307,21 @@ TEST_CASES = [
         with a as b:
             pass
      '''),
+    ('with_list_recursive',
+     '''
+        with a as [x, [y, z]]:
+            pass
+     '''),
+    ('with_tuple_recursive',
+     '''
+        with a as ((x, y), z):
+            pass
+     '''),
+    ('with_tuple_target',
+     '''
+        with a as (x, y):
+            pass
+     '''),
     ('yield', 'yield'),
     ('yield_expr', 'yield a'),
     ('yield_from', 'yield from a'),
