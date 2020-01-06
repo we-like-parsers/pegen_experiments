@@ -7,8 +7,7 @@ import traceback
 import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
-from pegen.testutil import parse_string, generate_parser_c_extension
-from pegen.c_generator import EXTENSION_PREFIX, EXTENSION_SUFFIX
+from pegen.testutil import parse_string, generate_parser_c_extension, generate_c_parser_source
 
 
 def check_input_strings_for_grammar(
@@ -307,29 +306,30 @@ def test_syntax_error_for_file(text: str, tmp_path: PurePath) -> None:
     assert f"{text}\n        ^" in tb
 
 
-def test_metas(tmp_path: PurePath) -> None:
-    grammar_source = f"""
-    @header '''\
-        {textwrap.indent(EXTENSION_PREFIX, "    ")}
-        expr_ty identity_3(expr_ty x);
-        expr_ty identity_1(expr_ty x) {{
-            return identity_3(x);
-        }}
-    '''
-    @subheader '''
-        expr_ty identity(expr_ty x) {{
-            return identity_1(x);
-        }}
-    '''
-    @trailer '''
-        expr_ty identity_3(expr_ty x) {{
-            return x;
-        }}
-        {textwrap.indent(EXTENSION_SUFFIX, "    ")}
-    '''
+def test_headers_and_trailer(tmp_path: PurePath) -> None:
+    grammar_source = """
+    @header 'SOME HEADER'
+    @subheader 'SOME SUBHEADER'
+    @trailer 'SOME TRAILER'
     start: expr+ NEWLINE? ENDMARKER
-    expr: x=NAME {{identity(x)}}
+    expr: x=NAME
     """
     grammar = parse_string(grammar_source, GrammarParser)
-    extension = generate_parser_c_extension(grammar, tmp_path)
-    extension.parse_string("a b c")
+    parser_source = generate_c_parser_source(grammar)
+
+    assert "SOME HEADER" in parser_source
+    assert "SOME SUBHEADER" in parser_source
+    assert "SOME TRAILER" in parser_source
+
+
+def test_extension_name(tmp_path: PurePath) -> None:
+    grammar_source = """
+    @modulename 'alternative_name'
+    start: expr+ NEWLINE? ENDMARKER
+    expr: x=NAME
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    parser_source = generate_c_parser_source(grammar)
+
+    assert "PyInit_alternative_name" in parser_source
+    assert '.m_name = "alternative_name"' in parser_source
