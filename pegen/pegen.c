@@ -1238,7 +1238,7 @@ keyword_or_starred(Parser *p, void *element, int is_keyword)
 }
 
 /* Get the number of starred expressions in an asdl_seq* of KeywordOrStarred*s */
-int
+static int
 _seq_number_of_starred_exprs(asdl_seq *seq)
 {
     int n = 0;

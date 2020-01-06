@@ -184,7 +184,7 @@ annotation[expr_ty]: expression
 
 decorators[asdl_seq*]: a=('@' f=factor NEWLINE { f })+ { a }
 
-class_def:
+class_def[stmt_ty]:
     | a=decorators b=class_def_raw { class_def_decorators(p, a, b) }
     | class_def_raw
 class_def_raw[stmt_ty]:
@@ -390,13 +390,12 @@ args[expr_ty]:
                           seq_extract_starred_exprs(p, a),
                           seq_delete_starred_exprs(p, a),
                           EXTRA) }
-    | a=posarg b=[',' c=args { c }] {
+    | a=named_expression b=[',' c=args { c }] {
         _Py_Call(CONSTRUCTOR(p),
                  (b) ? seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args) : singleton_seq(p, a),
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
 kwargs[asdl_seq*]: a=','.kwarg+ { a }
-posarg[expr_ty]: starred_expression | named_expression
 starred_expression[expr_ty]:
     | '*' a=expression { _Py_Starred(a, Load, EXTRA) }
 kwarg[KeywordOrStarred*]:
