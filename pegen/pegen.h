@@ -56,6 +56,11 @@ typedef struct {
     operator_ty kind;
 } AugOperator;
 
+typedef struct {
+    void *element;
+    int is_keyword;
+} KeywordOrStarred;
+
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
 int is_memoized(Parser *p, int type, void *pres);
@@ -112,3 +117,7 @@ arguments_ty empty_arguments(Parser *);
 AugOperator *augoperator(Parser*, operator_ty type);
 expr_ty construct_assign_target(Parser *p, expr_ty node);
 stmt_ty function_def_decorators(Parser *, asdl_seq *, stmt_ty);
+stmt_ty class_def_decorators(Parser *, asdl_seq *, stmt_ty);
+KeywordOrStarred *keyword_or_starred(Parser *, void *, int);
+asdl_seq *seq_extract_starred_exprs(Parser *, asdl_seq *);
+asdl_seq *seq_delete_starred_exprs(Parser *, asdl_seq *);

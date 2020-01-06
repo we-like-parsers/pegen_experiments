@@ -1187,6 +1187,7 @@ augoperator(Parser* p, operator_ty kind)
     return a;
 }
 
+/* Construct a FunctionDef equivalent to function_def, but with decorators */
 stmt_ty
 function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
 {
@@ -1203,4 +1204,94 @@ function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
         function_def->end_col_offset,
         p->arena
     );
+}
+
+/* Construct a ClassDef equivalent to class_def, but with decorators */
+stmt_ty
+class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)
+{
+    return _Py_ClassDef(
+        class_def->v.ClassDef.name,
+        class_def->v.ClassDef.bases,
+        class_def->v.ClassDef.keywords,
+        class_def->v.ClassDef.body,
+        decorators,
+        class_def->lineno,
+        class_def->col_offset,
+        class_def->end_lineno,
+        class_def->end_col_offset,
+        p->arena
+    );
+}
+
+/* Construct a KeywordOrStarred */
+KeywordOrStarred *
+keyword_or_starred(Parser *p, void *element, int is_keyword)
+{
+    KeywordOrStarred *a = PyArena_Malloc(p->arena, sizeof(KeywordOrStarred));
+    if (!a) {
+        return NULL;
+    }
+    a->element = element;
+    a->is_keyword = is_keyword;
+    return a;
+}
+
+/* Get the number of starred expressions in an asdl_seq* of KeywordOrStarred*s */
+static int
+_seq_number_of_starred_exprs(asdl_seq *seq)
+{
+    int n = 0;
+    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
+        KeywordOrStarred *k = asdl_seq_GET(seq, i);
+        if (!k->is_keyword) n++;
+    }
+    return n;
+}
+
+/* Extract the starred expressions of an asdl_seq* of KeywordOrStarred*s */
+asdl_seq *
+seq_extract_starred_exprs(Parser *p, asdl_seq *kwargs)
+{
+    int new_len = _seq_number_of_starred_exprs(kwargs);
+    if (new_len == 0) {
+        return NULL;
+    }
+    asdl_seq *new_seq = _Py_asdl_seq_new(new_len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+
+    int idx = 0;
+    for (int i = 0, len = asdl_seq_LEN(kwargs); i < len; i++) {
+        KeywordOrStarred *k = asdl_seq_GET(kwargs, i);
+        if (!k->is_keyword) {
+            asdl_seq_SET(new_seq, idx++, k->element);
+        }
+    }
+    return new_seq;
+}
+
+/* Return a new asdl_seq* with only the keywords in kwargs */
+asdl_seq *
+seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
+{
+    int len = asdl_seq_LEN(kwargs);
+    int new_len = len - _seq_number_of_starred_exprs(kwargs);
+    if (new_len == 0) {
+        return NULL;
+    }
+    asdl_seq *new_seq = _Py_asdl_seq_new(new_len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+
+    int idx = 0;
+    for (int i = 0; i < len; i++) {
+        KeywordOrStarred *k = asdl_seq_GET(kwargs, i);
+        if (k->is_keyword) {
+            asdl_seq_SET(new_seq, idx++, k->element);
+        }
+    }
+    return new_seq;
 }

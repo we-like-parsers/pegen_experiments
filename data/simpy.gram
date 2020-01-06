@@ -184,7 +184,15 @@ annotation[expr_ty]: expression
 
 decorators[asdl_seq*]: a=('@' f=factor NEWLINE { f })+ { a }
 
-class_def: [decorators] 'class' NAME ['(' [arguments] ')'] ':' block
+class_def[stmt_ty]:
+    | a=decorators b=class_def_raw { class_def_decorators(p, a, b) }
+    | class_def_raw
+class_def_raw[stmt_ty]:
+    | 'class' a=NAME b=['(' z=[class_arguments] ')' { z }] ':' c=block {
+        _Py_ClassDef(((expr_ty) a)->v.Name.id,
+                     (b) ? ((expr_ty) b)->v.Call.args : NULL,
+                     (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                     c, NULL, EXTRA) }
 
 block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
 
@@ -365,11 +373,36 @@ yield_expr[expr_ty]:
     | 'yield' 'from' a=expression { _Py_YieldFrom(a, EXTRA) }
     | 'yield' a=[expressions] { _Py_Yield(a, EXTRA) }
 
-arguments: expression for_if_clauses | args [',']
-args: '*' expression [',' args] | kwargs | posarg [',' args]  # Weird to make it work
-kwargs: ','.kwarg+
-posarg: named_expression | '*' expression
-kwarg: NAME '=' expression | '*' expression | '**' expression
+class_arguments[expr_ty]: a=args [','] { a }
+arguments[expr_ty]:
+    | a=expression b=for_if_clauses { _Py_Call(CONSTRUCTOR(p),
+                                               singleton_seq(p, _Py_GeneratorExp(a, b, EXTRA)),
+                                               NULL,
+                                               EXTRA) }
+    | a=args [','] { a }
+args[expr_ty]:
+    | a=starred_expression b=[',' c=args { c }] {
+        _Py_Call(CONSTRUCTOR(p),
+                 (b) ? seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args) : singleton_seq(p, a),
+                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                 EXTRA) }
+    | a=kwargs { _Py_Call(CONSTRUCTOR(p),
+                          seq_extract_starred_exprs(p, a),
+                          seq_delete_starred_exprs(p, a),
+                          EXTRA) }
+    | a=named_expression b=[',' c=args { c }] {
+        _Py_Call(CONSTRUCTOR(p),
+                 (b) ? seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args) : singleton_seq(p, a),
+                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                 EXTRA) }
+kwargs[asdl_seq*]: a=','.kwarg+ { a }
+starred_expression[expr_ty]:
+    | '*' a=expression { _Py_Starred(a, Load, EXTRA) }
+kwarg[KeywordOrStarred*]:
+    | a=NAME '=' b=expression {
+        keyword_or_starred(p, _Py_keyword(((expr_ty) a)->v.Name.id, b, p->arena), 1) }
+    | a=starred_expression { keyword_or_starred(p, a, 0) }
+    | '**' a=expression { keyword_or_starred(p, _Py_keyword(NULL, a, p->arena), 1) }
 
 # NOTE: star_targets may contain *NAME, targets may not.
 # NOTE: the !'in' is to handle "for x, in ...".
