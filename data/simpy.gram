@@ -328,6 +328,7 @@ primary[expr_ty]:
     | primary_raw
 primary_raw[expr_ty]:
     | a=primary_raw '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=primary_raw '[' b=slice_expressions ']' { _Py_Subscript(a, b, Load, EXTRA) }
     | a=primary_raw '[' b=slices ']' { _Py_Subscript(a, b, Load, EXTRA) }
     | a=primary_raw '(' b=[arguments] ')' {
         _Py_Call(a,
@@ -336,7 +337,11 @@ primary_raw[expr_ty]:
                  EXTRA) }
     | atom
 
-slices[slice_ty]: a=','.slice+ [','] { (asdl_seq_LEN(a) == 1) ? asdl_seq_GET(a, 0) : _Py_ExtSlice(a, p->arena) }
+slice_expressions[slice_ty]: a=','.expression+ [','] {
+    (asdl_seq_LEN(a) == 1) ? _Py_Index(asdl_seq_GET(a, 0), p->arena)
+                           : _Py_Index(_Py_Tuple(a, Load, EXTRA), p->arena) }
+slices[slice_ty]: a=','.slice+ [','] {
+    (asdl_seq_LEN(a) == 1) ? asdl_seq_GET(a, 0) : _Py_ExtSlice(a, p->arena) }
 slice[slice_ty]:
     | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { _Py_Slice(a, b, c, p->arena) }
     | a=expression { _Py_Index(a, p->arena) }

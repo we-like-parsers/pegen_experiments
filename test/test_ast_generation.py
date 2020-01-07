@@ -270,6 +270,7 @@ TEST_CASES = [
     ('subscript_call', 'a[b]()'),
     ('subscript_multiple_slices', 'a[0:a:2, 1]'),
     ('subscript_simple', 'a[0]'),
+    ('subscript_tuple', 'a[0, 1, 2]'),
     ('subscript_whole_slice', 'a[0+1:b:c]'),
     ('try_except',
      '''
