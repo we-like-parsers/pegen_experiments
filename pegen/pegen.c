@@ -809,6 +809,24 @@ _set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
                     EXTRA_EXPR(e, e));
 }
 
+expr_ty
+_set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_Subscript(e->v.Subscript.value,
+                         e->v.Subscript.slice,
+                         ctx,
+                         EXTRA_EXPR(e, e));
+}
+
+expr_ty
+_set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_Attribute(e->v.Attribute.value,
+                         e->v.Attribute.attr,
+                         ctx,
+                         EXTRA_EXPR(e, e));
+}
+
 /* Receives a expr_ty and creates the appropiate node for assignment targets */
 expr_ty
 construct_assign_target(Parser *p, expr_ty node)
@@ -831,6 +849,17 @@ construct_assign_target(Parser *p, expr_ty node)
             }
             name = asdl_seq_GET(node->v.Tuple.elts, 0);
             return _set_name_context(p, name, Store);
+        case List_kind:
+            PyErr_Format(PyExc_SyntaxError, "Only single target (not list) can be annotated");
+            //TODO: We need to return a dummy here because we don't have a way to correctly
+            // buble up exceptions for now.
+            return _Py_Name(_create_dummy_identifier(p),
+                        Store,
+                        EXTRA_EXPR(node, node));
+        case Subscript_kind:
+            return _set_subscript_context(p, node, Store);
+        case Attribute_kind:
+            return _set_attribute_context(p, node, Store);
         default:
             //TODO: Support more types of nodes when the target rule is
             // ready.
@@ -845,7 +874,6 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
     if (!expr) {
         return NULL;
     }
-    assert(expr->kind == Name_kind || expr->kind == Tuple_kind || expr->kind == List_kind); // For now!
 
     expr_ty new = NULL;
     switch (expr->kind) {
@@ -857,6 +885,12 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
             break;
         case List_kind:
             new = _set_list_context(p, expr, ctx);
+            break;
+        case Subscript_kind:
+            new = _set_subscript_context(p, expr, ctx);
+            break;
+        case Attribute_kind:
+            new = _set_attribute_context(p, expr, ctx);
             break;
         default: // To avoid warnings
             break;
