@@ -320,18 +320,17 @@ factor[expr_ty]:
     | '~' a=factor { _Py_UnaryOp(Invert, a, EXTRA) }
     | power
 power[expr_ty]:
-    | a=primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA) }
-    | primary 
+    | a=await_primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA) }
+    | await_primary
+await_primary[expr_ty]:
+    | AWAIT a=primary { _Py_Await(a, EXTRA) }
+    | primary
 primary[expr_ty]:
-    | !'await' a=atom !'.' !'(' !'[' { a }
-    | AWAIT a=primary_raw { _Py_Await(a, EXTRA) }
-    | primary_raw
-primary_raw[expr_ty]:
-    | a=primary_raw '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
-    | a=primary_raw '[' b=expression ']' { _Py_Subscript(a, _Py_Index(b, p->arena), Load, EXTRA) }
-    | a=primary_raw '[' b=slice_expressions ']' { _Py_Subscript(a, b, Load, EXTRA) }
-    | a=primary_raw '[' b=slices ']' { _Py_Subscript(a, b, Load, EXTRA) }
-    | a=primary_raw '(' b=[arguments] ')' {
+    | a=primary '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=primary '[' b=expression ']' { _Py_Subscript(a, _Py_Index(b, p->arena), Load, EXTRA) }
+    | a=primary '[' b=slice_expressions ']' { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=primary '[' b=slices ']' { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
