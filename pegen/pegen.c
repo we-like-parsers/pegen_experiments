@@ -392,7 +392,7 @@ string_token(Parser *p)
     if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
         return NULL;
     // TODO: Creating an AST constant here and joining the strings afterwards is
-    // ineficient. We should just move around the char*.
+    // inefficient. We should just move around the char*.
     PyObject *c = PyUnicode_FromStringAndSize(s, len);
     if (!c)
         return NULL;
@@ -1304,6 +1304,11 @@ seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
 
 
 //// STRING HANDLING FUNCTIONS ////
+
+// These functions are ported directly from Python/ast.c with some modifications
+// to account for the use of "Parser *p", the fact that don't have parser nodes
+// to pass around and the usage of some specialized APIs present only in this
+// file (like "raise_syntax_error").
 
 
 static int
