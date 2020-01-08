@@ -69,6 +69,13 @@ def import_file(full_name: str, path: str) -> Any:
     return mod
 
 
+def generate_c_parser_source(grammar: Grammar) -> str:
+    out = io.StringIO()
+    genr = CParserGenerator(grammar, out)
+    genr.generate("<string>")
+    return out.getvalue()
+
+
 def generate_parser_c_extension(
     grammar: Grammar, path: pathlib.PurePath, debug: bool = False
 ) -> Any:
