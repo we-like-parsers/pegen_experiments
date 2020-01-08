@@ -327,9 +327,7 @@ await_primary[expr_ty]:
     | primary
 primary[expr_ty]:
     | a=primary '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
-    | a=primary '[' b=expression ']' { _Py_Subscript(a, _Py_Index(b, p->arena), Load, EXTRA) }
-    | a=primary '[' b=slice_expressions ']' { _Py_Subscript(a, b, Load, EXTRA) }
-    | a=primary '[' b=slices ']' { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
     | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
@@ -337,6 +335,10 @@ primary[expr_ty]:
                  EXTRA) }
     | atom
 
+slicing[slice_ty]:
+    | '[' b=expression ']' { _Py_Index(b, p->arena) }
+    | '[' b=slice_expressions ']' { b }
+    | '[' b=slices ']' { b }
 slice_expressions[slice_ty]:
     | a=','.expression+ [','] { _Py_Index(_Py_Tuple(a, Load, EXTRA), p->arena) }
 slices[slice_ty]:
