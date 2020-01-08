@@ -215,6 +215,9 @@ TEST_CASES = [
         def f(a, b=2, /, c=3, *e, f, **g):
             pass
      '''),
+    ('multipart_string_bytes', 'b"Hola" b"Hello" b"Bye"'),
+    ('multipart_string_triple', '"""Something here""" "and now"'),
+    ('multipart_string_different_prefixes', 'u"Something" "Other thing" r"last thing"'),
     ('multiple_assignments', 'x = y = z = 42'),
     ('multiple_assignments_with_yield', 'x = y = z = yield 42'),
     ('multiple_pass',
@@ -433,7 +436,7 @@ def test_ast_generation_on_source_files(parser_extension: Any, source: str) -> N
 
 @pytest.mark.xfail
 def test_ast_generation_for_fstrings(parser_extension: Any) -> None:
-    source = "val=12; f'{val}'"
+    source = "f'{val}'"
     actual_ast = parser_extension.parse_string(source)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
