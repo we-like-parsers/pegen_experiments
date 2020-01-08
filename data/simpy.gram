@@ -427,7 +427,23 @@ star_target: '*' bitwise_or | atom t_tail+ | a=star_atom t_tail* { a }
 star_atom: a=NAME { set_expr_context(p, a, Store) } | '(' [star_targets] ')' | '[' [star_targets] ']'
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
-target[expr_ty]: atom t_tail+ | a=t_atom t_tail* { a }
+target[expr_ty]:
+    | a=non_terminal_target '.' b=NAME !tmore {
+        _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=non_terminal_target b=slicing !tmore { _Py_Subscript(a, b, Load, EXTRA) }
+    | t_atom
+non_terminal_target[expr_ty]:
+    | a=non_terminal_target '.' b=NAME &tmore {
+        _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=non_terminal_target b=slicing &tmore { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=non_terminal_target b=genexp  &tmore { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
+    | a=non_terminal_target '(' b=[arguments] ')'  &tmore {
+        _Py_Call(a,
+                 (b) ? ((expr_ty) b)->v.Call.args : NULL,
+                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                 EXTRA) }
+    | a=atom &tmore { a }
+tmore: '(' | '[' | '.'
 t_atom[expr_ty]:
     | NAME
     | '(' b=[targets] ')' { _Py_Tuple(b, Load, EXTRA) }
