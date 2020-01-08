@@ -28,8 +28,6 @@ EXTENSION_PREFIX = """\
 #include "pegen.h"
 """
 EXTENSION_SUFFIX = """
-// TODO: Allow specifying a module name
-
 static PyObject *
 parse_file(PyObject *self, PyObject *args)
 {
@@ -240,10 +238,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.print()
                 self.visit(rule)
         mode = int(self.rules["start"].type == "mod_ty")
-        modname = self.grammar.metas.get("modulename", "parse")
+        modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
-            self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modname))
+            self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modulename))
 
     def _set_up_token_start_metadata_extraction(self) -> None:
         self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
