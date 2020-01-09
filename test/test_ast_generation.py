@@ -24,6 +24,10 @@ TEST_CASES = [
         async for i in a:
             pass
      '''),
+    ('attribute_call', 'a.b()'),
+    ('attribute_multiple_names', 'abcd.efg.hij'),
+    ('attribute_simple', 'a.b'),
+    ('attributes_subscript', 'a.b[0]'),
     ('augmented_assignment', 'x += 42'),
     ('binop_add', '1 + 1'),
     ('binop_add_multiple', '1 + 1 + 1 + 1'),
@@ -67,6 +71,14 @@ TEST_CASES = [
         class C(A, x=2, *[B, C], y=3):
             pass
      '''),
+    ('call_attribute', 'f().b'),
+    ('call_genexp', 'f(i for i in a)'),
+    ('call_mixed_args', 'f(a, b, *c, **d)'),
+    ('call_mixed_args_named', 'f(a, b, *c, d=4, **v)'),
+    ('call_one_arg', 'f(a)'),
+    ('call_posarg_genexp', 'f(a, (i for i in a))'),
+    ('call_simple', 'f()'),
+    ('call_subscript', 'f()[0]'),
     ('comp', 'a == b'),
     ('comp_multiple', 'a == b == c'),
     ('decorator',
@@ -242,6 +254,7 @@ TEST_CASES = [
         def f(a, b=0, /, c=2):
             pass
      '''),
+    ('primary_mixed', 'a.b.c().d[0]'),
     ('raise', 'raise'),
     ('raise_ellipsis', 'raise ...'),
     ('raise_expr', 'raise a'),
@@ -253,6 +266,14 @@ TEST_CASES = [
     ('set_trailing_comma', '{1, 2, 3,}'),
     ('simple_assignment', 'x = 42'),
     ('simple_assignment_with_yield', 'x = yield 42'),
+    ('subscript_attribute', 'a[0].b'),
+    ('subscript_call', 'a[b]()'),
+    ('subscript_multiple_slices', 'a[0:a:2, 1]'),
+    ('subscript_simple', 'a[0]'),
+    ('subscript_single_element_tuple', 'a[0,]'),
+    ('subscript_trailing_comma', 'a[0, 1, 2,]'),
+    ('subscript_tuple', 'a[0, 1, 2]'),
+    ('subscript_whole_slice', 'a[0+1:b:c]'),
     ('try_except',
      '''
         try:
