@@ -89,6 +89,7 @@ TEST_CASES = [
      '''),
     ('del_attribute', 'del a.b'),
     ('del_call_attribute', 'del a().c'),
+    ('del_call_genexp_attribute', 'del a(i for i in b).c'),
     ('del_list', 'del a, [b, c]'),
     ('del_mixed', 'del a[0].b().c'),
     ('del_multiple', 'del a, b'),
@@ -393,6 +394,7 @@ TEST_CASES = [
 
 FAIL_TEST_CASES = [
     ("del_call", "del a()"),
+    ("del_call_genexp", "del a(i for i in b)"),
     ("del_subscript_call", "del a[b]()"),
     ("del_attribute_call", "del a.b()"),
     ("del_mixed_call", "del a[0].b().c.d()"),

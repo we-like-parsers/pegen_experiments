@@ -431,6 +431,7 @@ target[expr_ty]: t_atom_optional_tail | atom_tail
 atom_tail[expr_ty]:
     | a=atom_tail '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
     | a=atom_tail b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=atom_tail b=genexp &('.' | '[') { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=atom_tail '(' b=[arguments] ')' &('.' | '[') {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
@@ -440,6 +441,7 @@ atom_tail[expr_ty]:
 t_atom_optional_tail[expr_ty]:
     | a=t_atom_optional_tail '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
     | a=t_atom_optional_tail b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=t_atom_optional_tail b=genexp &('.' | '[') { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=t_atom_optional_tail '(' b=[arguments] ')' &('.' | '[') {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
