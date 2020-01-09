@@ -188,7 +188,7 @@ class_def[stmt_ty]:
     | a=decorators b=class_def_raw { class_def_decorators(p, a, b) }
     | class_def_raw
 class_def_raw[stmt_ty]:
-    | 'class' a=NAME b=['(' z=[class_arguments] ')' { z }] ':' c=block {
+    | 'class' a=NAME b=['(' z=[arguments] ')' { z }] ':' c=block {
         _Py_ClassDef(((expr_ty) a)->v.Name.id,
                      (b) ? ((expr_ty) b)->v.Call.args : NULL,
                      (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
@@ -328,6 +328,7 @@ await_primary[expr_ty]:
 primary[expr_ty]:
     | a=primary '.' b=NAME { _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
     | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
+    | a=primary b=genexp { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
@@ -392,12 +393,7 @@ yield_expr[expr_ty]:
     | 'yield' 'from' a=expression { _Py_YieldFrom(a, EXTRA) }
     | 'yield' a=[expressions] { _Py_Yield(a, EXTRA) }
 
-class_arguments[expr_ty]: a=args [','] { a }
 arguments[expr_ty]:
-    | a=expression b=for_if_clauses { _Py_Call(CONSTRUCTOR(p),
-                                               singleton_seq(p, _Py_GeneratorExp(a, b, EXTRA)),
-                                               NULL,
-                                               EXTRA) }
     | a=args [','] { a }
 args[expr_ty]:
     | a=starred_expression b=[',' c=args { c }] {
