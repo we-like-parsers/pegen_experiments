@@ -1567,7 +1567,7 @@ concatenate_strings(Parser *p, asdl_seq *strings)
         Py_ssize_t fstrlen = -1;  /* Silence a compiler warning. */
 
         expr_ty cons = asdl_seq_GET(strings, i);
-        assert(const->kind == Constant_kind);
+        assert(cons->kind == Constant_kind);
         const char* the_str = PyUnicode_AsUTF8(cons->v.Constant.value);
         if (parsestr(p, the_str, &this_bytesmode, &this_rawmode, &s,
                      &fstr, &fstrlen) != 0) {
