@@ -119,6 +119,13 @@ TEST_CASES = [
         else:
             pass
      '''),
+    ('for_star_targets_attribute', 'for a.b in c: pass'),
+    ('for_star_targets_call_attribute', 'for a().c in b: pass'),
+    ('for_star_targets_mixed', 'for a[0].b().c in d: pass'),
+    ('for_star_targets_multiple', 'for a, b in c: pass'),
+    ('for_star_targets_starred', 'for *a in b: pass'),
+    ('for_star_targets_subscript_attribute', 'for a[0].b in c: pass'),
+    ('for_star_targets_tuple', 'for a, (b, c) in d: pass'),
     ('for_underscore',
      '''
         for _ in a:
@@ -399,6 +406,10 @@ FAIL_TEST_CASES = [
     ("del_subscript_call", "del a[b]()"),
     ("del_attribute_call", "del a.b()"),
     ("del_mixed_call", "del a[0].b().c.d()"),
+    ("for_star_targets_call", "for a() in b: pass"),
+    ("for_star_targets_subscript_call", "for a[b]() in c: pass"),
+    ("for_star_targets_attribute_call", "for a.b() in c: pass"),
+    ("for_star_targets_mixed_call", "for a[0].b().c.d() in e: pass"),
 ]
 
 # fmt: on
