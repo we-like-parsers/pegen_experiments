@@ -172,3 +172,7 @@ Extract the starred expressions of an `asdl_seq*` of `KeywordOrStarred*`s.
 
 ###### `asdl_seq *seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)`
 Return a new `asdl_seq*` with only the keywords in `kwargs`.
+
+###### `expr_ty concatenate_strings(Parser *p, asdl_seq *)`
+Receives a `asdl_seq` that must contain constant strings and
+returns a new string with the concatenation of all of them.

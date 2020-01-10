@@ -360,7 +360,7 @@ atom[expr_ty]:
     | dict
     | dictcomp
     | NAME
-    | a=STRING+ { asdl_seq_GET(a, 0) }
+    | a=STRING+ { concatenate_strings(p, a) }
     | NUMBER
     | '...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA) }
 
