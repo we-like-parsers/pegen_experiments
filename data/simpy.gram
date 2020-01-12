@@ -428,13 +428,11 @@ star_atom: a=NAME { set_expr_context(p, a, Store) } | '(' [star_targets] ')' | '
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]:
-    | a=non_terminal_target '.' b=NAME !tmore {
-        _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=non_terminal_target '.' b=NAME !tmore { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
     | a=non_terminal_target b=slicing !tmore { _Py_Subscript(a, b, Load, EXTRA) }
     | t_atom
 non_terminal_target[expr_ty]:
-    | a=non_terminal_target '.' b=NAME &tmore {
-        _Py_Attribute(a, ((expr_ty) b)->v.Name.id, Load, EXTRA) }
+    | a=non_terminal_target '.' b=NAME &tmore { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
     | a=non_terminal_target b=slicing &tmore { _Py_Subscript(a, b, Load, EXTRA) }
     | a=non_terminal_target b=genexp  &tmore { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=non_terminal_target '(' b=[arguments] ')'  &tmore {
