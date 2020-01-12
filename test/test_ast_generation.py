@@ -403,7 +403,7 @@ FAIL_TEST_CASES = [
 
 # fmt: on
 
-def create_source_string(source: Any) -> str:
+def cleanup_source(source: Any) -> str:
     if isinstance(source, str):
         result = dedent(source)
     elif not isinstance(source, (list, tuple)):
@@ -420,13 +420,13 @@ def prepare_test_cases(
     test_ids, _test_sources = zip(*TEST_CASES)
     test_sources = list(_test_sources)
     for index, source in enumerate(test_sources):
-        result = create_source_string(source)
+        result = cleanup_source(source)
         test_sources[index] = result
 
     fail_test_ids = tuple(i[0] for i in FAIL_TEST_CASES)
     fail_test_sources = list()
     for _, source in FAIL_TEST_CASES:
-        result = create_source_string(source)
+        result = cleanup_source(source)
         fail_test_sources.append(pytest.param(source, marks=pytest.mark.xfail(strict=True)))
     return test_ids + fail_test_ids, test_sources + fail_test_sources
 
