@@ -122,6 +122,11 @@ TEST_CASES = [
     ('for_star_targets_attribute', 'for a.b in c: pass'),
     ('for_star_targets_call_attribute', 'for a().c in b: pass'),
     ('for_star_targets_mixed', 'for a[0].b().c in d: pass'),
+    ('for_star_targets_mixed_starred',
+     '''
+        for a, *b, (c, d) in e:
+            pass
+     '''),
     ('for_star_targets_multiple', 'for a, b in c: pass'),
     ('for_star_targets_starred', 'for *a in b: pass'),
     ('for_star_targets_subscript_attribute', 'for a[0].b in c: pass'),
