@@ -492,7 +492,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                     type = rule.type
             elif name.startswith("_loop") or name.startswith("_gather"):
                 type = "asdl_seq *"
-            elif name.startswith("name") or name.startswith("string") or name.startswith("number"):
+            elif name == "name_var" or name == "string_var" or name == "number_var":
                 type = "expr_ty"
         if node.name:
             name = node.name
