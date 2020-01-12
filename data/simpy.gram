@@ -55,8 +55,7 @@ yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 
 assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
 
-del_stmt[stmt_ty]: 'del' a=targets { # TODO: exclude *target
-    _Py_Delete(set_seq_context(p, a, Del), EXTRA) }
+del_stmt[stmt_ty]: 'del' a=del_targets { _Py_Delete(a, EXTRA) }
 
 pass_stmt[stmt_ty]: 'pass' { _Py_Pass(EXTRA) }
 
@@ -436,6 +435,16 @@ star_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Store) }
     | '(' a=[star_targets_seq] ')' { _Py_Tuple(a, Store, EXTRA) }
     | '[' a=[star_targets_seq] ']' { _Py_List(a, Store, EXTRA) }
+
+del_targets[asdl_seq*]: a=','.del_target+ [','] { a }
+del_target[expr_ty]:
+    | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Del, EXTRA) }
+    | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Del, EXTRA) }
+    | del_t_atom
+del_t_atom[expr_ty]:
+    | a=NAME { set_expr_context(p, a, Del) }
+    | '(' b=[del_targets] ')' { _Py_Tuple(b, Del, EXTRA) }
+    | '[' b=[del_targets] ']' { _Py_List(b, Del, EXTRA) }
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]:
