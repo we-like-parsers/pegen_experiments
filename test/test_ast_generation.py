@@ -130,6 +130,11 @@ TEST_CASES = [
     ('for_star_targets_multiple', 'for a, b in c: pass'),
     ('for_star_targets_starred', 'for *a in b: pass'),
     ('for_star_targets_subscript_attribute', 'for a[0].b in c: pass'),
+    ('for_star_targets_trailing_comma',
+     '''
+        for a, (b, c), in d:
+            pass
+     '''),
     ('for_star_targets_tuple', 'for a, (b, c) in d: pass'),
     ('for_underscore',
      '''
