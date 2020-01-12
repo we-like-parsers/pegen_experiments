@@ -87,8 +87,14 @@ TEST_CASES = [
         def f():
             pass
      '''),
+    ('del_attribute', 'del a.b'),
+    ('del_call_attribute', 'del a().c'),
+    ('del_call_genexp_attribute', 'del a(i for i in b).c'),
     ('del_list', 'del a, [b, c]'),
+    ('del_mixed', 'del a[0].b().c'),
     ('del_multiple', 'del a, b'),
+    ('del_multiple_calls_attribute', 'del a()().b'),
+    ('del_subscript_attribute', 'del a[0].b'),
     ('del_tuple', 'del a, (b, c)'),
     ('delete', 'del a'),
     ('dict',
@@ -387,7 +393,24 @@ TEST_CASES = [
     ('yield_from', 'yield from a'),
 ]
 
+FAIL_TEST_CASES = [
+    ("del_call", "del a()"),
+    ("del_call_genexp", "del a(i for i in b)"),
+    ("del_subscript_call", "del a[b]()"),
+    ("del_attribute_call", "del a.b()"),
+    ("del_mixed_call", "del a[0].b().c.d()"),
+]
+
 # fmt: on
+
+def cleanup_source(source: Any) -> str:
+    if isinstance(source, str):
+        result = dedent(source)
+    elif not isinstance(source, (list, tuple)):
+        result = "\n".join(source)
+    else:
+        raise TypeError(f"Invalid type for test source: {source}")
+    return result
 
 
 def prepare_test_cases(
@@ -397,14 +420,15 @@ def prepare_test_cases(
     test_ids, _test_sources = zip(*TEST_CASES)
     test_sources = list(_test_sources)
     for index, source in enumerate(test_sources):
-        if isinstance(source, str):
-            result = dedent(source)
-        elif not isinstance(source, (list, tuple)):
-            result = "\n".join(source)
-        else:
-            raise TypeError(f"Invalid type for test source: {source}")
+        result = cleanup_source(source)
         test_sources[index] = result
-    return test_ids, test_sources
+
+    fail_test_ids = tuple(i[0] for i in FAIL_TEST_CASES)
+    fail_test_sources = list()
+    for _, source in FAIL_TEST_CASES:
+        result = cleanup_source(source)
+        fail_test_sources.append(pytest.param(source, marks=pytest.mark.xfail(strict=True)))
+    return test_ids + fail_test_ids, test_sources + fail_test_sources
 
 
 TEST_IDS, TEST_SOURCES = prepare_test_cases(TEST_CASES)
