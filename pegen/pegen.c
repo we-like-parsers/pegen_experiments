@@ -827,6 +827,14 @@ _set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)
                          EXTRA_EXPR(e, e));
 }
 
+expr_ty
+_set_starred_context(Parser *p, expr_ty e, expr_context_ty ctx)
+{
+    return _Py_Starred(set_expr_context(p, e->v.Starred.value, ctx),
+                       ctx,
+                       EXTRA_EXPR(e, e));
+}
+
 /* Receives a expr_ty and creates the appropiate node for assignment targets */
 expr_ty
 construct_assign_target(Parser *p, expr_ty node)
@@ -834,10 +842,8 @@ construct_assign_target(Parser *p, expr_ty node)
     if (!node) {
         return NULL;
     }
-    expr_ty name;
+
     switch(node->kind) {
-        case Name_kind:
-            return _set_name_context(p, node, Store);
         case Tuple_kind:
             if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
                 PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
@@ -847,8 +853,7 @@ construct_assign_target(Parser *p, expr_ty node)
                             Store,
                             EXTRA_EXPR(node, node));
             }
-            name = asdl_seq_GET(node->v.Tuple.elts, 0);
-            return _set_name_context(p, name, Store);
+            return asdl_seq_GET(node->v.Tuple.elts, 0);
         case List_kind:
             PyErr_Format(PyExc_SyntaxError, "Only single target (not list) can be annotated");
             //TODO: We need to return a dummy here because we don't have a way to correctly
@@ -856,14 +861,8 @@ construct_assign_target(Parser *p, expr_ty node)
             return _Py_Name(_create_dummy_identifier(p),
                         Store,
                         EXTRA_EXPR(node, node));
-        case Subscript_kind:
-            return _set_subscript_context(p, node, Store);
-        case Attribute_kind:
-            return _set_attribute_context(p, node, Store);
         default:
-            //TODO: Support more types of nodes when the target rule is
-            // ready.
-            return NULL;
+            return node;
     }
 }
 
@@ -892,6 +891,8 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
         case Attribute_kind:
             new = _set_attribute_context(p, expr, ctx);
             break;
+        case Starred_kind:
+            new = _set_starred_context(p, expr, ctx);
         default: // To avoid warnings
             break;
     }
