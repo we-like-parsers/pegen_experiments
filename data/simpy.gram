@@ -419,9 +419,8 @@ kwarg[KeywordOrStarred*]:
     | a=starred_expression { keyword_or_starred(p, a, 0) }
     | '**' a=expression { keyword_or_starred(p, _Py_keyword(NULL, a, p->arena), 1) }
 
-# NOTE: star_targets may contain *NAME, targets may not.
+# NOTE: star_targets may contain *bitwise_or, targets may not.
 # NOTE: the !'in' is to handle "for x, in ...".
-# TODO: things like {k: v}[k] = v should also be acceptable [star] targets.
 star_targets[expr_ty]:
     | a=star_target !',' { a }
     | a=star_target b=(',' !'in' c=star_target { c })* [','] {
