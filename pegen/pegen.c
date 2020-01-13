@@ -787,29 +787,49 @@ Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
                        EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
 }
 
-expr_ty
+/* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
+static asdl_seq *
+_set_seq_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
+{
+    if (!seq) {
+        return NULL;
+    }
+
+    int len = asdl_seq_LEN(seq);
+    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
+    if (!new_seq) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
+        expr_ty e = asdl_seq_GET(seq, i);
+        asdl_seq_SET(new_seq, i, set_expr_context(p, e, ctx));
+    }
+    return new_seq;
+}
+
+static expr_ty
 _set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
     return _Py_Name(e->v.Name.id, ctx, EXTRA_EXPR(e, e));
 }
 
-expr_ty
+static expr_ty
 _set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Tuple(set_seq_context(p, e->v.Tuple.elts, ctx),
+    return _Py_Tuple(_set_seq_context(p, e->v.Tuple.elts, ctx),
                      ctx,
                      EXTRA_EXPR(e, e));
 }
 
-expr_ty
+static expr_ty
 _set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_List(set_seq_context(p, e->v.List.elts, ctx),
+    return _Py_List(_set_seq_context(p, e->v.List.elts, ctx),
                     ctx,
                     EXTRA_EXPR(e, e));
 }
 
-expr_ty
+static expr_ty
 _set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
     return _Py_Subscript(e->v.Subscript.value,
@@ -818,7 +838,7 @@ _set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)
                          EXTRA_EXPR(e, e));
 }
 
-expr_ty
+static expr_ty
 _set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
     return _Py_Attribute(e->v.Attribute.value,
@@ -896,26 +916,6 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
             break;
     }
     return new;
-}
-
-/* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
-asdl_seq *
-set_seq_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)
-{
-    if (!seq) {
-        return NULL;
-    }
-
-    int len = asdl_seq_LEN(seq);
-    asdl_seq *new_seq = _Py_asdl_seq_new(len, p->arena);
-    if (!new_seq) {
-        return NULL;
-    }
-    for (int i = 0; i < len; i++) {
-        expr_ty e = asdl_seq_GET(seq, i);
-        asdl_seq_SET(new_seq, i, set_expr_context(p, e, ctx));
-    }
-    return new_seq;
 }
 
 /* Constructs a KeyValuePair that is used when parsing a dict's key value pairs */

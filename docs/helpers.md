@@ -131,9 +131,6 @@ Wrapper for `_Py_Compare`, so that the call in the grammar stays concise.
 ###### `expr_ty set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)`
 Creates an `expr_ty` equivalent to `expr` but with `ctx` as context.
 
-###### `asdl_seq *map_seq_to_context(Parser *p, asdl_seq *seq, expr_context_ty ctx)`
-Creates an `asdl_seq *` where all the elements have been changed to have `ctx` as context.
-
 ###### `KeyValuePair *key_value_pair(Parser *p, expr_ty key, expr_ty value)`
 Constructs a `KeyValuePair` that is used when parsing a dict's key value pairs.
 
