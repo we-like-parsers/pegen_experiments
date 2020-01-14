@@ -508,7 +508,6 @@ def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source:
         parser_extension.parse_string(source, mode=0)
 
 
-@pytest.mark.xfail
 def test_ast_generation_for_fstrings(parser_extension: Any) -> None:
     source = "f'{val}'"
     actual_ast = parser_extension.parse_string(source, mode=1)

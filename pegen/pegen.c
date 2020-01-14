@@ -423,72 +423,7 @@ static int
 parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **result,
          const char **fstr, Py_ssize_t *fstrlen);
 
-expr_ty
-string_token(Parser *p)
-{
-    Token *t = expect_token(p, STRING);
-
-    if (t == NULL) {
-        return NULL;
-    }
-
-    char *the_str = PyBytes_AsString(t->bytes);
-    if (the_str == NULL) {
-        return NULL;
-    }
-
-    PyObject *s;
-    int this_rawmode = 0;
-    int bytesmode = 0;
-    const char *fstr;
-    Py_ssize_t fstrlen = -1; /* Silence a compiler warning. */
-    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
-        return NULL;
-    }
-
-    /* Check if it has a 'u' prefix */
-    int kind_unicode = 0;
-    if (the_str[0] == 'u') {
-        assert(!bytesmode);
-        kind_unicode = 1;
-    }
-
-    if (fstr != NULL) {
-        /* We are parsing an f-string. */
-        assert(s == NULL && !bytesmode);
-
-        // TODO: We still don't support f-strings so let's return some
-        // dummy here to not make the parsing tests fail.
-        PyObject *final_str = new_identifier(p, "f-strings not supported yet!!");
-        return Constant(final_str, NULL, t->lineno, t->col_offset, t->end_lineno,
-                        t->end_col_offset, p->arena);
-    }
-
-    /* A string or byte string. */
-    assert(s != NULL && fstr == NULL);
-    assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
-
-    PyObject *final_str = s;
-    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
-        goto error;
-    }
-
-    PyObject *u_kind = NULL;
-    if (!bytesmode && kind_unicode) {
-        // TODO: Intern this string when we decide how we will
-        // handle static constants in the module.
-        u_kind = new_identifier(p, "u");
-        if (u_kind == NULL) {
-            goto error;
-        }
-    }
-    return Constant(final_str, u_kind, t->lineno, t->col_offset, t->end_lineno,
-                    t->end_col_offset, p->arena);
-
-error:
-    Py_DECREF(final_str);
-    return NULL;
-}
+expr_ty string_token(Parser *p);
 
 void *
 keyword_token(Parser *p, const char *val)
@@ -544,6 +479,8 @@ run_parser(struct tok_state *tok,
 
     PyErr_Clear();
 
+    p->start_rule_func = start_rule_func;
+
     void *res = (*start_rule_func)(p);
     if (res == NULL) {
         if (PyErr_Occurred()) {
@@ -588,6 +525,7 @@ exit:
     PyMem_Free(p);
     return result;
 }
+
 
 PyObject *
 run_parser_from_file(const char *filename,
@@ -1677,6 +1615,934 @@ parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **resu
     return *result == NULL ? -1 : 0;
 }
 
+
+
+// FSTRING STUFF
+
+/* /1* Shift locations for the given node and all its children by adding `lineno` */
+/*    and `col_offset` to existing locations. *1/ */
+/* static void fstring_shift_node_locations(node *n, int lineno, int col_offset) */
+/* { */
+/*     n->n_col_offset = n->n_col_offset + col_offset; */
+/*     n->n_end_col_offset = n->n_end_col_offset + col_offset; */
+/*     for (int i = 0; i < NCH(n); ++i) { */
+/*         if (n->n_lineno && n->n_lineno < CHILD(n, i)->n_lineno) { */
+/*             /1* Shifting column offsets unnecessary if there's been newlines. *1/ */
+/*             col_offset = 0; */
+/*         } */
+/*         fstring_shift_node_locations(CHILD(n, i), lineno, col_offset); */
+/*     } */
+/*     n->n_lineno = n->n_lineno + lineno; */
+/*     n->n_end_lineno = n->n_end_lineno + lineno; */
+/* } */
+
+/* Fix locations for the given node and its children.
+
+   `parent` is the enclosing node.
+   `n` is the node which locations are going to be fixed relative to parent.
+   `expr_str` is the child node's string representation, including braces.
+*/
+/* static void */
+/* fstring_fix_node_location(const node *parent, node *n, char *expr_str) */
+/* { */
+/*     char *substr = NULL; */
+/*     char *start; */
+/*     int lines = LINENO(parent) - 1; */
+/*     int cols = parent->n_col_offset; */
+/*     /1* Find the full fstring to fix location information in `n`. *1/ */
+/*     while (parent && parent->n_type != STRING) */
+/*         parent = parent->n_child; */
+/*     if (parent && parent->n_str) { */
+/*         substr = strstr(parent->n_str, expr_str); */
+/*         if (substr) { */
+/*             start = substr; */
+/*             while (start > parent->n_str) { */
+/*                 if (start[0] == '\n') */
+/*                     break; */
+/*                 start--; */
+/*             } */
+/*             cols += (int)(substr - start); */
+/*             /1* adjust the start based on the number of newlines encountered */
+/*                before the f-string expression *1/ */
+/*             for (char* p = parent->n_str; p < substr; p++) { */
+/*                 if (*p == '\n') { */
+/*                     lines++; */
+/*                 } */
+/*             } */
+/*         } */
+/*     } */
+/*     fstring_shift_node_locations(n, lines, cols); */
+/* } */
+
+
+/* Compile this expression in to an expr_ty.  Add parens around the
+   expression, in order to allow leading spaces in the expression. */
+static expr_ty
+fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
+{
+    mod_ty mod;
+    char *str;
+    Py_ssize_t len;
+    const char *s;
+
+    assert(expr_end >= expr_start);
+    assert(*(expr_start-1) == '{');
+    assert(*expr_end == '}' || *expr_end == '!' || *expr_end == ':' ||
+           *expr_end == '=');
+
+    /* If the substring is all whitespace, it's an error.  We need to catch this
+       here, and not when we call PyParser_SimpleParseStringFlagsFilename,
+       because turning the expression '' in to '()' would go from being invalid
+       to valid. */
+    for (s = expr_start; s != expr_end; s++) {
+        char c = *s;
+        /* The Python parser ignores only the following whitespace
+           characters (\r already is converted to \n). */
+        if (!(c == ' ' || c == '\t' || c == '\n' || c == '\f')) {
+            break;
+        }
+    }
+    if (s == expr_end) {
+        raise_syntax_error(p, "f-string: empty expression not allowed");
+        return NULL;
+    }
+
+    len = expr_end - expr_start;
+    /* Allocate 3 extra bytes: open paren, close paren, null byte. */
+    str = PyMem_RawMalloc(len + 3);
+    if (str == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    str[0] = '(';
+    memcpy(str+1, expr_start, len);
+    str[len+1] = ')';
+    str[len+2] = 0;
+
+    struct tok_state* tok = PyTokenizer_FromString(str, 1);
+    if (tok == NULL) {
+        return NULL;
+    }
+    mod_ty (*the_start_rule)(Parser*) = p->start_rule_func;
+    mod = the_start_rule(p);
+
+    PyTokenizer_Free(tok);
+
+    /* Reuse str to find the correct column offset. */
+    str[0] = '{';
+    str[len+1] = '}';
+    if (!mod) {
+        return NULL;
+    }
+    return mod->v.Expression.body;
+}
+
+/* Return -1 on error.
+
+   Return 0 if we reached the end of the literal.
+
+   Return 1 if we haven't reached the end of the literal, but we want
+   the caller to process the literal up to this point. Used for
+   doubled braces.
+*/
+static int
+fstring_find_literal(Parser *p, const char **str, const char *end, int raw,
+                     PyObject **literal, int recurse_lvl)
+{
+    /* Get any literal string. It ends when we hit an un-doubled left
+       brace (which isn't part of a unicode name escape such as
+       "\N{EULER CONSTANT}"), or the end of the string. */
+
+    const char *s = *str;
+    const char *literal_start = s;
+    int result = 0;
+
+    assert(*literal == NULL);
+    while (s < end) {
+        char ch = *s++;
+        if (!raw && ch == '\\' && s < end) {
+            ch = *s++;
+            if (ch == 'N') {
+                if (s < end && *s++ == '{') {
+                    while (s < end && *s++ != '}') {
+                    }
+                    continue;
+                }
+                break;
+            }
+            if (ch == '{' && warn_invalid_escape_sequence(p, ch) < 0) {
+                return -1;
+            }
+        }
+        if (ch == '{' || ch == '}') {
+            /* Check for doubled braces, but only at the top level. If
+               we checked at every level, then f'{0:{3}}' would fail
+               with the two closing braces. */
+            if (recurse_lvl == 0) {
+                if (s < end && *s == ch) {
+                    /* We're going to tell the caller that the literal ends
+                       here, but that they should continue scanning. But also
+                       skip over the second brace when we resume scanning. */
+                    *str = s + 1;
+                    result = 1;
+                    goto done;
+                }
+
+                /* Where a single '{' is the start of a new expression, a
+                   single '}' is not allowed. */
+                if (ch == '}') {
+                    *str = s - 1;
+                    raise_syntax_error(p, "f-string: single '}' is not allowed");
+                    return -1;
+                }
+            }
+            /* We're either at a '{', which means we're starting another
+               expression; or a '}', which means we're at the end of this
+               f-string (for a nested format_spec). */
+            s--;
+            break;
+        }
+    }
+    *str = s;
+    assert(s <= end);
+    assert(s == end || *s == '{' || *s == '}');
+done:
+    if (literal_start != s) {
+        if (raw)
+            *literal = PyUnicode_DecodeUTF8Stateful(literal_start,
+                                                    s - literal_start,
+                                                    NULL, NULL);
+        else
+            *literal = decode_unicode_with_escapes(p, literal_start,
+                                                   s - literal_start);
+        if (!*literal)
+            return -1;
+    }
+    return result;
+}
+
+/* Forward declaration because parsing is recursive. */
+static expr_ty
+fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
+              Token* t);
+
+/* Parse the f-string at *str, ending at end.  We know *str starts an
+   expression (so it must be a '{'). Returns the FormattedValue node, which
+   includes the expression, conversion character, format_spec expression, and
+   optionally the text of the expression (if = is used).
+
+   Note that I don't do a perfect job here: I don't make sure that a
+   closing brace doesn't match an opening paren, for example. It
+   doesn't need to error on all invalid expressions, just correctly
+   find the end of all valid ones. Any errors inside the expression
+   will be caught when we parse it later.
+
+   *expression is set to the expression.  For an '=' "debug" expression,
+   *expr_text is set to the debug text (the original text of the expression,
+   including the '=' and any whitespace around it, as a string object).  If
+   not a debug expression, *expr_text set to NULL. */
+static int
+fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
+                  PyObject **expr_text, expr_ty *expression)
+{
+    /* Return -1 on error, else 0. */
+
+    const char *expr_start;
+    const char *expr_end;
+    expr_ty simple_expression;
+    expr_ty format_spec = NULL; /* Optional format specifier. */
+    int conversion = -1; /* The conversion char.  Use default if not
+                            specified, or !r if using = and no format
+                            spec. */
+
+    /* 0 if we're not in a string, else the quote char we're trying to
+       match (single or double quote). */
+    char quote_char = 0;
+
+    /* If we're inside a string, 1=normal, 3=triple-quoted. */
+    int string_type = 0;
+
+    /* Keep track of nesting level for braces/parens/brackets in
+       expressions. */
+    Py_ssize_t nested_depth = 0;
+    char parenstack[MAXLEVEL];
+
+    *expr_text = NULL;
+
+    /* Can only nest one level deep. */
+    if (recurse_lvl >= 2) {
+        raise_syntax_error(p, "f-string: expressions nested too deeply");
+        goto error;
+    }
+
+    /* The first char must be a left brace, or we wouldn't have gotten
+       here. Skip over it. */
+    assert(**str == '{');
+    *str += 1;
+
+    expr_start = *str;
+    for (; *str < end; (*str)++) {
+        char ch;
+
+        /* Loop invariants. */
+        assert(nested_depth >= 0);
+        assert(*str >= expr_start && *str < end);
+        if (quote_char)
+            assert(string_type == 1 || string_type == 3);
+        else
+            assert(string_type == 0);
+
+        ch = **str;
+        /* Nowhere inside an expression is a backslash allowed. */
+        if (ch == '\\') {
+            /* Error: can't include a backslash character, inside
+               parens or strings or not. */
+            raise_syntax_error(p,
+                      "f-string expression part "
+                      "cannot include a backslash");
+            goto error;
+        }
+        if (quote_char) {
+            /* We're inside a string. See if we're at the end. */
+            /* This code needs to implement the same non-error logic
+               as tok_get from tokenizer.c, at the letter_quote
+               label. To actually share that code would be a
+               nightmare. But, it's unlikely to change and is small,
+               so duplicate it here. Note we don't need to catch all
+               of the errors, since they'll be caught when parsing the
+               expression. We just need to match the non-error
+               cases. Thus we can ignore \n in single-quoted strings,
+               for example. Or non-terminated strings. */
+            if (ch == quote_char) {
+                /* Does this match the string_type (single or triple
+                   quoted)? */
+                if (string_type == 3) {
+                    if (*str+2 < end && *(*str+1) == ch && *(*str+2) == ch) {
+                        /* We're at the end of a triple quoted string. */
+                        *str += 2;
+                        string_type = 0;
+                        quote_char = 0;
+                        continue;
+                    }
+                } else {
+                    /* We're at the end of a normal string. */
+                    quote_char = 0;
+                    string_type = 0;
+                    continue;
+                }
+            }
+        } else if (ch == '\'' || ch == '"') {
+            /* Is this a triple quoted string? */
+            if (*str+2 < end && *(*str+1) == ch && *(*str+2) == ch) {
+                string_type = 3;
+                *str += 2;
+            } else {
+                /* Start of a normal string. */
+                string_type = 1;
+            }
+            /* Start looking for the end of the string. */
+            quote_char = ch;
+        } else if (ch == '[' || ch == '{' || ch == '(') {
+            if (nested_depth >= MAXLEVEL) {
+                raise_syntax_error(p, "f-string: too many nested parenthesis");
+                goto error;
+            }
+            parenstack[nested_depth] = ch;
+            nested_depth++;
+        } else if (ch == '#') {
+            /* Error: can't include a comment character, inside parens
+               or not. */
+            raise_syntax_error(p, "f-string expression part cannot include '#'");
+            goto error;
+        } else if (nested_depth == 0 &&
+                   (ch == '!' || ch == ':' || ch == '}' ||
+                    ch == '=' || ch == '>' || ch == '<')) {
+            /* See if there's a next character. */
+            if (*str+1 < end) {
+                char next = *(*str+1);
+
+                /* For "!=". since '=' is not an allowed conversion character,
+                   nothing is lost in this test. */
+                if ((ch == '!' && next == '=') ||   /* != */
+                    (ch == '=' && next == '=') ||   /* == */
+                    (ch == '<' && next == '=') ||   /* <= */
+                    (ch == '>' && next == '=')      /* >= */
+                    ) {
+                    *str += 1;
+                    continue;
+                }
+                /* Don't get out of the loop for these, if they're single
+                   chars (not part of 2-char tokens). If by themselves, they
+                   don't end an expression (unlike say '!'). */
+                if (ch == '>' || ch == '<') {
+                    continue;
+                }
+            }
+
+            /* Normal way out of this loop. */
+            break;
+        } else if (ch == ']' || ch == '}' || ch == ')') {
+            if (!nested_depth) {
+                raise_syntax_error(p, "f-string: unmatched '%c'", ch);
+                goto error;
+            }
+            nested_depth--;
+            int opening = parenstack[nested_depth];
+            if (!((opening == '(' && ch == ')') ||
+                  (opening == '[' && ch == ']') ||
+                  (opening == '{' && ch == '}')))
+            {
+                raise_syntax_error(p,
+                          "f-string: closing parenthesis '%c' "
+                          "does not match opening parenthesis '%c'",
+                          ch, opening);
+                goto error;
+            }
+        } else {
+            /* Just consume this char and loop around. */
+        }
+    }
+    expr_end = *str;
+    /* If we leave this loop in a string or with mismatched parens, we
+       don't care. We'll get a syntax error when compiling the
+       expression. But, we can produce a better error message, so
+       let's just do that.*/
+    if (quote_char) {
+        raise_syntax_error(p, "f-string: unterminated string");
+        goto error;
+    }
+    if (nested_depth) {
+        int opening = parenstack[nested_depth - 1];
+        raise_syntax_error(p, "f-string: unmatched '%c'", opening);
+        goto error;
+    }
+
+    if (*str >= end)
+        goto unexpected_end_of_string;
+
+    /* Compile the expression as soon as possible, so we show errors
+       related to the expression before errors related to the
+       conversion or format_spec. */
+    simple_expression = fstring_compile_expr(p, expr_start, expr_end);
+    if (!simple_expression)
+        goto error;
+
+    /* Check for =, which puts the text value of the expression in
+       expr_text. */
+    if (**str == '=') {
+        *str += 1;
+
+        /* Skip over ASCII whitespace.  No need to test for end of string
+           here, since we know there's at least a trailing quote somewhere
+           ahead. */
+        while (Py_ISSPACE(**str)) {
+            *str += 1;
+        }
+
+        /* Set *expr_text to the text of the expression. */
+        *expr_text = PyUnicode_FromStringAndSize(expr_start, *str-expr_start);
+        if (!*expr_text) {
+            goto error;
+        }
+    }
+
+    /* Check for a conversion char, if present. */
+    if (**str == '!') {
+        *str += 1;
+        if (*str >= end)
+            goto unexpected_end_of_string;
+
+        conversion = **str;
+        *str += 1;
+
+        /* Validate the conversion. */
+        if (!(conversion == 's' || conversion == 'r' || conversion == 'a')) {
+            raise_syntax_error(p,
+                      "f-string: invalid conversion character: "
+                      "expected 's', 'r', or 'a'");
+            goto error;
+        }
+
+    }
+
+    /* Check for the format spec, if present. */
+    if (*str >= end)
+        goto unexpected_end_of_string;
+    if (**str == ':') {
+        *str += 1;
+        if (*str >= end)
+            goto unexpected_end_of_string;
+
+        /* Parse the format spec. */
+        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, NULL);
+        if (!format_spec)
+            goto error;
+    }
+
+    if (*str >= end || **str != '}')
+        goto unexpected_end_of_string;
+
+    /* We're at a right brace. Consume it. */
+    assert(*str < end);
+    assert(**str == '}');
+    *str += 1;
+
+    /* If we're in = mode (detected by non-NULL expr_text), and have no format
+       spec and no explicit conversion, set the conversion to 'r'. */
+    if (*expr_text && format_spec == NULL && conversion == -1) {
+        conversion = 'r';
+    }
+
+    /* And now create the FormattedValue node that represents this
+       entire expression with the conversion and format spec. */
+    //TODO: Fix this
+    *expression = FormattedValue(simple_expression, conversion,
+                                 format_spec, 1, 1, 1, 1, p->arena);
+    if (!*expression)
+        goto error;
+
+    return 0;
+
+unexpected_end_of_string:
+    raise_syntax_error(p, "f-string: expecting '}'");
+    /* Falls through to error. */
+
+error:
+    Py_XDECREF(*expr_text);
+    return -1;
+
+}
+
+/* Return -1 on error.
+
+   Return 0 if we have a literal (possible zero length) and an
+   expression (zero length if at the end of the string.
+
+   Return 1 if we have a literal, but no expression, and we want the
+   caller to call us again. This is used to deal with doubled
+   braces.
+
+   When called multiple times on the string 'a{{b{0}c', this function
+   will return:
+
+   1. the literal 'a{' with no expression, and a return value
+      of 1. Despite the fact that there's no expression, the return
+      value of 1 means we're not finished yet.
+
+   2. the literal 'b' and the expression '0', with a return value of
+      0. The fact that there's an expression means we're not finished.
+
+   3. literal 'c' with no expression and a return value of 0. The
+      combination of the return value of 0 with no expression means
+      we're finished.
+*/
+static int
+fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int raw,
+                              int recurse_lvl, PyObject **literal,
+                              PyObject **expr_text, expr_ty *expression)
+{
+    int result;
+
+    assert(*literal == NULL && *expression == NULL);
+
+    /* Get any literal string. */
+    result = fstring_find_literal(p, str, end, raw, literal, recurse_lvl);
+    if (result < 0)
+        goto error;
+
+    assert(result == 0 || result == 1);
+
+    if (result == 1)
+        /* We have a literal, but don't look at the expression. */
+        return 1;
+
+    if (*str >= end || **str == '}')
+        /* We're at the end of the string or the end of a nested
+           f-string: no expression. The top-level error case where we
+           expect to be at the end of the string but we're at a '}' is
+           handled later. */
+        return 0;
+
+    /* We must now be the start of an expression, on a '{'. */
+    assert(**str == '{');
+
+    if (fstring_find_expr(p, str, end, raw, recurse_lvl, expr_text,
+                          expression) < 0)
+        goto error;
+
+    return 0;
+
+error:
+    Py_CLEAR(*literal);
+    return -1;
+}
+
+
+
+
+#define EXPRLIST_N_CACHED  64
+
+typedef struct {
+    /* Incrementally build an array of expr_ty, so be used in an
+       asdl_seq. Cache some small but reasonably sized number of
+       expr_ty's, and then after that start dynamically allocating,
+       doubling the number allocated each time. Note that the f-string
+       f'{0}a{1}' contains 3 expr_ty's: 2 FormattedValue's, and one
+       Constant for the literal 'a'. So you add expr_ty's about twice as
+       fast as you add expressions in an f-string. */
+
+    Py_ssize_t allocated;  /* Number we've allocated. */
+    Py_ssize_t size;       /* Number we've used. */
+    expr_ty    *p;         /* Pointer to the memory we're actually
+                              using. Will point to 'data' until we
+                              start dynamically allocating. */
+    expr_ty    data[EXPRLIST_N_CACHED];
+} ExprList;
+
+#ifdef NDEBUG
+#define ExprList_check_invariants(l)
+#else
+static void
+ExprList_check_invariants(ExprList *l)
+{
+    /* Check our invariants. Make sure this object is "live", and
+       hasn't been deallocated. */
+    assert(l->size >= 0);
+    assert(l->p != NULL);
+    if (l->size <= EXPRLIST_N_CACHED)
+        assert(l->data == l->p);
+}
+#endif
+
+static void
+ExprList_Init(ExprList *l)
+{
+    l->allocated = EXPRLIST_N_CACHED;
+    l->size = 0;
+
+    /* Until we start allocating dynamically, p points to data. */
+    l->p = l->data;
+
+    ExprList_check_invariants(l);
+}
+
+static int
+ExprList_Append(ExprList *l, expr_ty exp)
+{
+    ExprList_check_invariants(l);
+    if (l->size >= l->allocated) {
+        /* We need to alloc (or realloc) the memory. */
+        Py_ssize_t new_size = l->allocated * 2;
+
+        /* See if we've ever allocated anything dynamically. */
+        if (l->p == l->data) {
+            Py_ssize_t i;
+            /* We're still using the cached data. Switch to
+               alloc-ing. */
+            l->p = PyMem_RawMalloc(sizeof(expr_ty) * new_size);
+            if (!l->p)
+                return -1;
+            /* Copy the cached data into the new buffer. */
+            for (i = 0; i < l->size; i++)
+                l->p[i] = l->data[i];
+        } else {
+            /* Just realloc. */
+            expr_ty *tmp = PyMem_RawRealloc(l->p, sizeof(expr_ty) * new_size);
+            if (!tmp) {
+                PyMem_RawFree(l->p);
+                l->p = NULL;
+                return -1;
+            }
+            l->p = tmp;
+        }
+
+        l->allocated = new_size;
+        assert(l->allocated == 2 * l->size);
+    }
+
+    l->p[l->size++] = exp;
+
+    ExprList_check_invariants(l);
+    return 0;
+}
+
+static void
+ExprList_Dealloc(ExprList *l)
+{
+    ExprList_check_invariants(l);
+
+    /* If there's been an error, or we've never dynamically allocated,
+       do nothing. */
+    if (!l->p || l->p == l->data) {
+        /* Do nothing. */
+    } else {
+        /* We have dynamically allocated. Free the memory. */
+        PyMem_RawFree(l->p);
+    }
+    l->p = NULL;
+    l->size = -1;
+}
+
+static asdl_seq *
+ExprList_Finish(ExprList *l, PyArena *arena)
+{
+    asdl_seq *seq;
+
+    ExprList_check_invariants(l);
+
+    /* Allocate the asdl_seq and copy the expressions in to it. */
+    seq = _Py_asdl_seq_new(l->size, arena);
+    if (seq) {
+        Py_ssize_t i;
+        for (i = 0; i < l->size; i++)
+            asdl_seq_SET(seq, i, l->p[i]);
+    }
+    ExprList_Dealloc(l);
+    return seq;
+}
+
+
+
+/* The FstringParser is designed to add a mix of strings and
+   f-strings, and concat them together as needed. Ultimately, it
+   generates an expr_ty. */
+typedef struct {
+    PyObject *last_str;
+    ExprList expr_list;
+    int fmode;
+} FstringParser;
+
+#ifdef NDEBUG
+#define FstringParser_check_invariants(state)
+#else
+static void
+FstringParser_check_invariants(FstringParser *state)
+{
+    if (state->last_str)
+        assert(PyUnicode_CheckExact(state->last_str));
+    ExprList_check_invariants(&state->expr_list);
+}
+#endif
+
+static void
+FstringParser_Init(FstringParser *state)
+{
+    state->last_str = NULL;
+    state->fmode = 0;
+    ExprList_Init(&state->expr_list);
+    FstringParser_check_invariants(state);
+}
+
+static void
+FstringParser_Dealloc(FstringParser *state)
+{
+    FstringParser_check_invariants(state);
+
+    Py_XDECREF(state->last_str);
+    ExprList_Dealloc(&state->expr_list);
+}
+
+/* Make a Constant node, but decref the PyUnicode object being added. */
+static expr_ty
+make_str_node_and_del(Parser *p, PyObject **str, Token* t)
+{
+    PyObject *s = *str;
+    PyObject *kind = NULL;
+    *str = NULL;
+    assert(PyUnicode_CheckExact(s));
+    if (PyArena_AddPyObject(p->arena, s) < 0) {
+        Py_DECREF(s);
+        return NULL;
+    }
+    //TODO: Check this logic with the kind
+    //
+    const char* the_str = PyUnicode_AsUTF8(s);
+    if (the_str && the_str[0] == 'u') {
+        kind = new_identifier(p, "u");
+    }
+
+    if (kind == NULL && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return Constant(s, kind, t->lineno, t->col_offset, t->end_lineno,
+                    t->end_col_offset, p->arena);
+
+}
+
+
+/* Add a non-f-string (that is, a regular literal string). str is
+   decref'd. */
+static int
+FstringParser_ConcatAndDel(FstringParser *state, PyObject *str)
+{
+    FstringParser_check_invariants(state);
+
+    assert(PyUnicode_CheckExact(str));
+
+    if (PyUnicode_GET_LENGTH(str) == 0) {
+        Py_DECREF(str);
+        return 0;
+    }
+
+    if (!state->last_str) {
+        /* We didn't have a string before, so just remember this one. */
+        state->last_str = str;
+    } else {
+        /* Concatenate this with the previous string. */
+        PyUnicode_AppendAndDel(&state->last_str, str);
+        if (!state->last_str)
+            return -1;
+    }
+    FstringParser_check_invariants(state);
+    return 0;
+}
+
+/* Parse an f-string. The f-string is in *str to end, with no
+   'f' or quotes. */
+static int
+FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
+                            const char *end, int raw, int recurse_lvl, Token* t)
+{
+    FstringParser_check_invariants(state);
+    state->fmode = 1;
+
+    /* Parse the f-string. */
+    while (1) {
+        PyObject *literal = NULL;
+        PyObject *expr_text = NULL;
+        expr_ty expression = NULL;
+
+        /* If there's a zero length literal in front of the
+           expression, literal will be NULL. If we're at the end of
+           the f-string, expression will be NULL (unless result == 1,
+           see below). */
+        int result = fstring_find_literal_and_expr(p, str, end, raw, recurse_lvl,
+                                                   &literal, &expr_text,
+                                                   &expression);
+        if (result < 0)
+            return -1;
+
+        /* Add the literal, if any. */
+        if (literal && FstringParser_ConcatAndDel(state, literal) < 0) {
+            Py_XDECREF(expr_text);
+            return -1;
+        }
+        /* Add the expr_text, if any. */
+        if (expr_text && FstringParser_ConcatAndDel(state, expr_text) < 0) {
+            return -1;
+        }
+
+        /* We've dealt with the literal and expr_text, their ownership has
+           been transferred to the state object.  Don't look at them again. */
+
+        /* See if we should just loop around to get the next literal
+           and expression, while ignoring the expression this
+           time. This is used for un-doubling braces, as an
+           optimization. */
+        if (result == 1)
+            continue;
+
+        if (!expression)
+            /* We're done with this f-string. */
+            break;
+
+        /* We know we have an expression. Convert any existing string
+           to a Constant node. */
+        if (!state->last_str) {
+            /* Do nothing. No previous literal. */
+        } else {
+            /* Convert the existing last_str literal to a Constant node. */
+            expr_ty str = make_str_node_and_del(p, &state->last_str, t);
+            if (!str || ExprList_Append(&state->expr_list, str) < 0)
+                return -1;
+        }
+
+        if (ExprList_Append(&state->expr_list, expression) < 0)
+            return -1;
+    }
+
+    /* If recurse_lvl is zero, then we must be at the end of the
+       string. Otherwise, we must be at a right brace. */
+
+    if (recurse_lvl == 0 && *str < end-1) {
+        raise_syntax_error(p, "f-string: unexpected end of string");
+        return -1;
+    }
+    if (recurse_lvl != 0 && **str != '}') {
+        raise_syntax_error(p, "f-string: expecting '}'");
+        return -1;
+    }
+
+    FstringParser_check_invariants(state);
+    return 0;
+}
+
+/* Convert the partial state reflected in last_str and expr_list to an
+   expr_ty. The expr_ty can be a Constant, or a JoinedStr. */
+static expr_ty
+FstringParser_Finish(Parser *p, FstringParser *state, Token* t)
+{
+    asdl_seq *seq;
+
+    FstringParser_check_invariants(state);
+
+    /* If we're just a constant string with no expressions, return
+       that. */
+    if (!state->fmode) {
+        assert(!state->expr_list.size);
+        if (!state->last_str) {
+            /* Create a zero length string. */
+            state->last_str = PyUnicode_FromStringAndSize(NULL, 0);
+            if (!state->last_str)
+                goto error;
+        }
+        return make_str_node_and_del(p, &state->last_str, t);
+    }
+
+    /* Create a Constant node out of last_str, if needed. It will be the
+       last node in our expression list. */
+    if (state->last_str) {
+        expr_ty str = make_str_node_and_del(p, &state->last_str, t);
+        if (!str || ExprList_Append(&state->expr_list, str) < 0)
+            goto error;
+    }
+    /* This has already been freed. */
+    assert(state->last_str == NULL);
+
+    seq = ExprList_Finish(&state->expr_list, p->arena);
+    if (!seq)
+        goto error;
+
+    return _Py_JoinedStr(seq, t->lineno, t->col_offset, t->end_lineno,
+                    t->end_col_offset, p->arena);
+
+
+
+error:
+    FstringParser_Dealloc(state);
+    return NULL;
+}
+
+/* Given an f-string (with no 'f' or quotes) that's in *str and ends
+   at end, parse it into an expr_ty.  Return NULL on error.  Adjust
+   str to point past the parsed portion. */
+static expr_ty
+fstring_parse(Parser *p, const char **str, const char *end, int raw,
+              int recurse_lvl, Token* t)
+{
+    FstringParser state;
+
+    FstringParser_Init(&state);
+    if (FstringParser_ConcatFstring(p, &state, str, end, raw, recurse_lvl, t) < 0) {
+        FstringParser_Dealloc(&state);
+        return NULL;
+    }
+
+    return FstringParser_Finish(p, &state, t);
+}
+
 expr_ty
 concatenate_strings(Parser *p, asdl_seq *strings)
 {
@@ -1691,6 +2557,8 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     int kind_unicode = 0;
     PyObject *final_str = NULL;
 
+    // TODO(Pablo): This assert will fail because we are returning
+    // JoinedStr now here: We need to add logic to join f-strings!
     assert(first->kind == Constant_kind);
     if (PyBytes_CheckExact(first->v.Constant.value)) {
         final_str = PyBytes_FromString("");
@@ -1742,5 +2610,71 @@ concatenate_strings(Parser *p, asdl_seq *strings)
 
 error:
     Py_XDECREF(final_str);
+    return NULL;
+}
+
+expr_ty
+string_token(Parser *p)
+{
+    Token *t = expect_token(p, STRING);
+
+    if (t == NULL) {
+        return NULL;
+    }
+
+    char *the_str = PyBytes_AsString(t->bytes);
+    if (the_str == NULL) {
+        return NULL;
+    }
+
+    PyObject *s;
+    int this_rawmode = 0;
+    int bytesmode = 0;
+    const char *fstr;
+    Py_ssize_t fstrlen = -1; /* Silence a compiler warning. */
+    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
+        return NULL;
+    }
+
+    /* Check if it has a 'u' prefix */
+    int kind_unicode = 0;
+    if (the_str[0] == 'u') {
+        assert(!bytesmode);
+        kind_unicode = 1;
+    }
+
+    if (fstr != NULL) {
+        /* We are parsing an f-string. */
+        assert(s == NULL && !bytesmode);
+
+        FstringParser state;
+        FstringParser_Init(&state);
+        int result = FstringParser_ConcatFstring(p, &state, &fstr, fstr+fstrlen, this_rawmode, 0, t);
+        return FstringParser_Finish(p, &state, t);
+    }
+
+    /* A string or byte string. */
+    assert(s != NULL && fstr == NULL);
+    assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
+
+    PyObject *final_str = s;
+    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
+        goto error;
+    }
+
+    PyObject *u_kind = NULL;
+    if (!bytesmode && kind_unicode) {
+        // TODO: Intern this string when we decide how we will
+        // handle static constants in the module.
+        u_kind = new_identifier(p, "u");
+        if (u_kind == NULL) {
+            goto error;
+        }
+    }
+    return Constant(final_str, u_kind, t->lineno, t->col_offset, t->end_lineno,
+                    t->end_col_offset, p->arena);
+
+error:
+    Py_DECREF(final_str);
     return NULL;
 }

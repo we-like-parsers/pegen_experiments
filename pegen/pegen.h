@@ -31,6 +31,7 @@ typedef struct {
     PyArena *arena;
     KeywordToken **keywords;
     int n_keyword_lists;
+    void *start_rule_func;
 } Parser;
 
 typedef struct {
