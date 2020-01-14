@@ -21,7 +21,10 @@ MOD_DIR = pathlib.Path(__file__)
 
 
 def compile_c_extension(
-    generated_source_path: str, build_dir: Optional[str] = None, verbose: bool = False
+    generated_source_path: str,
+    build_dir: Optional[str] = None,
+    verbose: bool = False,
+    keep_asserts: bool = True,
 ) -> str:
     """Compile the generated source for a parser generator into an extension module.
 
@@ -38,12 +41,15 @@ def compile_c_extension(
 
     source_file_path = pathlib.Path(generated_source_path)
     extension_name = source_file_path.stem
+    extra_compile_args = []
+    if keep_asserts:
+        extra_compile_args.append("-UNDEBUG")
     extension = [
         Extension(
             extension_name,
             sources=[str(MOD_DIR.parent / "pegen.c"), generated_source_path],
             include_dirs=[str(MOD_DIR.parent)],
-            extra_compile_args=[],
+            extra_compile_args=extra_compile_args,
         )
     ]
     dist = Distribution({"name": extension_name, "ext_modules": extension})
@@ -85,6 +91,7 @@ def build_generator(
     output_file: str,
     compile_extension: bool = False,
     verbose_c_extension: bool = False,
+    keep_asserts_in_extension: bool = True,
 ) -> ParserGenerator:
     with open(output_file, "w") as file:
         gen: ParserGenerator
@@ -97,7 +104,9 @@ def build_generator(
         gen.generate(grammar_file)
 
     if compile_extension and output_file.endswith(".c"):
-        compile_c_extension(output_file, verbose=verbose_c_extension)
+        compile_c_extension(
+            output_file, verbose=verbose_c_extension, keep_asserts=keep_asserts_in_extension
+        )
 
     return gen
 
@@ -109,6 +118,7 @@ def build_parser_and_generator(
     verbose_tokenizer: bool = False,
     verbose_parser: bool = False,
     verbose_c_extension: bool = False,
+    keep_asserts_in_extension: bool = True,
 ) -> Tuple[Grammar, Parser, Tokenizer, ParserGenerator]:
     """Generate rules, parser, tokenizer, parser generator for a given grammar
 
@@ -123,10 +133,18 @@ def build_parser_and_generator(
           when generating the parser. Defaults to False.
         verbose_c_extension (bool, optional): Whether to display additional
           output when compiling the C extension . Defaults to False.
+        keep_asserts_in_extension (bool, optional): Whether to keep the assert statements
+          when compiling the extension module. Defaults to True.
     """
     grammar, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
     gen = build_generator(
-        tokenizer, grammar, grammar_file, output_file, compile_extension, verbose_c_extension
+        tokenizer,
+        grammar,
+        grammar_file,
+        output_file,
+        compile_extension,
+        verbose_c_extension,
+        keep_asserts_in_extension,
     )
 
     return grammar, parser, tokenizer, gen

@@ -43,6 +43,9 @@ argparser.add_argument(
     help="Where to write the generated parser (default parse.py or parse.c)",
 )
 argparser.add_argument("filename", help="Grammar description")
+argparser.add_argument(
+    "--optimized", action="store_true", help="Compile the extension in optimized mode"
+)
 
 
 def main() -> None:
@@ -67,6 +70,7 @@ def main() -> None:
             verbose_tokenizer,
             verbose_parser,
             args.verbose,
+            keep_asserts_in_extension=False if args.optimized else True,
         )
     except Exception as err:
         if args.verbose:
