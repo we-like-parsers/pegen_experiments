@@ -425,6 +425,7 @@ FAIL_TEST_CASES = [
 
 # fmt: on
 
+
 def cleanup_source(source: Any) -> str:
     if isinstance(source, str):
         result = dedent(source)
@@ -439,21 +440,17 @@ def prepare_test_cases(
     test_cases: Iterable[Tuple[str, Union[str, Iterable[str]]]]
 ) -> Tuple[Iterable[str], Iterable[str]]:
 
-    test_ids, _test_sources = zip(*TEST_CASES)
+    test_ids, _test_sources = zip(*test_cases)
     test_sources = list(_test_sources)
     for index, source in enumerate(test_sources):
         result = cleanup_source(source)
         test_sources[index] = result
-
-    fail_test_ids = tuple(i[0] for i in FAIL_TEST_CASES)
-    fail_test_sources = list()
-    for _, source in FAIL_TEST_CASES:
-        result = cleanup_source(source)
-        fail_test_sources.append(pytest.param(source, marks=pytest.mark.xfail(strict=True)))
-    return test_ids + fail_test_ids, test_sources + fail_test_sources
+    return test_ids, test_sources
 
 
 TEST_IDS, TEST_SOURCES = prepare_test_cases(TEST_CASES)
+
+FAIL_TEST_IDS, FAIL_SOURCES = prepare_test_cases(FAIL_TEST_CASES)
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
@@ -472,12 +469,18 @@ def parser_extension(tmp_path_factory: Any) -> Any:
 
 
 @pytest.mark.parametrize("source", TEST_SOURCES, ids=TEST_IDS)
-def test_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
+def test_correct_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
     actual_ast = parser_extension.parse_string(source)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for source: {source}"
+
+
+@pytest.mark.parametrize("source", FAIL_SOURCES, ids=FAIL_TEST_IDS)
+def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
+    with pytest.raises(SyntaxError):
+        parser_extension.parse_string(source)
 
 
 @pytest.mark.xfail
