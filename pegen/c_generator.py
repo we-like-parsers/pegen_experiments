@@ -451,7 +451,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"goto done;")
         self.print("}")
 
-    def _handle_repetitions(
+    def _handle_alt_loop(
         self, node: Alt, is_gather: bool, rulename: Optional[str], names: List[str]
     ) -> None:
         # Condition of the main body of the alternative
@@ -492,7 +492,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
             names: List[str] = []
             if is_loop:
-                self._handle_repetitions(node, is_gather, rulename, names)
+                self._handle_alt_loop(node, is_gather, rulename, names)
             else:
                 self._handle_options(node, is_gather, names)
 
