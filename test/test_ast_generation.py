@@ -249,6 +249,7 @@ TEST_CASES = [
         pass; pass
         pass
      '''),
+    ('namedexpr', '(x:=[1, 2, 3])'),
     ('nonlocal', 'nonlocal a, b'),
     ('pass', 'pass'),
     ('pos_args',
@@ -358,6 +359,23 @@ TEST_CASES = [
         finally:
             pass
      '''),
+    ('unpacking_binop', '[*([1, 2, 3] + [3, 4, 5])]'),
+    ('unpacking_call', '[*b()]'),
+    ('unpacking_compare', '[*(x < y)]'),
+    ('unpacking_constant', '[*3]'),
+    ('unpacking_dict', '[*{1: 2, 3: 4}]'),
+    ('unpacking_dict_comprehension', '[*{x:y for x,y in z}]'),
+    ('unpacking_ifexpr', '[*([1, 2, 3] if x else y)]'),
+    ('unpacking_list', '[*[1,2,3]]'),
+    ('unpacking_list_comprehension', '[*[x for x in y]]'),
+    ('unpacking_namedexpr', '[*(x:=[1, 2, 3])]'),
+    ('unpacking_set', '[*{1,2,3}]'),
+    ('unpacking_set_comprehension', '[*{x for x in y}]'),
+    ('unpacking_string', '[*"myvalue"]'),
+    ('unpacking_tuple', '[*(1,2,3)]'),
+    ('unpacking_unaryop', '[*(not [1, 2, 3])]'),
+    ('unpacking_yield', '[*(yield 42)]'),
+    ('unpacking_yieldfrom', '[*(yield from x)]'),
     ('tuple', '(1, 2, 3)'),
     ('vararg',
      '''

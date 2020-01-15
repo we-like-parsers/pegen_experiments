@@ -913,8 +913,9 @@ set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)
             break;
         case Starred_kind:
             new = _set_starred_context(p, expr, ctx);
-        default: // To avoid warnings
             break;
+        default:
+            new = expr;
     }
     return new;
 }
