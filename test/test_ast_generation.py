@@ -472,8 +472,8 @@ def parser_extension(tmp_path_factory: Any) -> Any:
 
 
 @pytest.mark.parametrize("source", TEST_SOURCES, ids=TEST_IDS)
-def test_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
-    actual_ast = parser_extension.parse_string(source)
+def test_ast_generation_on_source_files(benchmark: Any, parser_extension: Any, source: str) -> None:
+    actual_ast = benchmark(parser_extension.parse_string, source)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
