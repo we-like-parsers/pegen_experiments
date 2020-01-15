@@ -22,6 +22,7 @@ def main() -> None:
     with open("simpy_cpython_timing.log", "w") as file:
         for commit in repo.iter_commits("80f8efb..master"):
             repo.head.reference = commit
+            repo.head.reset(index=True, working_tree=True)
             file.write(f"Commit: {commit.hexsha}\n")
             try:
                 output: str = subprocess.check_output(
@@ -32,6 +33,7 @@ def main() -> None:
                 file.write(f"Exit status: {e.returncode}\n")
             file.write("\n")
     repo.head.reference = repo.heads.master
+    repo.head.reset(index=True, working_tree=True)
 
 
 if __name__ == "__main__":
