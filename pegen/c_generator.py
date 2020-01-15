@@ -398,7 +398,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
 
-    def _join_conditions(self, keyword: str, node: Any, names: List[str]) -> None:
+    def join_conditions(self, keyword: str, node: Any, names: List[str]) -> None:
         self.print(f"{keyword} (")
         with self.indent():
             first = True
@@ -410,14 +410,14 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.visit(item, names=names)
         self.print(")")
 
-    def _emit_action(self, node: Alt) -> None:
+    def emit_action(self, node: Alt) -> None:
         self.print(f"res = {node.action};")
         if self.debug:
             self.print(
                 f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
             )
 
-    def _emit_default_action(self, is_gather: bool, names: List[str], node: Alt) -> None:
+    def emit_default_action(self, is_gather: bool, names: List[str], node: Alt) -> None:
         if len(names) > 1:
             if is_gather:
                 assert len(names) == 2
@@ -435,36 +435,36 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             self.print(f"res = {names[0]};")
 
-    def _handle_options(self, node: Alt, is_gather: bool, names: List[str]) -> None:
-        self._join_conditions(keyword="if", node=node, names=names)
+    def handle_alt_optional(self, node: Alt, is_gather: bool, names: List[str]) -> None:
+        self.join_conditions(keyword="if", node=node, names=names)
         self.print("{")
         # We have parsed successfully all the conditions for the option.
         with self.indent():
             # Prepare to emmit the rule action and do so
             self._set_up_token_end_metadata_extraction()
             if node.action:
-                self._emit_action(node)
+                self.emit_action(node)
             else:
-                self._emit_default_action(is_gather, names, node)
+                self.emit_default_action(is_gather, names, node)
 
             # As the current option has parsed correctly, do not continue with the rest.
             self.print(f"goto done;")
         self.print("}")
 
-    def _handle_alt_loop(
+    def handle_alt_loop(
         self, node: Alt, is_gather: bool, rulename: Optional[str], names: List[str]
     ) -> None:
         # Condition of the main body of the alternative
-        self._join_conditions(keyword="while", node=node, names=names)
+        self.join_conditions(keyword="while", node=node, names=names)
         self.print("{")
         # We have parsed successfully one item!
         with self.indent():
-            # Prepare to emmit the rule action and do so
+            # Prepare to emit the rule action and do so
             self._set_up_token_end_metadata_extraction()
             if node.action:
-                self._emit_action(node)
+                self.emit_action(node)
             else:
-                self._emit_default_action(is_gather, names, node)
+                self.emit_default_action(is_gather, names, node)
 
             # Add the result of rule to the temporary buffer of children. This buffer
             # will populate later an asdl_seq with all elements to return.
@@ -492,9 +492,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
             names: List[str] = []
             if is_loop:
-                self._handle_alt_loop(node, is_gather, rulename, names)
+                self.handle_alt_loop(node, is_gather, rulename, names)
             else:
-                self._handle_options(node, is_gather, names)
+                self.handle_alt_optional(node, is_gather, names)
 
             self.print("p->mark = mark;")
             if "cut_var" in names:
