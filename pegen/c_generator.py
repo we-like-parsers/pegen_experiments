@@ -435,7 +435,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             self.print(f"res = {names[0]};")
 
-    def handle_alt_optional(self, node: Alt, is_gather: bool, names: List[str]) -> None:
+    def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
         self.join_conditions(keyword="if", node=node, names=names)
         self.print("{")
         # We have parsed successfully all the conditions for the option.
@@ -494,7 +494,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             if is_loop:
                 self.handle_alt_loop(node, is_gather, rulename, names)
             else:
-                self.handle_alt_optional(node, is_gather, names)
+                self.handle_alt_normal(node, is_gather, names)
 
             self.print("p->mark = mark;")
             if "cut_var" in names:
