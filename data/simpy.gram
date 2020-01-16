@@ -210,7 +210,7 @@ star_named_expression[expr_ty]:
     | '*' a=bitwise_or { _Py_Starred(a, Load, EXTRA) }
     | named_expression
 named_expression[expr_ty]:
-    | a=NAME ':=' b=expression { _Py_NamedExpr(a, b, EXTRA) }
+    | a=NAME ':=' b=expression { _Py_NamedExpr(set_expr_context(p, a, Store), b, EXTRA) }
     | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
