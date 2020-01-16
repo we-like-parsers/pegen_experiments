@@ -398,68 +398,104 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         for alt in node.alts:
             self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
 
+    def join_conditions(self, keyword: str, node: Any, names: List[str]) -> None:
+        self.print(f"{keyword} (")
+        with self.indent():
+            first = True
+            for item in node.items:
+                if first:
+                    first = False
+                else:
+                    self.print("&&")
+                self.visit(item, names=names)
+        self.print(")")
+
+    def emit_action(self, node: Alt) -> None:
+        self.print(f"res = {node.action};")
+        if self.debug:
+            self.print(
+                f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
+            )
+
+    def emit_default_action(self, is_gather: bool, names: List[str], node: Alt) -> None:
+        if len(names) > 1:
+            if is_gather:
+                assert len(names) == 2
+                self.print(f"res = seq_insert_in_front(p, {names[0]}, {names[1]});")
+            else:
+                if self.debug:
+                    self.print(
+                        f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                    )
+                self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
+        else:
+            if self.debug:
+                self.print(
+                    f'fprintf(stderr, "Hit with default action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
+                )
+            self.print(f"res = {names[0]};")
+
+    def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
+        self.join_conditions(keyword="if", node=node, names=names)
+        self.print("{")
+        # We have parsed successfully all the conditions for the option.
+        with self.indent():
+            # Prepare to emmit the rule action and do so
+            self._set_up_token_end_metadata_extraction()
+            if node.action:
+                self.emit_action(node)
+            else:
+                self.emit_default_action(is_gather, names, node)
+
+            # As the current option has parsed correctly, do not continue with the rest.
+            self.print(f"goto done;")
+        self.print("}")
+
+    def handle_alt_loop(
+        self, node: Alt, is_gather: bool, rulename: Optional[str], names: List[str]
+    ) -> None:
+        # Condition of the main body of the alternative
+        self.join_conditions(keyword="while", node=node, names=names)
+        self.print("{")
+        # We have parsed successfully one item!
+        with self.indent():
+            # Prepare to emit the rule action and do so
+            self._set_up_token_end_metadata_extraction()
+            if node.action:
+                self.emit_action(node)
+            else:
+                self.emit_default_action(is_gather, names, node)
+
+            # Add the result of rule to the temporary buffer of children. This buffer
+            # will populate later an asdl_seq with all elements to return.
+            self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
+            self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
+            self.print(f"children[n++] = res;")
+            self.print("mark = p->mark;")
+        self.print("}")
+
     def visit_Alt(
         self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]
     ) -> None:
         self.print(f"{{ // {node}")
         with self.indent():
+            # Prepare variable declarations for the alternative
             vars = self.collect_vars(node)
-            for v, type in sorted(item for item in vars.items() if item[0] is not None):
-                if not type:
-                    type = "void *"
+            for v, var_type in sorted(item for item in vars.items() if item[0] is not None):
+                if not var_type:
+                    var_type = "void *"
                 else:
-                    type += " "
+                    var_type += " "
                 if v == "cut_var":
                     v += " = 0"  # cut_var must be initialized
-                self.print(f"{type}{v};")
+                self.print(f"{var_type}{v};")
+
             names: List[str] = []
             if is_loop:
-                self.print("while (")
+                self.handle_alt_loop(node, is_gather, rulename, names)
             else:
-                self.print("if (")
-            with self.indent():
-                first = True
-                for item in node.items:
-                    if first:
-                        first = False
-                    else:
-                        self.print("&&")
-                    self.visit(item, names=names)
-            self.print(") {")
-            with self.indent():
-                self._set_up_token_end_metadata_extraction()
-                action = node.action
-                if not action:
-                    if len(names) > 1:
-                        if is_gather:
-                            assert len(names) == 2
-                            self.print(f"res = seq_insert_in_front(p, {names[0]}, {names[1]});")
-                        else:
-                            if self.debug:
-                                self.print(
-                                    f'fprintf(stderr, "Hit without action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
-                                )
-                            self.print(f"res = CONSTRUCTOR(p, {', '.join(names)});")
-                    else:
-                        if self.debug:
-                            self.print(
-                                f'fprintf(stderr, "Hit with default action [%d:%d]: %s\\n", mark, p->mark, "{node}");'
-                            )
-                        self.print(f"res = {names[0]};")
-                else:
-                    self.print(f"res = {action};")
-                    if self.debug:
-                        self.print(
-                            f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
-                        )
-                if is_loop:
-                    self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-                    self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
-                    self.print(f"children[n++] = res;")
-                    self.print("mark = p->mark;")
-                else:
-                    self.print(f"goto done;")
-            self.print("}")
+                self.handle_alt_normal(node, is_gather, names)
+
             self.print("p->mark = mark;")
             if "cut_var" in names:
                 self.print("if (cut_var) return NULL;")
