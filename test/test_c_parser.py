@@ -153,6 +153,26 @@ def test_mutually_left_recursive(tmp_path: PurePath) -> None:
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
+def test_nasty_mutually_left_recursive(tmp_path: PurePath) -> None:
+    # This grammar does not recognize 'x - + =', much to my chagrin.
+    # But that's the way PEG works.
+    # [Breathlessly]
+    # The problem is that the toplevel target call
+    # recurses into maybe, which recognizes 'x - +',
+    # and then the toplevel target looks for another '+',
+    # which fails, so it retreats to NAME,
+    # which succeeds, so we end up just recognizing 'x',
+    # and then start fails because there's no '=' after that.
+    grammar = """
+    start: target '='
+    target: maybe '+' | NAME
+    maybe: maybe '-' | target
+    """
+    valid_cases = ["x ="]
+    invalid_cases = ["x - + ="]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
+
+
 def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
