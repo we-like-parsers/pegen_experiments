@@ -153,6 +153,17 @@ def test_mutually_left_recursive(tmp_path: PurePath) -> None:
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
+def test_nasty_mutually_left_recursive(tmp_path: PurePath) -> None:
+    grammar = """
+    start: target '='
+    target: maybe '+' | NAME
+    maybe: maybe '-' | target
+    """
+    valid_cases = ["x ="]
+    invalid_cases = ["x - + ="]
+    check_input_strings_for_grammar(grammar, tmp_path, valid_cases, invalid_cases)
+
+
 def test_return_stmt_noexpr_action(tmp_path: PurePath) -> None:
     grammar = """
     start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
