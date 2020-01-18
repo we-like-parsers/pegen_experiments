@@ -29,28 +29,36 @@ EXTENSION_PREFIX = """\
 """
 EXTENSION_SUFFIX = """
 static PyObject *
-parse_file(PyObject *self, PyObject *args)
+parse_file(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static const char *keywords[] = {"file", "mode", NULL};
     const char *filename;
+    int mode = %(mode)s;
 
-    if (!PyArg_ParseTuple(args, "s", &filename))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|i", keywords, &filename, &mode))
         return NULL;
-    return run_parser_from_file(filename, (void *)start_rule, %(mode)s);
+    if (mode < 0 || mode > %(mode)s)
+        return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
+    return run_parser_from_file(filename, (void *)start_rule, mode);
 }
 
 static PyObject *
-parse_string(PyObject *self, PyObject *args)
+parse_string(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static const char *keywords[] = {"string", "mode", NULL};
     const char *the_string;
+    int mode = %(mode)s;
 
-    if (!PyArg_ParseTuple(args, "s", &the_string))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|i", keywords, &the_string, &mode))
         return NULL;
-    return run_parser_from_string(the_string, (void *)start_rule, %(mode)s);
+    if (mode < 0 || mode > %(mode)s)
+        return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
+    return run_parser_from_string(the_string, (void *)start_rule, mode);
 }
 
 static PyMethodDef ParseMethods[] = {
-    {"parse_file",  parse_file, METH_VARARGS, "Parse a file."},
-    {"parse_string",  parse_string, METH_VARARGS, "Parse a string."},
+    {"parse_file",  parse_file, METH_VARARGS|METH_KEYWORDS, "Parse a file."},
+    {"parse_string",  parse_string, METH_VARARGS|METH_KEYWORDS, "Parse a string."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
