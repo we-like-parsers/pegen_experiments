@@ -27,16 +27,39 @@ regen-metaparser: pegen/metagrammar.gram pegen/*.py
 # this has different names in different systems so we are abusing the implicit dependency on
 # parse.c by the use of --compile-extension.
 
-test: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)'); exec(compile(t, '', 'exec'))"
+.PHONY: test
+
+test: run
+
+run: pegen/parse.c
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)'); exec(t)"
 
 compile: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)')"
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"
 
-time: pegen/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)')"
+parse: pegen/parse.c
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=1)"
 
-time_stdlib:
+check: pegen/parse.c
+	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
+
+time: time_compile
+
+time_compile: pegen/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
+
+time_parse: pegen/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
+
+time_check: pegen/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=0)"
+
+time_stdlib: time_stdlib_compile
+
+time_stdlib_compile:
+	/usr/bin/time -l $(PYTHON) -c "import ast; compile(open('$(TIMEFILE)').read(), '$(TIMEFILE)', 'exec')"
+
+time_stdlib_parse:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
 simpy:

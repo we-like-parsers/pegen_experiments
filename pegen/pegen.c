@@ -468,8 +468,10 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         goto exit;
     }
 
-    if (mode == 1) {
-        result =  PyAST_mod2obj(res);
+    if (mode == 2) {
+        result = (PyObject *)PyAST_CompileObject(res, tok->filename, NULL, -1, p->arena);
+    } else if (mode == 1) {
+        result = PyAST_mod2obj(res);
     } else {
         result = Py_None;
         Py_INCREF(result);

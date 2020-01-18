@@ -170,7 +170,7 @@ def main() -> None:
 
         if not should_exclude_file:
             try:
-                tree = parse.parse_file(file)
+                tree = parse.parse_file(file, mode=1)
                 if args.tree:
                     trees[file] = tree
                 if not args.short:
