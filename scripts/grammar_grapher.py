@@ -21,6 +21,8 @@
 import argparse
 import sys
 
+from typing import Any, List
+
 sys.path.insert(0, ".")
 
 from pegen.build import build_parser
@@ -32,7 +34,7 @@ argparser = argparse.ArgumentParser(
 )
 argparser.add_argument("grammar_file", help="The grammar file to graph")
 
-def references_for_item(item):
+def references_for_item(item: Any) -> List[Any]:
     if isinstance(item, Alt):
         return [_ref for _item in item.items for _ref in references_for_item(_item)]
     elif isinstance(item, Cut):
