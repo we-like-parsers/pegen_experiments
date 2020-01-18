@@ -453,7 +453,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             self.print(f"res = {names[0]};")
 
-    def emit_no_action(self) -> None:
+    def emit_dummy_action(self) -> None:
         self.print(f"res = CONSTRUCTOR(p);")
 
     def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
@@ -464,7 +464,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             # Prepare to emmit the rule action and do so
             self._set_up_token_end_metadata_extraction()
             if self.skip_actions:
-                self.emit_no_action()
+                self.emit_dummy_action()
             elif node.action:
                 self.emit_action(node)
             else:
@@ -485,7 +485,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             # Prepare to emit the rule action and do so
             self._set_up_token_end_metadata_extraction()
             if self.skip_actions:
-                self.emit_no_action()
+                self.emit_dummy_action()
             elif node.action:
                 self.emit_action(node)
             else:

@@ -144,7 +144,7 @@ CONSTRUCTOR(Parser *p, ...)
     if (!id) {
         return NULL;
     }
-    cache = Name(id, Load, 1, 0, 1, 0,p->arena);
+    cache = Name(id, Load, 1, 0, 1, 0, p->arena);
     return cache;
 }
 

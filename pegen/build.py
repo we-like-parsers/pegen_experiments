@@ -137,7 +137,7 @@ def build_parser_and_generator(
           output when compiling the C extension . Defaults to False.
         keep_asserts_in_extension (bool, optional): Whether to keep the assert statements
           when compiling the extension module. Defaults to True.
-        skip_actions (boo, optional): Whether to pretend no rule has any actions.
+        skip_actions (bool, optional): Whether to pretend no rule has any actions.
     """
     grammar, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
     gen = build_generator(
