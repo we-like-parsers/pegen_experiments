@@ -31,7 +31,7 @@ EXTENSION_SUFFIX = """
 static PyObject *
 parse_file(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    static const char *keywords[] = {"file", "mode", NULL};
+    static char *keywords[] = {"file", "mode", NULL};
     const char *filename;
     int mode = %(mode)s;
 
@@ -45,7 +45,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 parse_string(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    static const char *keywords[] = {"string", "mode", NULL};
+    static char *keywords[] = {"string", "mode", NULL};
     const char *the_string;
     int mode = %(mode)s;
 
@@ -57,8 +57,8 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 static PyMethodDef ParseMethods[] = {
-    {"parse_file",  parse_file, METH_VARARGS|METH_KEYWORDS, "Parse a file."},
-    {"parse_string",  parse_string, METH_VARARGS|METH_KEYWORDS, "Parse a string."},
+    {"parse_file", (PyCFunction)parse_file, METH_VARARGS|METH_KEYWORDS, "Parse a file."},
+    {"parse_string",  (PyCFunction)parse_string, METH_VARARGS|METH_KEYWORDS, "Parse a string."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
