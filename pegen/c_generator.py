@@ -166,11 +166,18 @@ class CCallMakerVisitor(GrammarVisitor):
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
-    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]], debug: bool = False):
+    def __init__(
+        self,
+        grammar: grammar.Grammar,
+        file: Optional[IO[Text]],
+        debug: bool = False,
+        skip_actions: bool = False,
+    ):
         super().__init__(grammar, file)
         self.callmakervisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
         self.debug = debug
+        self.skip_actions = skip_actions
 
     def unique_varname(self, name: str = "tmpvar") -> str:
         new_var = name + "_" + str(self._varname_counter)
@@ -237,7 +244,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 del self.todo[rulename]
                 self.print()
                 self.visit(rule)
-        mode = int(self.rules["start"].type == "mod_ty")
+        if self.skip_actions:
+            mode = 0
+        else:
+            mode = int(self.rules["start"].type == "mod_ty")
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
@@ -435,6 +445,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             self.print(f"res = {names[0]};")
 
+    def emit_no_action(self) -> None:
+        self.print(f"res = CONSTRUCTOR(p);")
+
     def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
         self.join_conditions(keyword="if", node=node, names=names)
         self.print("{")
@@ -442,7 +455,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             # Prepare to emmit the rule action and do so
             self._set_up_token_end_metadata_extraction()
-            if node.action:
+            if self.skip_actions:
+                self.emit_no_action()
+            elif node.action:
                 self.emit_action(node)
             else:
                 self.emit_default_action(is_gather, names, node)
@@ -461,7 +476,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             # Prepare to emit the rule action and do so
             self._set_up_token_end_metadata_extraction()
-            if node.action:
+            if self.skip_actions:
+                self.emit_no_action()
+            elif node.action:
                 self.emit_action(node)
             else:
                 self.emit_default_action(is_gather, names, node)

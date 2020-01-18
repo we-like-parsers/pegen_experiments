@@ -92,13 +92,14 @@ def build_generator(
     compile_extension: bool = False,
     verbose_c_extension: bool = False,
     keep_asserts_in_extension: bool = True,
+    skip_actions: bool = False,
 ) -> ParserGenerator:
     with open(output_file, "w") as file:
         gen: ParserGenerator
         if output_file.endswith(".c"):
-            gen = CParserGenerator(grammar, file)
+            gen = CParserGenerator(grammar, file, skip_actions=skip_actions)
         elif output_file.endswith(".py"):
-            gen = PythonParserGenerator(grammar, file)
+            gen = PythonParserGenerator(grammar, file)  # TODO: skip_actions
         else:
             raise Exception("Your output file must either be a .c or .py file")
         gen.generate(grammar_file)
@@ -119,6 +120,7 @@ def build_parser_and_generator(
     verbose_parser: bool = False,
     verbose_c_extension: bool = False,
     keep_asserts_in_extension: bool = True,
+    skip_actions: bool = False,
 ) -> Tuple[Grammar, Parser, Tokenizer, ParserGenerator]:
     """Generate rules, parser, tokenizer, parser generator for a given grammar
 
@@ -135,6 +137,7 @@ def build_parser_and_generator(
           output when compiling the C extension . Defaults to False.
         keep_asserts_in_extension (bool, optional): Whether to keep the assert statements
           when compiling the extension module. Defaults to True.
+        skip_actions (boo, optional): Whether to pretend no rule has any actions.
     """
     grammar, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
     gen = build_generator(
@@ -145,6 +148,7 @@ def build_parser_and_generator(
         compile_extension,
         verbose_c_extension,
         keep_asserts_in_extension,
+        skip_actions=skip_actions,
     )
 
     return grammar, parser, tokenizer, gen
