@@ -469,7 +469,7 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     }
 
     if (mode == 2) {
-        PyObject *filename = (tok->filename)
+        PyObject *filename = tok->filename
                              ? tok->filename
                              : PyUnicode_FromString("<string>");
         if (!filename)
