@@ -253,7 +253,7 @@ TEST_CASES = [
         pass
      '''),
     ('namedexpr', '(x := [1, 2, 3])'),
-    ('namedexpr_false, (x := False)'),
+    ('namedexpr_false', '(x := False)'),
     ('namedexpr_none', '(x := None)'),
     ('namedexpr_true', '(x := True)'),
     ('nonlocal', 'nonlocal a, b'),
