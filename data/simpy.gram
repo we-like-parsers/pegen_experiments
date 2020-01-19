@@ -1,5 +1,7 @@
 # Simplified grammar for Python
 
+@bytecode True
+
 start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
