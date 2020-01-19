@@ -381,26 +381,76 @@ number_token(Parser *p)
     return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
 }
 
+static int
+parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
+         PyObject **result, const char **fstr, Py_ssize_t *fstrlen);
+
 expr_ty
 string_token(Parser *p)
 {
     Token *t = expect_token(p, STRING);
-    if (t == NULL)
-        return NULL;
-    char *s = NULL;
-    Py_ssize_t len = 0;
-    if (PyBytes_AsStringAndSize(t->bytes, &s, &len) < 0)
-        return NULL;
-    // TODO: Creating an AST constant here and joining the strings afterwards is
-    // inefficient. We should just move around the char*.
-    PyObject *c = PyUnicode_FromStringAndSize(s, len);
-    if (!c)
-        return NULL;
-    if (PyArena_AddPyObject(p->arena, c) < 0) {
-        Py_DECREF(c);
+    PyObject *u_kind = NULL;
+
+    if (t == NULL) {
         return NULL;
     }
-    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
+
+    char *the_str = PyBytes_AsString(t->bytes) ;
+    if (the_str == NULL) {
+        return NULL;
+    }
+
+    PyObject *s;
+    PyObject *final_str = NULL;
+    int this_rawmode = 0;
+    int bytesmode = 0;
+    const char *fstr;
+    Py_ssize_t fstrlen = -1;  /* Silence a compiler warning. */
+    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s,
+                 &fstr, &fstrlen) != 0) {
+        return NULL;
+    }
+
+    /* Check if it has a 'u' prefix */
+    int kind_unicode = 0;
+    if (the_str[0] == 'u') {
+        kind_unicode = 1;
+    }
+
+    if (fstr != NULL) {
+        /* We are parsing an f-string. */
+        assert(s == NULL && !bytesmode);
+
+        // TODO: We still don't support f-strings so let's return some
+        // dummy here to not make the parsing tests fail.
+        final_str = new_identifier(p, "f-strings not supported yet!!");
+        return Constant(final_str, NULL, t->lineno, t->col_offset,
+                        t->end_lineno, t->end_col_offset, p->arena);
+    }
+
+    /* A string or byte string. */
+    assert(s != NULL && fstr == NULL);
+    assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
+    final_str = s;
+
+    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
+        goto error;
+    }
+
+    if (!bytesmode && kind_unicode) {
+        //TODO: Intern this string when we decide how we will
+        // handle static constants in the module.
+        u_kind = new_identifier(p, "u");
+        if (u_kind == NULL) {
+            goto error;
+        }
+    }
+    return Constant(final_str, u_kind, t->lineno, t->col_offset, t->end_lineno,
+                    t->end_col_offset, p->arena);
+
+error:
+    Py_DECREF(final_str);
+    return NULL;
 }
 
 void *
@@ -1595,86 +1645,41 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     int kind_unicode = 0;
     PyObject *final_str = NULL;
 
-    for (int i = 0; i < len; i++) {
-        int this_bytesmode;
-        int this_rawmode;
-        PyObject *s;
-        const char *fstr;
-        Py_ssize_t fstrlen = -1;  /* Silence a compiler warning. */
 
+    assert(first->kind == Constant_kind);
+    if (PyBytes_CheckExact(first->v.Constant.value)) {
+        final_str = PyBytes_FromString("");
+    } else {
+        final_str = PyUnicode_FromString("");
+    }
+    if (final_str == NULL) {
+        return NULL;
+    }
+    for (int i = 0; i < len; i++) {
         expr_ty cons = asdl_seq_GET(strings, i);
         assert(cons->kind == Constant_kind);
-        const char* the_str = PyUnicode_AsUTF8(cons->v.Constant.value);
-        if (parsestr(p, the_str, &this_bytesmode, &this_rawmode, &s,
-                     &fstr, &fstrlen) != 0) {
-            goto error;
-        }
+        PyObject* s = cons->v.Constant.value;
+        int this_bytesmode = PyBytes_CheckExact(s);
 
-        /* Check if it has a 'u' prefix */
-        if (the_str[0] == 'u') {
-            kind_unicode = 1;
-        }
-
-        /* Check that we're not mixing bytes with unicode. */
         if (i != 0 && bytesmode != this_bytesmode) {
             raise_syntax_error(p, "cannot mix bytes and nonbytes literals");
-            /* s is NULL if the current string part is an f-string. */
-            Py_XDECREF(s);
             goto error;
         }
+
         bytesmode = this_bytesmode;
 
-        if (fstr != NULL) {
-            /* This is an f-string. We need to parse and concatenate it. */
-            assert(s == NULL && !bytesmode);
-
-            // TODO: We still don't support f-strings so let's return some
-            // dummy here to not make the parsing tests fail.
-            final_str = new_identifier(p, "f-strings not supported yet!!");
-            return _Py_Constant(final_str, NULL, EXTRA_EXPR(first, last));
+        if (bytesmode) {
+            PyBytes_Concat(&final_str, s);
+            if (!final_str) {
+                goto error;
+            }
         } else {
-            /* A string or byte string. */
-            assert(s != NULL && fstr == NULL);
-
-            assert(bytesmode ? PyBytes_CheckExact(s) :
-                   PyUnicode_CheckExact(s));
-
-            if (bytesmode) {
-                /* For bytes, concat as we go. */
-                if (i == 0) {
-                    /* First time, just remember this value. */
-                    final_str = s;
-                } else {
-                    PyBytes_ConcatAndDel(&final_str, s);
-                    if (!final_str) {
-                        goto error;
-                    }
-                }
-            } else {
-                if (i == 0) {
-                    /* First time, just remember this value. */
-                    final_str = s;
-                } else {
-                    PyUnicode_AppendAndDel(&final_str, s);
-                    if (!final_str) {
-                        goto error;
-                    }
-                }
+            kind_unicode |= (cons->v.Constant.kind != NULL);
+            PyUnicode_Append(&final_str, s);
+            if (!final_str) {
+                goto error;
             }
         }
-    }
-
-    if (bytesmode) {
-        /* Just return the bytes object and we're done. */
-        if (PyArena_AddPyObject(p->arena, final_str) < 0) {
-            goto error;
-        }
-        return _Py_Constant(final_str, NULL, EXTRA_EXPR(first, last));
-    }
-
-    // This code will change when we support f-strings
-    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
-        goto error;
     }
 
     if (kind_unicode) {
@@ -1682,7 +1687,10 @@ concatenate_strings(Parser *p, asdl_seq *strings)
         // handle static constants in the module.
         u_kind = new_identifier(p, "u");
     }
-
+    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
+        Py_DECREF(final_str);
+        return NULL;
+    }
     return _Py_Constant(final_str, u_kind, EXTRA_EXPR(first, last));
 
 error:
