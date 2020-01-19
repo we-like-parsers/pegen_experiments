@@ -341,7 +341,7 @@ static const char *reserved_keywords[] = {
 static int // bool
 _is_reserved_keyword(char *s) {
     for (int i = 0; i < 32; i++) {
-        if (s[0] == reserved_keywords[i][0] && !strcmp(s, reserved_keywords[i]))
+        if (!strcmp(s, reserved_keywords[i]))
             return 1;
     }
     return 0;
