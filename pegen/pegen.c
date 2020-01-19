@@ -475,6 +475,8 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
         if (!filename)
             goto exit;
         result = (PyObject *)PyAST_CompileObject(res, filename, NULL, -1, p->arena);
+        if (!tok->filename)
+            Py_XDECREF(filename);
     } else if (mode == 1) {
         result = PyAST_mod2obj(res);
     } else {
