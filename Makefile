@@ -2,7 +2,7 @@ PYTHON ?= `/usr/bin/which python3.8`
 CPYTHON ?= "./cpython"
 MYPY ?= `/usr/bin/which mypy`
 
-GRAMMAR = data/cprog.gram
+GRAMMAR = data/simpy.gram
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 TESTDIR = .
@@ -18,7 +18,7 @@ clean:
 
 dump: pegen/parse.c
 	cat -n $(TESTFILE)
-	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)'); print(ast.dump(t))"
+	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)', mode=1); print(ast.dump(t))"
 
 regen-metaparser: pegen/metagrammar.gram pegen/*.py
 	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py
