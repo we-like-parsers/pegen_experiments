@@ -389,7 +389,6 @@ expr_ty
 string_token(Parser *p)
 {
     Token *t = expect_token(p, STRING);
-    PyObject *u_kind = NULL;
 
     if (t == NULL) {
         return NULL;
@@ -401,7 +400,6 @@ string_token(Parser *p)
     }
 
     PyObject *s;
-    PyObject *final_str = NULL;
     int this_rawmode = 0;
     int bytesmode = 0;
     const char *fstr;
@@ -414,6 +412,7 @@ string_token(Parser *p)
     /* Check if it has a 'u' prefix */
     int kind_unicode = 0;
     if (the_str[0] == 'u') {
+        assert(!bytesmode);
         kind_unicode = 1;
     }
 
@@ -423,7 +422,7 @@ string_token(Parser *p)
 
         // TODO: We still don't support f-strings so let's return some
         // dummy here to not make the parsing tests fail.
-        final_str = new_identifier(p, "f-strings not supported yet!!");
+        PyObject *final_str = new_identifier(p, "f-strings not supported yet!!");
         return Constant(final_str, NULL, t->lineno, t->col_offset,
                         t->end_lineno, t->end_col_offset, p->arena);
     }
@@ -431,14 +430,15 @@ string_token(Parser *p)
     /* A string or byte string. */
     assert(s != NULL && fstr == NULL);
     assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
-    final_str = s;
 
+    PyObject *final_str = s;
     if (PyArena_AddPyObject(p->arena, final_str) < 0) {
         goto error;
     }
 
+    PyObject *u_kind = NULL;
     if (!bytesmode && kind_unicode) {
-        //TODO: Intern this string when we decide how we will
+        // TODO: Intern this string when we decide how we will
         // handle static constants in the module.
         u_kind = new_identifier(p, "u");
         if (u_kind == NULL) {
