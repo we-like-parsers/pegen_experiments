@@ -22,8 +22,6 @@ Both the generator and the generated parsers require Python 3.8 -- it
 turns out writing a recursive-descent packrat parser is a really great
 use case for the walrus operator (`:=`).
 
-See [TODO.md](TODO.md) for a list of open tasks.
-
 Blog series
 -----------
 
