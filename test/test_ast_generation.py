@@ -488,7 +488,7 @@ def parser_extension(tmp_path_factory: Any) -> Any:
 
 @pytest.mark.parametrize("source", TEST_SOURCES, ids=TEST_IDS)
 def test_correct_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
-    actual_ast = parser_extension.parse_string(source)
+    actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
@@ -498,13 +498,13 @@ def test_correct_ast_generation_on_source_files(parser_extension: Any, source: s
 @pytest.mark.parametrize("source", FAIL_SOURCES, ids=FAIL_TEST_IDS)
 def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
     with pytest.raises(SyntaxError):
-        parser_extension.parse_string(source)
+        parser_extension.parse_string(source, mode=0)
 
 
 @pytest.mark.xfail
 def test_ast_generation_for_fstrings(parser_extension: Any) -> None:
     source = "f'{val}'"
-    actual_ast = parser_extension.parse_string(source)
+    actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True

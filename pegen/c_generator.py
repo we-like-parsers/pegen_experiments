@@ -256,6 +256,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             mode = 0
         else:
             mode = int(self.rules["start"].type == "mod_ty")
+            if mode == 1 and self.grammar.metas.get("bytecode"):
+                mode += 1
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
