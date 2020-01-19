@@ -37,9 +37,7 @@ argparser.add_argument(
     "-v", "--verbose", action="store_true", help="Display detailed errors for failures"
 )
 argparser.add_argument(
-    "--skip-actions",
-    action="store_true",
-    help="Don't generate action code (not even default actions)",
+    "--skip-actions", action="store_true", help="Suppress code emission for rule actions",
 )
 argparser.add_argument("-t", "--tree", action="count", help="Compare parse tree to official AST")
 
