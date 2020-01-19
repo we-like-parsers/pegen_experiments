@@ -304,6 +304,49 @@ endmarker_token(Parser *p)
     return expect_token(p, ENDMARKER);
 }
 
+static const char *reserved_keywords[] = {
+    "and",
+    "as",
+    "assert",
+    "async",
+    "await",
+    "break",
+    "class",
+    "continue",
+    "def",
+    "del",
+    "elif",
+    "else",
+    "except",
+    "finally",
+    "for",
+    "from",
+    "global",
+    "if",
+    "import",
+    "in",
+    "is",
+    "lambda",
+    "nonlocal",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "return",
+    "try",
+    "while",
+    "with",
+    "yield"
+};
+static int // bool
+_is_reserved_keyword(char *s) {
+    for (int i = 0; i < 32; i++) {
+        if (s[0] == reserved_keywords[i][0] && !strcmp(s, reserved_keywords[i]))
+            return 1;
+    }
+    return 0;
+}
+
 expr_ty
 name_token(Parser *p)
 {
@@ -313,6 +356,17 @@ name_token(Parser *p)
     char *s;
     Py_ssize_t n;
     if (PyBytes_AsStringAndSize(t->bytes, &s, &n) < 0)
+        return NULL;
+    if (!strcmp(s, "None"))
+        return Constant(Py_None, NULL, t->lineno, t->col_offset,
+                        t->end_lineno, t->end_col_offset, p->arena);
+    if (!strcmp(s, "True"))
+        return Constant(Py_True, NULL, t->lineno, t->col_offset,
+                        t->end_lineno, t->end_col_offset, p->arena);
+    if (!strcmp(s, "False"))
+        return Constant(Py_False, NULL, t->lineno, t->col_offset,
+                        t->end_lineno, t->end_col_offset, p->arena);
+    if (_is_reserved_keyword(s))
         return NULL;
     PyObject *id = PyUnicode_DecodeUTF8(s, n, NULL);
     if (id == NULL)

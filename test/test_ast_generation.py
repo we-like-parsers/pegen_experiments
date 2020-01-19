@@ -19,6 +19,9 @@ TEST_CASES = [
     ('annotation_with_parens', '(parens): int'),
     ('assert', 'assert a'),
     ('assert_message', 'assert a, b'),
+    ('assignment_false', 'a = False'),
+    ('assignment_none', 'a = None'),
+    ('assignment_true', 'a = True'),
     ('asyncfor',
      '''
         async for i in a:
@@ -430,6 +433,7 @@ TEST_CASES = [
 ]
 
 FAIL_TEST_CASES = [
+    ("assignment_keyword", "a = if"),
     ("del_call", "del a()"),
     ("del_call_genexp", "del a(i for i in b)"),
     ("del_subscript_call", "del a[b]()"),
