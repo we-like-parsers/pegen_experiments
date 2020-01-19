@@ -29,28 +29,36 @@ EXTENSION_PREFIX = """\
 """
 EXTENSION_SUFFIX = """
 static PyObject *
-parse_file(PyObject *self, PyObject *args)
+parse_file(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static char *keywords[] = {"file", "mode", NULL};
     const char *filename;
+    int mode = %(mode)s;
 
-    if (!PyArg_ParseTuple(args, "s", &filename))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|i", keywords, &filename, &mode))
         return NULL;
-    return run_parser_from_file(filename, (void *)start_rule, %(mode)s);
+    if (mode < 0 || mode > %(mode)s)
+        return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
+    return run_parser_from_file(filename, (void *)start_rule, mode);
 }
 
 static PyObject *
-parse_string(PyObject *self, PyObject *args)
+parse_string(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static char *keywords[] = {"string", "mode", NULL};
     const char *the_string;
+    int mode = %(mode)s;
 
-    if (!PyArg_ParseTuple(args, "s", &the_string))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|i", keywords, &the_string, &mode))
         return NULL;
-    return run_parser_from_string(the_string, (void *)start_rule, %(mode)s);
+    if (mode < 0 || mode > %(mode)s)
+        return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
+    return run_parser_from_string(the_string, (void *)start_rule, mode);
 }
 
 static PyMethodDef ParseMethods[] = {
-    {"parse_file",  parse_file, METH_VARARGS, "Parse a file."},
-    {"parse_string",  parse_string, METH_VARARGS, "Parse a string."},
+    {"parse_file", (PyCFunction)parse_file, METH_VARARGS|METH_KEYWORDS, "Parse a file."},
+    {"parse_string",  (PyCFunction)parse_string, METH_VARARGS|METH_KEYWORDS, "Parse a string."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
@@ -166,11 +174,18 @@ class CCallMakerVisitor(GrammarVisitor):
 
 
 class CParserGenerator(ParserGenerator, GrammarVisitor):
-    def __init__(self, grammar: grammar.Grammar, file: Optional[IO[Text]], debug: bool = False):
+    def __init__(
+        self,
+        grammar: grammar.Grammar,
+        file: Optional[IO[Text]],
+        debug: bool = False,
+        skip_actions: bool = False,
+    ):
         super().__init__(grammar, file)
         self.callmakervisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
         self.debug = debug
+        self.skip_actions = skip_actions
 
     def unique_varname(self, name: str = "tmpvar") -> str:
         new_var = name + "_" + str(self._varname_counter)
@@ -237,7 +252,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 del self.todo[rulename]
                 self.print()
                 self.visit(rule)
-        mode = int(self.rules["start"].type == "mod_ty")
+        if self.skip_actions:
+            mode = 0
+        else:
+            mode = int(self.rules["start"].type == "mod_ty")
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
@@ -435,6 +453,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             self.print(f"res = {names[0]};")
 
+    def emit_dummy_action(self) -> None:
+        self.print(f"res = CONSTRUCTOR(p);")
+
     def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
         self.join_conditions(keyword="if", node=node, names=names)
         self.print("{")
@@ -442,7 +463,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             # Prepare to emmit the rule action and do so
             self._set_up_token_end_metadata_extraction()
-            if node.action:
+            if self.skip_actions:
+                self.emit_dummy_action()
+            elif node.action:
                 self.emit_action(node)
             else:
                 self.emit_default_action(is_gather, names, node)
@@ -461,7 +484,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         with self.indent():
             # Prepare to emit the rule action and do so
             self._set_up_token_end_metadata_extraction()
-            if node.action:
+            if self.skip_actions:
+                self.emit_dummy_action()
+            elif node.action:
                 self.emit_action(node)
             else:
                 self.emit_default_action(is_gather, names, node)

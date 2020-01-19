@@ -46,6 +46,11 @@ argparser.add_argument("filename", help="Grammar description")
 argparser.add_argument(
     "--optimized", action="store_true", help="Compile the extension in optimized mode"
 )
+argparser.add_argument(
+    "--skip-actions",
+    action="store_true",
+    help="Don't generate action code (not even default actions)",
+)
 
 
 def main() -> None:
@@ -71,6 +76,7 @@ def main() -> None:
             verbose_parser,
             args.verbose,
             keep_asserts_in_extension=False if args.optimized else True,
+            skip_actions=args.skip_actions,
         )
     except Exception as err:
         if args.verbose:

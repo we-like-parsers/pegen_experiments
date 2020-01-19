@@ -135,12 +135,17 @@ update_memo(Parser *p, int mark, int type, void *node)
 void *
 CONSTRUCTOR(Parser *p, ...)
 {
+    static void *cache = NULL;
+
+    if (cache != NULL)
+        return cache;
 
     PyObject *id = _create_dummy_identifier(p);
     if (!id) {
         return NULL;
     }
-    return Name(id, Load, 1, 0, 1, 0,p->arena);
+    cache = Name(id, Load, 1, 0, 1, 0, p->arena);
+    return cache;
 }
 
 int
