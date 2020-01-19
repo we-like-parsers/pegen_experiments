@@ -3,7 +3,8 @@
 #include "v38tokenizer.h"
 
 static inline PyObject *
-new_identifier(Parser *p, char* identifier) {
+new_identifier(Parser *p, char *identifier)
+{
     PyObject *id = PyUnicode_FromString(identifier);
     if (id == NULL) {
         return NULL;
@@ -16,7 +17,8 @@ new_identifier(Parser *p, char* identifier) {
 }
 
 static PyObject *
-_create_dummy_identifier(Parser *p) {
+_create_dummy_identifier(Parser *p)
+{
     return new_identifier(p, "");
 }
 
@@ -40,7 +42,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     PyObject *errstr = NULL;
     PyObject *loc = NULL;
     PyObject *tmp = NULL;
-    PyObject* filename = NULL;
+    PyObject *filename = NULL;
     Token *t = p->tokens[p->fill - 1];
     va_list va;
 
@@ -57,7 +59,8 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             Py_INCREF(Py_None);
             loc = Py_None;
         }
-    } else {
+    }
+    else {
         Py_INCREF(Py_None);
         filename = Py_None;
         loc = PyUnicode_FromString(p->tok->buf);
@@ -92,8 +95,9 @@ error:
 static const char *
 token_name(int type)
 {
-    if (0 <= type && type <= N_TOKENS)
+    if (0 <= type && type <= N_TOKENS) {
         return _PyParser_TokenNames[type];
+    }
     return "<Huh?>";
 }
 
@@ -137,8 +141,9 @@ CONSTRUCTOR(Parser *p, ...)
 {
     static void *cache = NULL;
 
-    if (cache != NULL)
+    if (cache != NULL) {
         return cache;
+    }
 
     PyObject *id = _create_dummy_identifier(p);
     if (!id) {
@@ -188,17 +193,20 @@ fill_token(Parser *p)
     const char *line_start = type == STRING ? p->tok->multi_line_start : p->tok->line_start;
     int end_lineno = p->tok->lineno;
     int col_offset = -1, end_col_offset = -1;
-    if (start != NULL && start >= line_start)
+    if (start != NULL && start >= line_start) {
         col_offset = start - line_start;
-    if (end != NULL && end >= p->tok->line_start)
+    }
+    if (end != NULL && end >= p->tok->line_start) {
         end_col_offset = end - p->tok->line_start;
+    }
 
     t->lineno = lineno;
     t->col_offset = col_offset;
     t->end_lineno = end_lineno;
     t->end_col_offset = end_col_offset;
 
-    // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill, token_name(type), PyBytes_AsString(t->bytes));
+    // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill,
+    // token_name(type), PyBytes_AsString(t->bytes));
     p->fill += 1;
     return 0;
 }
@@ -227,7 +235,8 @@ is_memoized(Parser *p, int type, void *pres)
 }
 
 int
-lookahead_with_string(int positive, void *(func)(Parser *, const char *), Parser *p, const char *arg)
+lookahead_with_string(int positive, void *(func)(Parser *, const char *), Parser *p,
+                      const char *arg)
 {
     int mark = p->mark;
     void *res = func(p, arg);
@@ -267,7 +276,8 @@ expect_token(Parser *p, int type)
         return NULL;
     }
     p->mark += 1;
-    // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark, PyBytes_AsString(t->bytes));
+    // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark,
+    // PyBytes_AsString(t->bytes));
 
     return t;
 }
@@ -308,21 +318,25 @@ expr_ty
 name_token(Parser *p)
 {
     Token *t = expect_token(p, NAME);
-    if (t == NULL)
+    if (t == NULL) {
         return NULL;
+    }
     char *s;
     Py_ssize_t n;
-    if (PyBytes_AsStringAndSize(t->bytes, &s, &n) < 0)
+    if (PyBytes_AsStringAndSize(t->bytes, &s, &n) < 0) {
         return NULL;
+    }
     PyObject *id = PyUnicode_DecodeUTF8(s, n, NULL);
-    if (id == NULL)
+    if (id == NULL) {
         return NULL;
+    }
     if (PyArena_AddPyObject(p->arena, id) < 0) {
         Py_DECREF(id);
         return NULL;
     }
     // TODO: What new_identifier() does.
-    return Name(id, Load, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
+    return Name(id, Load, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset,
+                p->arena);
 }
 
 void *
@@ -347,12 +361,13 @@ expr_ty
 number_token(Parser *p)
 {
     Token *t = expect_token(p, NUMBER);
-    if (t == NULL)
+    if (t == NULL) {
         return NULL;
+    }
     // TODO: Just copy CPython's machinery for parsing numbers.
     PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
     if (c == NULL) {
-	PyErr_Clear();
+        PyErr_Clear();
         PyObject *tbytes = t->bytes;
         Py_ssize_t size = PyBytes_Size(tbytes);
         char *bytes = PyBytes_AsString(tbytes);
@@ -362,33 +377,37 @@ number_token(Parser *p)
         if (size > 0 && (lastc == 'j' || lastc == 'J')) {
             iscomplex = 1;
             obytes = PyBytes_FromStringAndSize(bytes, size - 1);
-            if (obytes == NULL)
+            if (obytes == NULL) {
                 return NULL;
+            }
             tbytes = obytes;
         }
-	c = PyFloat_FromString(tbytes);
+        c = PyFloat_FromString(tbytes);
         Py_XDECREF(obytes);
-	if (c == NULL)
-	    return NULL;
+        if (c == NULL) {
+            return NULL;
+        }
         if (iscomplex) {
             double real = PyFloat_AsDouble(c);
             double imag = 0;
             Py_DECREF(c);
             c = PyComplex_FromDoubles(real, imag);
-            if (c == NULL)
+            if (c == NULL) {
                 return NULL;
+            }
         }
     }
     if (PyArena_AddPyObject(p->arena, c) < 0) {
         Py_DECREF(c);
         return NULL;
     }
-    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset, p->arena);
+    return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset,
+                    p->arena);
 }
 
 static int
-parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
-         PyObject **result, const char **fstr, Py_ssize_t *fstrlen);
+parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **result,
+         const char **fstr, Py_ssize_t *fstrlen);
 
 expr_ty
 string_token(Parser *p)
@@ -408,9 +427,8 @@ string_token(Parser *p)
     int this_rawmode = 0;
     int bytesmode = 0;
     const char *fstr;
-    Py_ssize_t fstrlen = -1;  /* Silence a compiler warning. */
-    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s,
-                 &fstr, &fstrlen) != 0) {
+    Py_ssize_t fstrlen = -1; /* Silence a compiler warning. */
+    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
         return NULL;
     }
 
@@ -428,8 +446,8 @@ string_token(Parser *p)
         // TODO: We still don't support f-strings so let's return some
         // dummy here to not make the parsing tests fail.
         PyObject *final_str = new_identifier(p, "f-strings not supported yet!!");
-        return Constant(final_str, NULL, t->lineno, t->col_offset,
-                        t->end_lineno, t->end_col_offset, p->arena);
+        return Constant(final_str, NULL, t->lineno, t->col_offset, t->end_lineno,
+                        t->end_col_offset, p->arena);
     }
 
     /* A string or byte string. */
@@ -463,18 +481,20 @@ keyword_token(Parser *p, const char *val)
 {
     int mark = p->mark;
     Token *t = expect_token(p, NAME);
-    if (t == NULL)
+    if (t == NULL) {
         return NULL;
-    if (strcmp(val, PyBytes_AsString(t->bytes)) == 0)
+    }
+    if (strcmp(val, PyBytes_AsString(t->bytes)) == 0) {
         return t;
+    }
     p->mark = mark;
     return NULL;
 }
 
 PyObject *
-run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
 {
-    PyObject* result = NULL;
+    PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
     if (p == NULL) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for Parser");
@@ -519,17 +539,19 @@ run_parser(struct tok_state* tok, void *(start_rule_func)(Parser *), int mode)
     }
 
     if (mode == 2) {
-        PyObject *filename = tok->filename
-                             ? tok->filename
-                             : PyUnicode_FromString("<string>");
-        if (!filename)
+        PyObject *filename = tok->filename ? tok->filename : PyUnicode_FromString("<string>");
+        if (!filename) {
             goto exit;
+        }
         result = (PyObject *)PyAST_CompileObject(res, filename, NULL, -1, p->arena);
-        if (!tok->filename)
+        if (!tok->filename) {
             Py_XDECREF(filename);
-    } else if (mode == 1) {
+        }
+    }
+    else if (mode == 1) {
         result = PyAST_mod2obj(res);
-    } else {
+    }
+    else {
         result = Py_None;
         Py_INCREF(result);
     }
@@ -557,15 +579,17 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     }
 
     PyObject *filename_ob = NULL;
-    if ((filename_ob = PyUnicode_FromString(filename)) == NULL)
+    if ((filename_ob = PyUnicode_FromString(filename)) == NULL) {
         return NULL;
+    }
 
     // From here on we need to clean up even if there's an error
     PyObject *result = NULL;
 
-    struct tok_state* tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
-    if (tok == NULL)
+    struct tok_state *tok = PyTokenizer_FromFile(fp, NULL, NULL, NULL);
+    if (tok == NULL) {
         goto error;
+    }
 
     // Transfers ownership
     tok->filename = filename_ob;
@@ -575,21 +599,22 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
 
     PyTokenizer_Free(tok);
 
- error:
+error:
     fclose(fp);
     Py_XDECREF(filename_ob);
     return result;
 }
 
 PyObject *
-run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode)
 {
-    struct tok_state* tok = PyTokenizer_FromString(str, 1);
+    struct tok_state *tok = PyTokenizer_FromString(str, 1);
 
-    if (tok == NULL)
+    if (tok == NULL) {
         return NULL;
+    }
 
-    PyObject* result = run_parser(tok, start_rule_func, mode);
+    PyObject *result = run_parser(tok, start_rule_func, mode);
     PyTokenizer_Free(tok);
     return result;
 }
@@ -621,7 +646,7 @@ seq_insert_in_front(Parser *p, void *a, asdl_seq *seq)
 
     asdl_seq_SET(new_seq, 0, a);
     for (int i = 1, l = asdl_seq_LEN(new_seq); i < l; i++) {
-        asdl_seq_SET(new_seq, i, asdl_seq_GET(seq, i-1));
+        asdl_seq_SET(new_seq, i, asdl_seq_GET(seq, i - 1));
     }
     return new_seq;
 }
@@ -636,7 +661,9 @@ _get_flattened_seq_size(asdl_seq *seqs)
         // This following exclusion is needed, in order to correctly
         // handle the void pointers generated by the CONSTRUCTOR
         // function above.
-        if (asdl_seq_GET(inner_seq, 0) == (void *) 1) continue;
+        if (asdl_seq_GET(inner_seq, 0) == (void *)1) {
+            continue;
+        }
 
         size += asdl_seq_LEN(inner_seq);
     }
@@ -660,7 +687,9 @@ seq_flatten(Parser *p, asdl_seq *seqs)
         // This following exclusion is needed, in order to correctly
         // handle the void pointers generated by the CONSTRUCTOR
         // function above.
-        if (asdl_seq_GET(inner_seq, 0) == (void *) 1) continue;
+        if (asdl_seq_GET(inner_seq, 0) == (void *)1) {
+            continue;
+        }
 
         for (int j = 0, li = asdl_seq_LEN(inner_seq); j < li; j++) {
             asdl_seq_SET(flattened_seq, flattened_seq_idx++, asdl_seq_GET(inner_seq, j));
@@ -692,7 +721,7 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
     if (!second_str) {
         return NULL;
     }
-    ssize_t len = strlen(first_str) + strlen(second_str) + 1; // +1 for the dot
+    ssize_t len = strlen(first_str) + strlen(second_str) + 1;  // +1 for the dot
 
     PyObject *str = PyBytes_FromStringAndSize(NULL, len);
     if (!str) {
@@ -711,9 +740,7 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
     s += strlen(second_str);
     *s = '\0';
 
-    PyObject *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str),
-                                         PyBytes_GET_SIZE(str),
-                                         NULL);
+    PyObject *uni = PyUnicode_DecodeUTF8(PyBytes_AS_STRING(str), PyBytes_GET_SIZE(str), NULL);
     Py_DECREF(str);
     if (!uni) {
         return NULL;
@@ -724,9 +751,7 @@ join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)
         return NULL;
     }
 
-    return _Py_Name(uni,
-                    Load,
-                    EXTRA_EXPR(first_name, second_name));
+    return _Py_Name(uni, Load, EXTRA_EXPR(first_name, second_name));
 }
 
 /* Counts the total number of dots in seq's tokens */
@@ -738,9 +763,11 @@ seq_count_dots(asdl_seq *seq)
         Token *current_expr = asdl_seq_GET(seq, i);
         if (current_expr->type == ELLIPSIS) {
             number_of_dots += 3;
-        } else if (current_expr->type == DOT) {
+        }
+        else if (current_expr->type == DOT) {
             number_of_dots += 1;
-        } else {
+        }
+        else {
             return -1;
         }
     }
@@ -753,8 +780,9 @@ alias_ty
 alias_for_star(Parser *p)
 {
     PyObject *str = PyUnicode_InternFromString("*");
-    if (!str)
+    if (!str) {
         return NULL;
+    }
     if (PyArena_AddPyObject(p->arena, str) < 0) {
         Py_DECREF(str);
         return NULL;
@@ -845,10 +873,8 @@ _get_exprs(Parser *p, asdl_seq *seq)
 expr_ty
 Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
 {
-    return _Py_Compare(expr,
-                       _get_cmpops(p, pairs),
-                       _get_exprs(p, pairs),
-                       EXTRA_EXPR(expr, ((CmpopExprPair *) seq_get_tail(NULL, pairs))->expr));
+    return _Py_Compare(expr, _get_cmpops(p, pairs), _get_exprs(p, pairs),
+                       EXTRA_EXPR(expr, ((CmpopExprPair *)seq_get_tail(NULL, pairs))->expr));
 }
 
 /* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
@@ -880,43 +906,31 @@ _set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)
 static expr_ty
 _set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Tuple(_set_seq_context(p, e->v.Tuple.elts, ctx),
-                     ctx,
-                     EXTRA_EXPR(e, e));
+    return _Py_Tuple(_set_seq_context(p, e->v.Tuple.elts, ctx), ctx, EXTRA_EXPR(e, e));
 }
 
 static expr_ty
 _set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_List(_set_seq_context(p, e->v.List.elts, ctx),
-                    ctx,
-                    EXTRA_EXPR(e, e));
+    return _Py_List(_set_seq_context(p, e->v.List.elts, ctx), ctx, EXTRA_EXPR(e, e));
 }
 
 static expr_ty
 _set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Subscript(e->v.Subscript.value,
-                         e->v.Subscript.slice,
-                         ctx,
-                         EXTRA_EXPR(e, e));
+    return _Py_Subscript(e->v.Subscript.value, e->v.Subscript.slice, ctx, EXTRA_EXPR(e, e));
 }
 
 static expr_ty
 _set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Attribute(e->v.Attribute.value,
-                         e->v.Attribute.attr,
-                         ctx,
-                         EXTRA_EXPR(e, e));
+    return _Py_Attribute(e->v.Attribute.value, e->v.Attribute.attr, ctx, EXTRA_EXPR(e, e));
 }
 
 expr_ty
 _set_starred_context(Parser *p, expr_ty e, expr_context_ty ctx)
 {
-    return _Py_Starred(set_expr_context(p, e->v.Starred.value, ctx),
-                       ctx,
-                       EXTRA_EXPR(e, e));
+    return _Py_Starred(set_expr_context(p, e->v.Starred.value, ctx), ctx, EXTRA_EXPR(e, e));
 }
 
 /* Receives a expr_ty and creates the appropiate node for assignment targets */
@@ -927,24 +941,21 @@ construct_assign_target(Parser *p, expr_ty node)
         return NULL;
     }
 
-    switch(node->kind) {
+    switch (node->kind) {
         case Tuple_kind:
             if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
-                PyErr_Format(PyExc_SyntaxError, "Only single target (not tuple) can be annotated");
-                //TODO: We need to return a dummy here because we don't have a way to correctly
-                // buble up exceptions for now.
-               return _Py_Name(_create_dummy_identifier(p),
-                            Store,
-                            EXTRA_EXPR(node, node));
+                PyErr_Format(PyExc_SyntaxError,
+                             "Only single target (not tuple) can be annotated");
+                // TODO: We need to return a dummy here because we don't have a way to
+                // correctly buble up exceptions for now.
+                return _Py_Name(_create_dummy_identifier(p), Store, EXTRA_EXPR(node, node));
             }
             return asdl_seq_GET(node->v.Tuple.elts, 0);
         case List_kind:
             PyErr_Format(PyExc_SyntaxError, "Only single target (not list) can be annotated");
-            //TODO: We need to return a dummy here because we don't have a way to correctly
+            // TODO: We need to return a dummy here because we don't have a way to correctly
             // buble up exceptions for now.
-            return _Py_Name(_create_dummy_identifier(p),
-                        Store,
-                        EXTRA_EXPR(node, node));
+            return _Py_Name(_create_dummy_identifier(p), Store, EXTRA_EXPR(node, node));
         default:
             return node;
     }
@@ -1122,24 +1133,26 @@ _get_defaults(Parser *p, asdl_seq *names_with_defaults)
 
 /* Constructs an arguments_ty object out of all the parsed constructs in the parameters rule */
 arguments_ty
-make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *slash_with_default,
-               asdl_seq *plain_names, asdl_seq *names_with_default, StarEtc *star_etc)
+make_arguments(Parser *p, asdl_seq *slash_without_default,
+               SlashWithDefault *slash_with_default, asdl_seq *plain_names,
+               asdl_seq *names_with_default, StarEtc *star_etc)
 {
     asdl_seq *posonlyargs;
     if (slash_without_default != NULL) {
         posonlyargs = slash_without_default;
-    } else if (slash_with_default != NULL) {
-        asdl_seq *slash_with_default_names = _get_names(p, slash_with_default->names_with_defaults);
+    }
+    else if (slash_with_default != NULL) {
+        asdl_seq *slash_with_default_names =
+            _get_names(p, slash_with_default->names_with_defaults);
         if (!slash_with_default_names) {
             return NULL;
         }
-        posonlyargs = _join_seqs(p,
-                                 slash_with_default->plain_names,
-                                 slash_with_default_names);
+        posonlyargs = _join_seqs(p, slash_with_default->plain_names, slash_with_default_names);
         if (!posonlyargs) {
             return NULL;
         }
-    } else {
+    }
+    else {
         posonlyargs = _Py_asdl_seq_new(0, p->arena);
         if (!posonlyargs) {
             return NULL;
@@ -1152,20 +1165,21 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
         if (!names_with_default_names) {
             return NULL;
         }
-        posargs = _join_seqs(p,
-                             plain_names,
-                             names_with_default_names);
+        posargs = _join_seqs(p, plain_names, names_with_default_names);
         if (!posargs) {
             return NULL;
         }
-    } else if (plain_names == NULL && names_with_default != NULL) {
+    }
+    else if (plain_names == NULL && names_with_default != NULL) {
         posargs = _get_names(p, names_with_default);
         if (!posargs) {
             return NULL;
         }
-    } else if (plain_names != NULL && names_with_default == NULL) {
+    }
+    else if (plain_names != NULL && names_with_default == NULL) {
         posargs = plain_names;
-    } else {
+    }
+    else {
         posargs = _Py_asdl_seq_new(0, p->arena);
         if (!posargs) {
             return NULL;
@@ -1174,37 +1188,33 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
 
     asdl_seq *posdefaults;
     if (slash_with_default != NULL && names_with_default != NULL) {
-        asdl_seq *slash_with_default_values = _get_defaults(
-            p,
-            slash_with_default->names_with_defaults
-        );
+        asdl_seq *slash_with_default_values =
+            _get_defaults(p, slash_with_default->names_with_defaults);
         if (!slash_with_default_values) {
             return NULL;
         }
-        asdl_seq *names_with_default_values = _get_defaults(
-            p,
-            names_with_default
-        );
+        asdl_seq *names_with_default_values = _get_defaults(p, names_with_default);
         if (!names_with_default_values) {
             return NULL;
         }
-        posdefaults = _join_seqs(p,
-                                 slash_with_default_values,
-                                 names_with_default_values);
+        posdefaults = _join_seqs(p, slash_with_default_values, names_with_default_values);
         if (!posdefaults) {
             return NULL;
         }
-    } else if (slash_with_default == NULL && names_with_default != NULL) {
+    }
+    else if (slash_with_default == NULL && names_with_default != NULL) {
         posdefaults = _get_defaults(p, names_with_default);
         if (!posdefaults) {
             return NULL;
         }
-    } else if (slash_with_default != NULL && names_with_default == NULL) {
+    }
+    else if (slash_with_default != NULL && names_with_default == NULL) {
         posdefaults = _get_defaults(p, slash_with_default->names_with_defaults);
         if (!posdefaults) {
             return NULL;
         }
-    } else {
+    }
+    else {
         posdefaults = _Py_asdl_seq_new(0, p->arena);
         if (!posdefaults) {
             return NULL;
@@ -1222,7 +1232,8 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
         if (!kwonlyargs) {
             return NULL;
         }
-    } else {
+    }
+    else {
         kwonlyargs = _Py_asdl_seq_new(0, p->arena);
         if (!kwonlyargs) {
             return NULL;
@@ -1235,7 +1246,8 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
         if (!kwdefaults) {
             return NULL;
         }
-    } else {
+    }
+    else {
         kwdefaults = _Py_asdl_seq_new(0, p->arena);
         if (!kwdefaults) {
             return NULL;
@@ -1247,11 +1259,12 @@ make_arguments(Parser *p, asdl_seq *slash_without_default, SlashWithDefault *sla
         kwarg = star_etc->kwarg;
     }
 
-    return _Py_arguments(posonlyargs, posargs, vararg, kwonlyargs, kwdefaults,
-                         kwarg, posdefaults, p->arena);
+    return _Py_arguments(posonlyargs, posargs, vararg, kwonlyargs, kwdefaults, kwarg,
+                         posdefaults, p->arena);
 }
 
-/* Constructs an empty arguments_ty object, that gets used when a function accepts no arguments. */
+/* Constructs an empty arguments_ty object, that gets used when a function accepts no
+ * arguments. */
 arguments_ty
 empty_arguments(Parser *p)
 {
@@ -1276,13 +1289,13 @@ empty_arguments(Parser *p)
         return NULL;
     }
 
-    return _Py_arguments(posonlyargs, posargs, NULL, kwonlyargs,
-                         kwdefaults, NULL, kwdefaults, p->arena);
+    return _Py_arguments(posonlyargs, posargs, NULL, kwonlyargs, kwdefaults, NULL, kwdefaults,
+                         p->arena);
 }
 
 /* Encapsulates the value of an operator_ty into an AugOperator struct */
 AugOperator *
-augoperator(Parser* p, operator_ty kind)
+augoperator(Parser *p, operator_ty kind)
 {
     AugOperator *a = PyArena_Malloc(p->arena, sizeof(AugOperator));
     if (!a) {
@@ -1296,38 +1309,22 @@ augoperator(Parser* p, operator_ty kind)
 stmt_ty
 function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
 {
-    return _Py_FunctionDef(
-        function_def->v.FunctionDef.name,
-        function_def->v.FunctionDef.args,
-        function_def->v.FunctionDef.body,
-        decorators,
-        function_def->v.FunctionDef.returns,
-        function_def->v.FunctionDef.type_comment,
-        function_def->lineno,
-        function_def->col_offset,
-        function_def->end_lineno,
-        function_def->end_col_offset,
-        p->arena
-    );
+    return _Py_FunctionDef(function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
+                           function_def->v.FunctionDef.body, decorators,
+                           function_def->v.FunctionDef.returns,
+                           function_def->v.FunctionDef.type_comment, function_def->lineno,
+                           function_def->col_offset, function_def->end_lineno,
+                           function_def->end_col_offset, p->arena);
 }
-
 
 /* Construct a ClassDef equivalent to class_def, but with decorators */
 stmt_ty
 class_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty class_def)
 {
-    return _Py_ClassDef(
-        class_def->v.ClassDef.name,
-        class_def->v.ClassDef.bases,
-        class_def->v.ClassDef.keywords,
-        class_def->v.ClassDef.body,
-        decorators,
-        class_def->lineno,
-        class_def->col_offset,
-        class_def->end_lineno,
-        class_def->end_col_offset,
-        p->arena
-    );
+    return _Py_ClassDef(class_def->v.ClassDef.name, class_def->v.ClassDef.bases,
+                        class_def->v.ClassDef.keywords, class_def->v.ClassDef.body, decorators,
+                        class_def->lineno, class_def->col_offset, class_def->end_lineno,
+                        class_def->end_col_offset, p->arena);
 }
 
 /* Construct a KeywordOrStarred */
@@ -1350,7 +1347,9 @@ _seq_number_of_starred_exprs(asdl_seq *seq)
     int n = 0;
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         KeywordOrStarred *k = asdl_seq_GET(seq, i);
-        if (!k->is_keyword) n++;
+        if (!k->is_keyword) {
+            n++;
+        }
     }
     return n;
 }
@@ -1402,7 +1401,6 @@ seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
     return new_seq;
 }
 
-
 //// STRING HANDLING FUNCTIONS ////
 
 // These functions are ported directly from Python/ast.c with some modifications
@@ -1410,25 +1408,21 @@ seq_delete_starred_exprs(Parser *p, asdl_seq *kwargs)
 // to pass around and the usage of some specialized APIs present only in this
 // file (like "raise_syntax_error").
 
-
 static int
 warn_invalid_escape_sequence(Parser *p, unsigned char first_invalid_escape_char)
 {
-    PyObject *msg = PyUnicode_FromFormat("invalid escape sequence \\%c",
-                                         first_invalid_escape_char);
+    PyObject *msg =
+        PyUnicode_FromFormat("invalid escape sequence \\%c", first_invalid_escape_char);
     if (msg == NULL) {
         return -1;
     }
-    if (PyErr_WarnExplicitObject(PyExc_DeprecationWarning, msg,
-                                   p->tok->filename, p->tok->lineno,
-                                   NULL, NULL) < 0)
-    {
+    if (PyErr_WarnExplicitObject(PyExc_DeprecationWarning, msg, p->tok->filename,
+                                 p->tok->lineno, NULL, NULL) < 0) {
         if (PyErr_ExceptionMatches(PyExc_DeprecationWarning)) {
             /* Replace the DeprecationWarning exception with a SyntaxError
                to get a more accurate error report */
             PyErr_Clear();
-            raise_syntax_error(p, "invalid escape sequence \\%c",
-                               first_invalid_escape_char);
+            raise_syntax_error(p, "invalid escape sequence \\%c", first_invalid_escape_char);
         }
         Py_DECREF(msg);
         return -1;
@@ -1442,11 +1436,12 @@ decode_utf8(const char **sPtr, const char *end)
 {
     const char *s, *t;
     t = s = *sPtr;
-    while (s < end && (*s & 0x80)) s++;
+    while (s < end && (*s & 0x80)) {
+        s++;
+    }
     *sPtr = s;
     return PyUnicode_DecodeUTF8(t, s - t, NULL);
 }
-
 
 static PyObject *
 decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
@@ -1457,13 +1452,15 @@ decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
     const char *end;
 
     /* check for integer overflow */
-    if (len > SIZE_MAX / 6)
+    if (len > SIZE_MAX / 6) {
         return NULL;
+    }
     /* "ä" (2 bytes) may become "\U000000E4" (10 bytes), or 1:5
        "\ä" (3 bytes) may become "\u005c\U000000E4" (16 bytes), or ~1:6 */
     u = PyBytes_FromStringAndSize((char *)NULL, len * 6);
-    if (u == NULL)
+    if (u == NULL) {
         return NULL;
+    }
     p = buf = PyBytes_AsString(u);
     end = s + len;
     while (s < end) {
@@ -1472,8 +1469,9 @@ decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
             if (s >= end || *s & 0x80) {
                 strcpy(p, "u005c");
                 p += 5;
-                if (s >= end)
+                if (s >= end) {
                     break;
+                }
             }
         }
         if (*s & 0x80) {
@@ -1497,7 +1495,8 @@ decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
             /* Should be impossible to overflow */
             assert(p - buf <= PyBytes_GET_SIZE(u));
             Py_DECREF(w);
-        } else {
+        }
+        else {
             *p++ = *s++;
         }
     }
@@ -1521,12 +1520,13 @@ decode_unicode_with_escapes(Parser *parser, const char *s, size_t len)
 }
 
 static PyObject *
-decode_bytes_with_escapes(Parser* p, const char *s, Py_ssize_t len)
+decode_bytes_with_escapes(Parser *p, const char *s, Py_ssize_t len)
 {
     const char *first_invalid_escape;
     PyObject *result = _PyBytes_DecodeEscape(s, len, NULL, 0, NULL, &first_invalid_escape);
-    if (result == NULL)
+    if (result == NULL) {
         return NULL;
+    }
 
     if (first_invalid_escape != NULL) {
         if (warn_invalid_escape_sequence(p, *first_invalid_escape) < 0) {
@@ -1537,15 +1537,14 @@ decode_bytes_with_escapes(Parser* p, const char *s, Py_ssize_t len)
     return result;
 }
 
-
 /* s must include the bracketing quote characters, and r, b, u,
    &/or f prefixes (if any), and embedded escape sequences (if any).
    parsestr parses it, and sets *result to decoded Python string object.
    If the string is an f-string, set *fstr and *fstrlen to the unparsed
    string object.  Return 0 if no errors occurred.  */
 static int
-parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
-         PyObject **result, const char **fstr, Py_ssize_t *fstrlen)
+parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **result,
+         const char **fstr, Py_ssize_t *fstrlen)
 {
     size_t len;
     int quote = Py_CHARMASK(*s);
@@ -1589,8 +1588,7 @@ parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
     s++;
     len = strlen(s);
     if (len > INT_MAX) {
-        PyErr_SetString(PyExc_OverflowError,
-                        "string to parse is too long");
+        PyErr_SetString(PyExc_OverflowError, "string to parse is too long");
         return -1;
     }
     if (s[--len] != quote) {
@@ -1627,20 +1625,26 @@ parsestr(Parser* p, const char* s, int *bytesmode, int *rawmode,
         const char *ch;
         for (ch = s; *ch; ch++) {
             if (Py_CHARMASK(*ch) >= 0x80) {
-                raise_syntax_error(p, "bytes can only contain ASCII "
-                          "literal characters.");
+                raise_syntax_error(p,
+                                   "bytes can only contain ASCII "
+                                   "literal characters.");
                 return -1;
             }
         }
-        if (*rawmode)
+        if (*rawmode) {
             *result = PyBytes_FromStringAndSize(s, len);
-        else
+        }
+        else {
             *result = decode_bytes_with_escapes(p, s, len);
-    } else {
-        if (*rawmode)
+        }
+    }
+    else {
+        if (*rawmode) {
             *result = PyUnicode_DecodeUTF8Stateful(s, len, NULL, NULL);
-        else
+        }
+        else {
             *result = decode_unicode_with_escapes(p, s, len);
+        }
     }
     return *result == NULL ? -1 : 0;
 }
@@ -1652,18 +1656,18 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     assert(len > 0);
 
     expr_ty first = asdl_seq_GET(strings, 0);
-    expr_ty last = asdl_seq_GET(strings, len-1);
+    expr_ty last = asdl_seq_GET(strings, len - 1);
 
     int bytesmode = 0;
     PyObject *u_kind = NULL;
     int kind_unicode = 0;
     PyObject *final_str = NULL;
 
-
     assert(first->kind == Constant_kind);
     if (PyBytes_CheckExact(first->v.Constant.value)) {
         final_str = PyBytes_FromString("");
-    } else {
+    }
+    else {
         final_str = PyUnicode_FromString("");
     }
     if (final_str == NULL) {
@@ -1672,7 +1676,7 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     for (int i = 0; i < len; i++) {
         expr_ty cons = asdl_seq_GET(strings, i);
         assert(cons->kind == Constant_kind);
-        PyObject* s = cons->v.Constant.value;
+        PyObject *s = cons->v.Constant.value;
         int this_bytesmode = PyBytes_CheckExact(s);
 
         if (i != 0 && bytesmode != this_bytesmode) {
@@ -1687,7 +1691,8 @@ concatenate_strings(Parser *p, asdl_seq *strings)
             if (!final_str) {
                 goto error;
             }
-        } else {
+        }
+        else {
             kind_unicode |= (cons->v.Constant.kind != NULL);
             PyUnicode_Append(&final_str, s);
             if (!final_str) {
@@ -1697,7 +1702,7 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     }
 
     if (kind_unicode) {
-        //TODO: Intern this string when we decide how we will
+        // TODO: Intern this string when we decide how we will
         // handle static constants in the module.
         u_kind = new_identifier(p, "u");
     }
