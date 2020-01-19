@@ -532,7 +532,16 @@ run_parser_from_string(const char* str, void *(start_rule_func)(Parser *), int m
     if (tok == NULL)
         return NULL;
 
-    PyObject* result = run_parser(tok, start_rule_func, mode);
+    // From here on we need to clean up even if there's an error
+    PyObject *result = NULL;
+
+    tok->filename = PyUnicode_FromString("<string>");
+    if (tok->filename == NULL)
+        goto error;
+
+    result = run_parser(tok, start_rule_func, mode);
+
+ error:
     PyTokenizer_Free(tok);
     return result;
 }
