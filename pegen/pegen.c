@@ -395,7 +395,7 @@ string_token(Parser *p)
         return NULL;
     }
 
-    char *the_str = PyBytes_AsString(t->bytes) ;
+    char *the_str = PyBytes_AsString(t->bytes);
     if (the_str == NULL) {
         return NULL;
     }
