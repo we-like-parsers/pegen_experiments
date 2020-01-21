@@ -2,11 +2,6 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
-void init_keywords(Parser *p, KeywordToken (*keywords)[], int n) {
-    p->keywords = keywords;
-    p->n_keywords = n;
-}
-
 static inline PyObject *
 new_identifier(Parser *p, char *identifier)
 {
@@ -511,7 +506,11 @@ keyword_token(Parser *p, const char *val)
 }
 
 PyObject *
-run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state *tok,
+           void *(start_rule_func)(Parser *),
+           int mode,
+           KeywordToken (*keywords)[],
+           int n_keywords)
 {
     PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -521,6 +520,8 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
     }
     assert(tok != NULL);
     p->tok = tok;
+    p->keywords = keywords;
+    p->n_keywords = n_keywords;
     p->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
@@ -536,6 +537,11 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
     if (!p->arena) {
         goto exit;
     }
+
+    if (fill_token(p) < 0) {
+        goto exit;
+    }
+
     PyErr_Clear();
 
     void *res = (*start_rule_func)(p);
@@ -584,7 +590,11 @@ exit:
 }
 
 PyObject *
-run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_file(const char *filename,
+                     void *(start_rule_func)(Parser *),
+                     int mode,
+                     KeywordToken (*keywords)[],
+                     int n_keywords)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
@@ -609,7 +619,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    result = run_parser(tok, start_rule_func, mode);
+    result = run_parser(tok, start_rule_func, mode, keywords, n_keywords);
 
     PyTokenizer_Free(tok);
 
@@ -620,7 +630,11 @@ error:
 }
 
 PyObject *
-run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_string(const char *str,
+                       void *(start_rule_func)(Parser *),
+                       int mode,
+                       KeywordToken (*keywords)[],
+                       int n_keywords)
 {
     struct tok_state *tok = PyTokenizer_FromString(str, 1);
 
@@ -628,7 +642,7 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
         return NULL;
     }
 
-    PyObject *result = run_parser(tok, start_rule_func, mode);
+    PyObject *result = run_parser(tok, start_rule_func, mode, keywords, n_keywords);
     PyTokenizer_Free(tok);
     return result;
 }

@@ -39,7 +39,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_file(filename, (void *)start_rule, mode);
+    return run_parser_from_file(filename, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
 }
 
 static PyObject *
@@ -53,7 +53,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_string(the_string, (void *)start_rule, mode);
+    return run_parser_from_string(the_string, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -268,10 +268,17 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
-            self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modulename))
+            self.print(
+                trailer.rstrip("\n")
+                % dict(
+                    mode=mode,
+                    modulename=modulename,
+                    n_keywords=len(self.callmakervisitor.keyword_cache),
+                )
+            )
 
     def _setup_keywords(self) -> None:
-        self.print("static KeywordToken keywords[] = {")
+        self.print("static KeywordToken reserved_keywords[] = {")
         with self.indent():
             for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
                 self.print(f'{{"{keyword_str}", {keyword_type}}},')
@@ -410,11 +417,6 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self._set_up_rule_memoization(node, result_type)
 
         self.print("{")
-        if node.name.startswith("start"):
-            with self.indent():
-                self.print(
-                    f"init_keywords(p, &keywords, {len(self.callmakervisitor.keyword_cache)});"
-                )
         if is_loop:
             self._handle_loop_rule_body(node, rhs)
         else:
