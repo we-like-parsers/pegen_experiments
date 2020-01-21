@@ -201,9 +201,7 @@ fill_token(Parser *p)
     }
 
     Token *t = p->tokens[p->fill];
-    t->type = (type == NAME || type == ASYNC || type == AWAIT)
-              ? _get_keyword_or_name_type(p, start, end - start)
-              : type;
+    t->type = (type == NAME) ? _get_keyword_or_name_type(p, start, end - start) : type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL) {
         return -1;
@@ -315,6 +313,18 @@ get_last_nonnwhitespace_token(Parser *p)
         }
     }
     return token;
+}
+
+void *
+async_token(Parser *p)
+{
+    return expect_token(p, ASYNC);
+}
+
+void *
+await_token(Parser *p)
+{
+    return expect_token(p, AWAIT);
 }
 
 void *

@@ -99,12 +99,9 @@ class CCallMakerVisitor(GrammarVisitor):
         if name in ("NAME", "NUMBER", "STRING"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER"):
+        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        if name in ("ASYNC", "AWAIT"):
-            name = name.lower()
-            return self.keyword_helper(name)
         return f"{name}_var", f"{name}_rule(p)"
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
@@ -191,7 +188,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         skip_actions: bool = False,
     ):
         super().__init__(grammar, file)
-        self.callmakervisitor = CCallMakerVisitor(self)
+        self.callmakervisitor: CCallMakerVisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
         self.debug = debug
         self.skip_actions = skip_actions
