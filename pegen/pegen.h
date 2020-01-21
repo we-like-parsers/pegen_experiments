@@ -19,11 +19,18 @@ typedef struct {
 } Token;
 
 typedef struct {
+    char *str;
+    int type;
+} KeywordToken;
+
+typedef struct {
     struct tok_state *tok;
     Token **tokens;
     int mark;
     int fill, size;
     PyArena *arena;
+    KeywordToken (*keywords)[];
+    int n_keywords;
 } Parser;
 
 typedef struct {
@@ -69,11 +76,10 @@ int lookahead_with_string(int, void *(func)(Parser *, const char *), Parser *, c
 int lookahead_with_int(int, Token *(func)(Parser *, int), Parser *, int);
 int lookahead(int, void *(func)(Parser *), Parser *);
 
+void init_keywords(Parser *p, KeywordToken (*keywords_list)[], int n);
 Token *expect_token(Parser *p, int type);
 Token *get_last_nonnwhitespace_token(Parser *);
 int fill_token(Parser *p);
-void *async_token(Parser *p);
-void *await_token(Parser *p);
 void *endmarker_token(Parser *p);
 expr_ty name_token(Parser *p);
 void *newline_token(Parser *p);

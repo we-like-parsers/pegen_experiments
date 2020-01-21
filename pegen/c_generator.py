@@ -87,21 +87,30 @@ class CCallMakerVisitor(GrammarVisitor):
     def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
+        self.keyword_cache: Dict[str, int] = {}
+
+    def keyword_helper(self, keyword: str) -> Tuple[str, str]:
+        if keyword not in self.keyword_cache:
+            self.keyword_cache[keyword] = self.gen.keyword_type()
+        return "keyword", f"expect_token(p, {self.keyword_cache[keyword]})"
 
     def visit_NameLeaf(self, node: NameLeaf) -> Tuple[str, str]:
         name = node.value
         if name in ("NAME", "NUMBER", "STRING"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
-        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER", "ASYNC", "AWAIT"):
+        if name in ("NEWLINE", "DEDENT", "INDENT", "ENDMARKER"):
             name = name.lower()
             return f"{name}_var", f"{name}_token(p)"
+        if name in ("ASYNC", "AWAIT"):
+            name = name.lower()
+            return self.keyword_helper(name)
         return f"{name}_var", f"{name}_rule(p)"
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
-        if re.match(r"[a-zA-Z_]\w*\Z", val):
-            return "keyword", f'keyword_token(p, "{val}")'
+        if re.match(r"[a-zA-Z_]\w*\Z", val): # This is a keyword
+            return self.keyword_helper(val)
         else:
             assert val in exact_token_types, f"{node.value} is not a known literal"
             type = exact_token_types[val]
@@ -235,6 +244,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         subheader = self.grammar.metas.get("subheader", "")
         if subheader:
             self.print(subheader)
+        self._setup_keywords()
         for i, rulename in enumerate(self.todo, 1000):
             self.print(f"#define {rulename}_type {i}")
         self.print()
@@ -262,6 +272,13 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
             self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modulename))
+
+    def _setup_keywords(self):
+        self.print("static KeywordToken keywords[] = {")
+        with self.indent():
+            for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
+                self.print(f'{{"{keyword_str}", {keyword_type}}},')
+        self.print("};")
 
     def _set_up_token_start_metadata_extraction(self) -> None:
         self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
@@ -396,6 +413,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self._set_up_rule_memoization(node, result_type)
 
         self.print("{")
+        if node.name.startswith("start"):
+            with self.indent():
+                self.print(f"init_keywords(p, &keywords, {len(self.callmakervisitor.keyword_cache)});")
         if is_loop:
             self._handle_loop_rule_body(node, rhs)
         else:

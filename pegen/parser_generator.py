@@ -47,6 +47,7 @@ class ParserGenerator:
         self.first_graph, self.first_sccs = compute_left_recursives(self.rules)
         self.todo = self.rules.copy()  # Rules to generate
         self.counter = 0  # For name_rule()/name_loop()
+        self.keyword_counter = 499  # For keyword_type()
 
     @abstractmethod
     def generate(self, filename: str) -> None:
@@ -81,6 +82,10 @@ class ParserGenerator:
             for rulename in todo:
                 self.todo[rulename].collect_todo(self)
             done = alltodo
+
+    def keyword_type(self):
+        self.keyword_counter += 1
+        return self.keyword_counter
 
     def name_node(self, rhs: Rhs) -> str:
         self.counter += 1

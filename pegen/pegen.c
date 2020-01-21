@@ -2,6 +2,11 @@
 #include "pegen.h"
 #include "v38tokenizer.h"
 
+void init_keywords(Parser *p, KeywordToken (*keywords)[], int n) {
+    p->keywords = keywords;
+    p->n_keywords = n;
+}
+
 static inline PyObject *
 new_identifier(Parser *p, char *identifier)
 {
@@ -153,6 +158,20 @@ CONSTRUCTOR(Parser *p, ...)
     return cache;
 }
 
+static int
+_get_keyword_or_name_type(Parser *p, char *name, size_t name_len)
+{
+    for (int i = 0; i < p->n_keywords; i++) {
+        KeywordToken k = (*p->keywords)[i];
+        if (k.str[0] == name[0]
+            && strlen(k.str) == name_len
+            && strncmp(k.str, name, name_len) == 0) {
+            return k.type;
+        }
+    }
+    return NAME;
+}
+
 int
 fill_token(Parser *p)
 {
@@ -182,7 +201,9 @@ fill_token(Parser *p)
     }
 
     Token *t = p->tokens[p->fill];
-    t->type = type;
+    t->type = (type == NAME || type == ASYNC || type == AWAIT)
+              ? _get_keyword_or_name_type(p, start, end - start)
+              : type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL) {
         return -1;
@@ -294,18 +315,6 @@ get_last_nonnwhitespace_token(Parser *p)
         }
     }
     return token;
-}
-
-void *
-async_token(Parser *p)
-{
-    return expect_token(p, ASYNC);
-}
-
-void *
-await_token(Parser *p)
-{
-    return expect_token(p, AWAIT);
 }
 
 void *
@@ -517,11 +526,6 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
     if (!p->arena) {
         goto exit;
     }
-
-    if (fill_token(p) < 0) {
-        goto exit;
-    }
-
     PyErr_Clear();
 
     void *res = (*start_rule_func)(p);
