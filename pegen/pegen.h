@@ -80,6 +80,8 @@ void init_keywords(Parser *p, KeywordToken (*keywords_list)[], int n);
 Token *expect_token(Parser *p, int type);
 Token *get_last_nonnwhitespace_token(Parser *);
 int fill_token(Parser *p);
+void *async_token(Parser *p);
+void *await_token(Parser *p);
 void *endmarker_token(Parser *p);
 expr_ty name_token(Parser *p);
 void *newline_token(Parser *p);
