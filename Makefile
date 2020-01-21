@@ -101,6 +101,13 @@ bench: cpython
 	$(MAKE) -s simpy_cpython 2>/dev/null
 	$(MAKE) -s simpy_cpython 2>/dev/null
 
+format-pegen:
+	$(eval COMPILE_OPTIONS = $(shell python-config --cflags))
+	clang-tidy pegen/pegen.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
+	clang-format pegen/pegen.c -i
+
+format: black format-pegen
+
 find_max_nesting:
 	$(PYTHON) scripts/find_max_nesting.py
 
