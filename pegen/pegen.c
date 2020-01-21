@@ -158,6 +158,8 @@ _get_keyword_or_name_type(Parser *p, char *name, size_t name_len)
 {
     for (int i = 0; i < p->n_keywords; i++) {
         KeywordToken k = (*p->keywords)[i];
+        // The length comparison is needed duo to name containing
+        // the whole input starting from the current token
         if (k.str[0] == name[0]
             && strlen(k.str) == name_len
             && strncmp(k.str, name, name_len) == 0) {
