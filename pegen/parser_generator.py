@@ -83,7 +83,7 @@ class ParserGenerator:
                 self.todo[rulename].collect_todo(self)
             done = alltodo
 
-    def keyword_type(self):
+    def keyword_type(self) -> int:
         self.keyword_counter += 1
         return self.keyword_counter
 

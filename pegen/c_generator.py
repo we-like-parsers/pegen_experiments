@@ -109,7 +109,7 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
-        if re.match(r"[a-zA-Z_]\w*\Z", val): # This is a keyword
+        if re.match(r"[a-zA-Z_]\w*\Z", val):  # This is a keyword
             return self.keyword_helper(val)
         else:
             assert val in exact_token_types, f"{node.value} is not a known literal"
@@ -273,7 +273,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         if trailer:
             self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modulename))
 
-    def _setup_keywords(self):
+    def _setup_keywords(self) -> None:
         self.print("static KeywordToken keywords[] = {")
         with self.indent():
             for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
@@ -415,7 +415,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print("{")
         if node.name.startswith("start"):
             with self.indent():
-                self.print(f"init_keywords(p, &keywords, {len(self.callmakervisitor.keyword_cache)});")
+                self.print(
+                    f"init_keywords(p, &keywords, {len(self.callmakervisitor.keyword_cache)});"
+                )
         if is_loop:
             self._handle_loop_rule_body(node, rhs)
         else:
