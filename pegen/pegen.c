@@ -153,6 +153,22 @@ CONSTRUCTOR(Parser *p, ...)
     return cache;
 }
 
+static int
+_get_keyword_or_name_type(Parser *p, char *name, size_t name_len)
+{
+    for (int i = 0; i < p->n_keywords; i++) {
+        KeywordToken k = (*p->keywords)[i];
+        // The length comparison is needed duo to name containing
+        // the whole input starting from the current token
+        if (k.str[0] == name[0]
+            && strlen(k.str) == name_len
+            && strncmp(k.str, name, name_len) == 0) {
+            return k.type;
+        }
+    }
+    return NAME;
+}
+
 int
 fill_token(Parser *p)
 {
@@ -182,7 +198,7 @@ fill_token(Parser *p)
     }
 
     Token *t = p->tokens[p->fill];
-    t->type = type;
+    t->type = (type == NAME) ? _get_keyword_or_name_type(p, start, end - start) : type;
     t->bytes = PyBytes_FromStringAndSize(start, end - start);
     if (t->bytes == NULL) {
         return -1;
@@ -492,7 +508,11 @@ keyword_token(Parser *p, const char *val)
 }
 
 PyObject *
-run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
+run_parser(struct tok_state *tok,
+           void *(start_rule_func)(Parser *),
+           int mode,
+           KeywordToken (*keywords)[],
+           int n_keywords)
 {
     PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -502,6 +522,8 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode)
     }
     assert(tok != NULL);
     p->tok = tok;
+    p->keywords = keywords;
+    p->n_keywords = n_keywords;
     p->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
@@ -570,7 +592,11 @@ exit:
 }
 
 PyObject *
-run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_file(const char *filename,
+                     void *(start_rule_func)(Parser *),
+                     int mode,
+                     KeywordToken (*keywords)[],
+                     int n_keywords)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
@@ -595,7 +621,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    result = run_parser(tok, start_rule_func, mode);
+    result = run_parser(tok, start_rule_func, mode, keywords, n_keywords);
 
     PyTokenizer_Free(tok);
 
@@ -606,7 +632,11 @@ error:
 }
 
 PyObject *
-run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode)
+run_parser_from_string(const char *str,
+                       void *(start_rule_func)(Parser *),
+                       int mode,
+                       KeywordToken (*keywords)[],
+                       int n_keywords)
 {
     struct tok_state *tok = PyTokenizer_FromString(str, 1);
 
@@ -614,7 +644,7 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
         return NULL;
     }
 
-    PyObject *result = run_parser(tok, start_rule_func, mode);
+    PyObject *result = run_parser(tok, start_rule_func, mode, keywords, n_keywords);
     PyTokenizer_Free(tok);
     return result;
 }

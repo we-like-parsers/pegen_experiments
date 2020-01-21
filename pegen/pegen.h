@@ -19,11 +19,18 @@ typedef struct {
 } Token;
 
 typedef struct {
+    char *str;
+    int type;
+} KeywordToken;
+
+typedef struct {
     struct tok_state *tok;
     Token **tokens;
     int mark;
     int fill, size;
     PyArena *arena;
+    KeywordToken (*keywords)[];
+    int n_keywords;
 } Parser;
 
 typedef struct {
@@ -90,8 +97,16 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define EXTRA_EXPR(head, tail) head->lineno, head->col_offset, tail->end_lineno, tail->end_col_offset, p->arena
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
-PyObject *run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode);
-PyObject *run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode);
+PyObject *run_parser_from_file(const char *filename,
+                               void *(start_rule_func)(Parser *),
+                               int mode,
+                               KeywordToken (*keywords_list)[],
+                               int n_keywords);
+PyObject *run_parser_from_string(const char *str,
+                                 void *(start_rule_func)(Parser *),
+                                 int mode,
+                                 KeywordToken (*keywords_list)[],
+                                 int n_keywords);
 asdl_seq *singleton_seq(Parser *, void *);
 asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);
 asdl_seq *seq_flatten(Parser *, asdl_seq *);

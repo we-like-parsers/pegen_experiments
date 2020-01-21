@@ -360,6 +360,9 @@ atom[expr_ty]:
     | setcomp
     | dict
     | dictcomp
+    | 'True' { _Py_Constant(Py_True, NULL, EXTRA) }
+    | 'False' { _Py_Constant(Py_False, NULL, EXTRA) }
+    | 'None' { _Py_Constant(Py_None, NULL, EXTRA) }
     | NAME
     | a=STRING+ { concatenate_strings(p, a) }
     | NUMBER

@@ -39,7 +39,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_file(filename, (void *)start_rule, mode);
+    return run_parser_from_file(filename, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
 }
 
 static PyObject *
@@ -53,7 +53,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_string(the_string, (void *)start_rule, mode);
+    return run_parser_from_string(the_string, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -87,6 +87,12 @@ class CCallMakerVisitor(GrammarVisitor):
     def __init__(self, parser_generator: ParserGenerator):
         self.gen = parser_generator
         self.cache: Dict[Any, Any] = {}
+        self.keyword_cache: Dict[str, int] = {}
+
+    def keyword_helper(self, keyword: str) -> Tuple[str, str]:
+        if keyword not in self.keyword_cache:
+            self.keyword_cache[keyword] = self.gen.keyword_type()
+        return "keyword", f"expect_token(p, {self.keyword_cache[keyword]})"
 
     def visit_NameLeaf(self, node: NameLeaf) -> Tuple[str, str]:
         name = node.value
@@ -100,8 +106,8 @@ class CCallMakerVisitor(GrammarVisitor):
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
-        if re.match(r"[a-zA-Z_]\w*\Z", val):
-            return "keyword", f'keyword_token(p, "{val}")'
+        if re.match(r"[a-zA-Z_]\w*\Z", val):  # This is a keyword
+            return self.keyword_helper(val)
         else:
             assert val in exact_token_types, f"{node.value} is not a known literal"
             type = exact_token_types[val]
@@ -182,7 +188,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         skip_actions: bool = False,
     ):
         super().__init__(grammar, file)
-        self.callmakervisitor = CCallMakerVisitor(self)
+        self.callmakervisitor: CCallMakerVisitor = CCallMakerVisitor(self)
         self._varname_counter = 0
         self.debug = debug
         self.skip_actions = skip_actions
@@ -235,6 +241,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         subheader = self.grammar.metas.get("subheader", "")
         if subheader:
             self.print(subheader)
+        self._setup_keywords()
         for i, rulename in enumerate(self.todo, 1000):
             self.print(f"#define {rulename}_type {i}")
         self.print()
@@ -261,7 +268,21 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
         if trailer:
-            self.print(trailer.rstrip("\n") % dict(mode=mode, modulename=modulename))
+            self.print(
+                trailer.rstrip("\n")
+                % dict(
+                    mode=mode,
+                    modulename=modulename,
+                    n_keywords=len(self.callmakervisitor.keyword_cache),
+                )
+            )
+
+    def _setup_keywords(self) -> None:
+        self.print("static KeywordToken reserved_keywords[] = {")
+        with self.indent():
+            for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
+                self.print(f'{{"{keyword_str}", {keyword_type}}},')
+        self.print("};")
 
     def _set_up_token_start_metadata_extraction(self) -> None:
         self.print("if (p->mark == p->fill && fill_token(p) < 0) {")
