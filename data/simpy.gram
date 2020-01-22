@@ -14,16 +14,16 @@ small_stmt[stmt_ty]:
     | e=expressions { _Py_Expr(e, EXTRA) }
     | return_stmt
     | import_stmt
-    | pass_stmt
     | raise_stmt
+    | pass_stmt
+    | del_stmt
     | yield_stmt
     | assert_stmt
-    | del_stmt
-    | global_stmt
-    | nonlocal_stmt
     | break_stmt
     | continue_stmt
-compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
+    | global_stmt
+    | nonlocal_stmt
+compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stmt | try_stmt | while_stmt
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
@@ -328,13 +328,13 @@ await_primary[expr_ty]:
     | primary
 primary[expr_ty]:
     | a=primary '.' b=NAME { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
-    | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
     | a=primary b=genexp { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
+    | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
     | atom
 
 slicing[slice_ty]:
@@ -357,14 +357,14 @@ atom[expr_ty]:
     | 'None' { _Py_Constant(Py_None, NULL, EXTRA) }
     | a=STRING+ { concatenate_strings(p, a) }
     | NUMBER
-    | list
     | tuple
-    | listcomp
+    | list
     | dict
-    | dictcomp
+    | listcomp
     | group
     | genexp
     | set
+    | dictcomp
     | setcomp
     | '...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA) }
 
