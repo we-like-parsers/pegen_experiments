@@ -10,20 +10,20 @@ simple_stmt[asdl_seq*]: a=';'.small_stmt+ [';'] NEWLINE { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt[stmt_ty]:
-    | return_stmt
-    | import_stmt
-    | pass_stmt
-    | raise_stmt
-    | yield_stmt
-    | assert_stmt
-    | del_stmt
-    | global_stmt
-    | nonlocal_stmt
-    | break_stmt
-    | continue_stmt
     | assignment
     | e=expressions { _Py_Expr(e, EXTRA) }
-compound_stmt[stmt_ty]: if_stmt | while_stmt | for_stmt | with_stmt | try_stmt | function_def | class_def
+    | return_stmt
+    | import_stmt
+    | raise_stmt
+    | pass_stmt
+    | del_stmt
+    | yield_stmt
+    | assert_stmt
+    | break_stmt
+    | continue_stmt
+    | global_stmt
+    | nonlocal_stmt
+compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stmt | try_stmt | while_stmt
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
@@ -195,7 +195,7 @@ class_def_raw[stmt_ty]:
                      (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                      c, NULL, EXTRA) }
 
-block[asdl_seq*]: simple_stmt | NEWLINE INDENT a=statements DEDENT { a }
+block[asdl_seq*]: NEWLINE INDENT a=statements DEDENT { a } | simple_stmt
 
 expressions_list[asdl_seq*]: a=','.star_expression+ [','] { a }
 expressions[expr_ty]:
@@ -216,9 +216,9 @@ named_expression[expr_ty]:
     | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
-    | lambdef
     | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA) }
     | disjunction
+    | lambdef
 
 lambdef[expr_ty]:
     | 'lambda' a=[lambda_parameters] ':' b=expression { _Py_Lambda((a) ? a : empty_arguments(p), b, EXTRA) }
@@ -328,13 +328,13 @@ await_primary[expr_ty]:
     | primary
 primary[expr_ty]:
     | a=primary '.' b=NAME { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
-    | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
     | a=primary b=genexp { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
+    | a=primary b=slicing { _Py_Subscript(a, b, Load, EXTRA) }
     | atom
 
 slicing[slice_ty]:
@@ -351,21 +351,21 @@ slice[slice_ty]:
     | a=expression { _Py_Index(a, p->arena) }
 # STRING+'s output is just a hack for now 
 atom[expr_ty]:
-    | list
-    | listcomp
-    | tuple
-    | group
-    | genexp
-    | set
-    | setcomp
-    | dict
-    | dictcomp
+    | NAME
     | 'True' { _Py_Constant(Py_True, NULL, EXTRA) }
     | 'False' { _Py_Constant(Py_False, NULL, EXTRA) }
     | 'None' { _Py_Constant(Py_None, NULL, EXTRA) }
-    | NAME
     | a=STRING+ { concatenate_strings(p, a) }
     | NUMBER
+    | tuple
+    | list
+    | dict
+    | listcomp
+    | group
+    | genexp
+    | set
+    | dictcomp
+    | setcomp
     | '...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA) }
 
 list[expr_ty]:
