@@ -26,13 +26,24 @@ from typing import Any, List
 sys.path.insert(0, ".")
 
 from pegen.build import build_parser
-from pegen.grammar import Alt, Cut, Grammar, Group, Leaf, Lookahead, Rule, NameLeaf, NamedItem, Opt, Repeat, Rhs
-
-argparser = argparse.ArgumentParser(
-    prog="graph_grammar",
-    description="Graph a grammar tree",
+from pegen.grammar import (
+    Alt,
+    Cut,
+    Grammar,
+    Group,
+    Leaf,
+    Lookahead,
+    Rule,
+    NameLeaf,
+    NamedItem,
+    Opt,
+    Repeat,
+    Rhs,
 )
+
+argparser = argparse.ArgumentParser(prog="graph_grammar", description="Graph a grammar tree",)
 argparser.add_argument("grammar_file", help="The grammar file to graph")
+
 
 def references_for_item(item: Any) -> List[Any]:
     if isinstance(item, Alt):
@@ -48,7 +59,7 @@ def references_for_item(item: Any) -> List[Any]:
 
     # NOTE NameLeaf must be before Leaf
     elif isinstance(item, NameLeaf):
-        if item.value == 'ENDMARKER':
+        if item.value == "ENDMARKER":
             return []
         return [item.value]
     elif isinstance(item, Leaf):
@@ -65,6 +76,7 @@ def references_for_item(item: Any) -> List[Any]:
     else:
         raise RuntimeError(f"Unknown item: {type(item)}")
 
+
 def main() -> None:
     args = argparser.parse_args()
 
@@ -79,20 +91,21 @@ def main() -> None:
         references[name] = set(references_for_item(rule))
 
     # Flatten the start node if has only a single reference
-    root_node = 'start'
-    if start := references['start']:
+    root_node = "start"
+    if start := references["start"]:
         if len(start) == 1:
             root_node = list(start)[0]
-            del references['start']
+            del references["start"]
 
     print("digraph g1 {")
-    print("\toverlap=\"scale\";")   # Force twopi to scale the graph to avoid overlaps
-    print(f"\troot=\"{root_node}\";")
+    print('\toverlap="scale";')  # Force twopi to scale the graph to avoid overlaps
+    print(f'\troot="{root_node}";')
     print(f"\t{root_node} [color=green, shape=circle]")
     for name, refs in references.items():
-        if refs:    # Ignore empty sets
+        if refs:  # Ignore empty sets
             print(f"\t{name} -> {','.join(refs)};")
     print("}")
+
 
 if __name__ == "__main__":
     main()
