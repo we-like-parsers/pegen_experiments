@@ -281,30 +281,30 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             )
 
     def _group_keywords_by_length(self) -> Dict[int, List[Tuple[str, int]]]:
-        keywords: Dict[int, List[Tuple[str, int]]] = {}
+        groups: Dict[int, List[Tuple[str, int]]] = {}
         for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
             length = len(keyword_str)
-            if length in keywords:
-                keywords[length].append((keyword_str, keyword_type))
+            if length in groups:
+                groups[length].append((keyword_str, keyword_type))
             else:
-                keywords[length] = [(keyword_str, keyword_type)]
-        return keywords
+                groups[length] = [(keyword_str, keyword_type)]
+        return groups
 
     def _setup_keywords(self) -> None:
-        keywords = self._group_keywords_by_length()
+        groups = self._group_keywords_by_length()
         self.print("static KeywordToken *reserved_keywords[] = {")
         with self.indent():
-            last_known_length = 0
-            for keywords_length, keywords_list in sorted(keywords.items(), key=lambda x: x[0]):
-                for j in range(last_known_length, keywords_length):
+            num_groups = max(groups) + 1 if groups else 1
+            for keywords_length in range(num_groups):
+                if keywords_length not in groups.keys():
                     self.print("NULL,")
-                last_known_length = keywords_length + 1
-                self.print("(KeywordToken[]) {")
-                with self.indent():
-                    for keyword_str, keyword_type in keywords_list:
-                        self.print(f'{{"{keyword_str}", {keyword_type}}},')
-                    self.print("{NULL, -1},")
-                self.print("},")
+                else:
+                    self.print("(KeywordToken[]) {")
+                    with self.indent():
+                        for keyword_str, keyword_type in groups[keywords_length]:
+                            self.print(f'{{"{keyword_str}", {keyword_type}}},')
+                        self.print("{NULL, -1},")
+                    self.print("},")
         self.print("};")
 
     def _set_up_token_start_metadata_extraction(self) -> None:
