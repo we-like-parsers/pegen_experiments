@@ -295,11 +295,11 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         keywords = self._group_keywords_by_length()
         self.print("static KeywordToken *reserved_keywords[] = {")
         with self.indent():
-            i = 0
+            last_known_length = 0
             for keywords_length, keywords_list in sorted(keywords.items(), key=lambda x: x[0]):
-                for j in range(i, keywords_length):
+                for j in range(last_known_length, keywords_length):
                     self.print("NULL,")
-                i = keywords_length + 1
+                last_known_length = keywords_length + 1
                 self.print("(KeywordToken[]) {")
                 with self.indent():
                     for keyword_str, keyword_type in keywords_list:
