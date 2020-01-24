@@ -39,7 +39,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_file(filename, (void *)start_rule, mode, reserved_keywords, %(max_keyword_length)s);
+    return run_parser_from_file(filename, (void *)start_rule, mode, reserved_keywords, %(n_keyword_lists)s);
 }
 
 static PyObject *
@@ -53,7 +53,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_string(the_string, (void *)start_rule, mode, reserved_keywords, %(max_keyword_length)s);
+    return run_parser_from_string(the_string, (void *)start_rule, mode, reserved_keywords, %(n_keyword_lists)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -267,16 +267,15 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 mode += 1
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
+        keyword_cache = self.callmakervisitor.keyword_cache
         if trailer:
             self.print(
                 trailer.rstrip("\n")
                 % dict(
                     mode=mode,
                     modulename=modulename,
-                    max_keyword_length=len(
-                        max(self.callmakervisitor.keyword_cache.keys(), key=len)
-                    )
-                    if len(self.callmakervisitor.keyword_cache) > 0
+                    n_keyword_lists=len(max(keyword_cache.keys(), key=len)) + 1
+                    if len(keyword_cache) > 0
                     else 0,
                 )
             )
