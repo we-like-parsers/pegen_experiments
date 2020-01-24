@@ -281,8 +281,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 )
             )
 
-    def _group_keywords_by_length(self) -> Dict[int, Tuple[str, int]]:
-        keywords = {}
+    def _group_keywords_by_length(self) -> Dict[int, List[Tuple[str, int]]]:
+        keywords: Dict[int, List[Tuple[str, int]]] = {}
         for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
             length = len(keyword_str)
             if length in keywords:
