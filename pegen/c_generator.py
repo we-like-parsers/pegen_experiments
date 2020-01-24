@@ -39,7 +39,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_file(filename, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
+    return run_parser_from_file(filename, (void *)start_rule, mode, reserved_keywords, %(max_keyword_length)s);
 }
 
 static PyObject *
@@ -53,7 +53,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_string(the_string, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
+    return run_parser_from_string(the_string, (void *)start_rule, mode, reserved_keywords, %(max_keyword_length)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -273,15 +273,39 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 % dict(
                     mode=mode,
                     modulename=modulename,
-                    n_keywords=len(self.callmakervisitor.keyword_cache),
+                    max_keyword_length=len(
+                        max(self.callmakervisitor.keyword_cache.keys(), key=len)
+                    )
+                    if len(self.callmakervisitor.keyword_cache) > 0
+                    else 0,
                 )
             )
 
+    def _group_keywords_by_length(self) -> Dict[int, Tuple[str, int]]:
+        keywords = {}
+        for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
+            length = len(keyword_str)
+            if length in keywords:
+                keywords[length].append((keyword_str, keyword_type))
+            else:
+                keywords[length] = [(keyword_str, keyword_type)]
+        return keywords
+
     def _setup_keywords(self) -> None:
-        self.print("static KeywordToken reserved_keywords[] = {")
+        keywords = self._group_keywords_by_length()
+        self.print("static KeywordToken *reserved_keywords[] = {")
         with self.indent():
-            for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
-                self.print(f'{{"{keyword_str}", {keyword_type}}},')
+            i = 0
+            for keywords_length, keywords_list in sorted(keywords.items(), key=lambda x: x[0]):
+                for j in range(i, keywords_length):
+                    self.print("NULL,")
+                i = keywords_length + 1
+                self.print("(KeywordToken[]) {")
+                with self.indent():
+                    for keyword_str, keyword_type in keywords_list:
+                        self.print(f'{{"{keyword_str}", {keyword_type}}},')
+                    self.print("{NULL, -1},")
+                self.print("},")
         self.print("};")
 
     def _set_up_token_start_metadata_extraction(self) -> None:
