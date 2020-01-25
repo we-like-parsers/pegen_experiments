@@ -39,7 +39,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_file(filename, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
+    return run_parser_from_file(filename, (void *)start_rule, mode, reserved_keywords, %(n_keyword_lists)s);
 }
 
 static PyObject *
@@ -53,7 +53,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     if (mode < 0 || mode > %(mode)s)
         return PyErr_Format(PyExc_ValueError, "Bad mode, must be 0 <= mode <= %(mode)s");
-    return run_parser_from_string(the_string, (void *)start_rule, mode, &reserved_keywords, %(n_keywords)s);
+    return run_parser_from_string(the_string, (void *)start_rule, mode, reserved_keywords, %(n_keyword_lists)s);
 }
 
 static PyMethodDef ParseMethods[] = {
@@ -267,21 +267,44 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 mode += 1
         modulename = self.grammar.metas.get("modulename", "parse")
         trailer = self.grammar.metas.get("trailer", EXTENSION_SUFFIX)
+        keyword_cache = self.callmakervisitor.keyword_cache
         if trailer:
             self.print(
                 trailer.rstrip("\n")
                 % dict(
                     mode=mode,
                     modulename=modulename,
-                    n_keywords=len(self.callmakervisitor.keyword_cache),
+                    n_keyword_lists=len(max(keyword_cache.keys(), key=len)) + 1
+                    if len(keyword_cache) > 0
+                    else 0,
                 )
             )
 
+    def _group_keywords_by_length(self) -> Dict[int, List[Tuple[str, int]]]:
+        groups: Dict[int, List[Tuple[str, int]]] = {}
+        for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
+            length = len(keyword_str)
+            if length in groups:
+                groups[length].append((keyword_str, keyword_type))
+            else:
+                groups[length] = [(keyword_str, keyword_type)]
+        return groups
+
     def _setup_keywords(self) -> None:
-        self.print("static KeywordToken reserved_keywords[] = {")
+        groups = self._group_keywords_by_length()
+        self.print("static KeywordToken *reserved_keywords[] = {")
         with self.indent():
-            for keyword_str, keyword_type in self.callmakervisitor.keyword_cache.items():
-                self.print(f'{{"{keyword_str}", {keyword_type}}},')
+            num_groups = max(groups) + 1 if groups else 1
+            for keywords_length in range(num_groups):
+                if keywords_length not in groups.keys():
+                    self.print("NULL,")
+                else:
+                    self.print("(KeywordToken[]) {")
+                    with self.indent():
+                        for keyword_str, keyword_type in groups[keywords_length]:
+                            self.print(f'{{"{keyword_str}", {keyword_type}}},')
+                        self.print("{NULL, -1},")
+                    self.print("},")
         self.print("};")
 
     def _set_up_token_start_metadata_extraction(self) -> None:

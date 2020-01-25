@@ -29,8 +29,8 @@ typedef struct {
     int mark;
     int fill, size;
     PyArena *arena;
-    KeywordToken (*keywords)[];
-    int n_keywords;
+    KeywordToken **keywords;
+    int n_keyword_lists;
 } Parser;
 
 typedef struct {
@@ -100,13 +100,13 @@ void *CONSTRUCTOR(Parser *p, ...);
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),
                                int mode,
-                               KeywordToken (*keywords_list)[],
-                               int n_keywords);
+                               KeywordToken **keywords_list,
+                               int n_keyword_lists);
 PyObject *run_parser_from_string(const char *str,
                                  void *(start_rule_func)(Parser *),
                                  int mode,
-                                 KeywordToken (*keywords_list)[],
-                                 int n_keywords);
+                                 KeywordToken **keywords_list,
+                                 int n_keyword_lists);
 asdl_seq *singleton_seq(Parser *, void *);
 asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);
 asdl_seq *seq_flatten(Parser *, asdl_seq *);
