@@ -1751,6 +1751,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
     PyErr_Clear();
     mod = the_start_rule(p2);
 
+
     PyTokenizer_Free(tok);
 
     /* Reuse str to find the correct column offset. */
@@ -1766,7 +1767,14 @@ exit:
     }
     PyMem_Free(p2->tokens);
     PyMem_Free(p2);
-    return mod == NULL ? NULL : mod->v.Expression.body;
+    if (mod == NULL) {
+        return NULL;
+    }
+    if (asdl_seq_LEN(mod->v.Module.body) != 1) {
+        raise_syntax_error(p, "f-string: invalid expression");
+    }
+    expr_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
+    return expr->v.Subscript.value;
 }
 
 /* Return -1 on error.
