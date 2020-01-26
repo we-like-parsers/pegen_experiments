@@ -236,5 +236,5 @@ def test_multiple_nullable_rules() -> None:
         "thing": {"'+'", ""},
         "start": {"'+'", "'-'", "'*'"},
         "other": {"'*'"},
-        "another": {"'/'"}
+        "another": {"'/'"},
     }

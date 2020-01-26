@@ -21,12 +21,15 @@ matrix:
       script:
           - make mypy
 
+    - name: "black"
+      script:
+          - python -m black pegen tatsu test scripts --check
+
     - name: "pytest"
       script:
           - python -m pytest -v --cov=pegen --cov-report term
       after_success:
           - coveralls
-
 
     - name: "makefile_targets"
       script:
