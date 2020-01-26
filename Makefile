@@ -101,9 +101,21 @@ bench: cpython
 	$(MAKE) -s simpy_cpython 2>/dev/null
 	$(MAKE) -s simpy_cpython 2>/dev/null
 
+# To install clang-format:
+#    on mac: "brew install clang-format"
+#    on ubuntu: "apt-get install clang-format"
+#    on arch: "pacman -S clang"
 format-c:
 	clang-format pegen/pegen.c -i
 
+# To install clang-tidy:
+#    on mac:
+#       "brew install llvm"
+#       Then, create symlinks to the binaries. For example:
+#       ln -s "$(brew --prefix llvm)/bin/clang-format" "/usr/local/bin/clang-format"
+#       ln -s "$(brew --prefix llvm)/bin/clang-tidy" "/usr/local/bin/clang-tidy"
+#    on ubuntu: "apt-get install clang-tidy"
+#    on arch: "pacman -S clang"
 clang-tidy:
 	$(eval COMPILE_OPTIONS = $(shell python-config --cflags))
 	clang-tidy pegen/pegen.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
