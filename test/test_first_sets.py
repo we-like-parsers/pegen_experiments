@@ -108,7 +108,7 @@ def test_repeat_1() -> None:
     start: thing+ '-' NEWLINE
     thing: NUMBER
     """
-    assert calculate_first_sets(grammar) == {'thing': {'NUMBER'}, 'start': {'NUMBER'}}
+    assert calculate_first_sets(grammar) == {"thing": {"NUMBER"}, "start": {"NUMBER"}}
 
 
 def test_repeat_1_with_group() -> None:
@@ -177,7 +177,7 @@ def test_advance_left_recursion() -> None:
     start: NUMBER | sign start
     sign: ['-']
     """
-    assert calculate_first_sets(grammar) == {"sign": {"'-'"}, "start": {"'-'", "NUMBER"}}
+    assert calculate_first_sets(grammar) == {"sign": {"'-'", ""}, "start": {"'-'", "NUMBER"}}
 
 
 def test_mutual_left_recursion() -> None:
@@ -201,3 +201,40 @@ def test_nasty_left_recursion() -> None:
     maybe: maybe '-' | target
     """
     assert calculate_first_sets(grammar) == {"maybe": set(), "target": {"NAME"}, "start": {"NAME"}}
+
+
+def test_nullable_rule() -> None:
+    grammar = """
+    start: sign thing $
+    sign: ['-']
+    thing: NUMBER
+    """
+    assert calculate_first_sets(grammar) == {
+        "sign": {"", "'-'"},
+        "thing": {"NUMBER"},
+        "start": {"NUMBER", "'-'"},
+    }
+
+
+def test_epsilon_production_in_start_rule() -> None:
+    grammar = """
+    start: ['-'] $
+    """
+    assert calculate_first_sets(grammar) == {"start": {"ENDMARKER", "'-'"}}
+
+
+def test_multiple_nullable_rules() -> None:
+    grammar = """
+    start: sign thing other another $
+    sign: ['-']
+    thing: ['+']
+    other: '*'
+    another: '/'
+    """
+    assert calculate_first_sets(grammar) == {
+        "sign": {"", "'-'"},
+        "thing": {"'+'", ""},
+        "start": {"'+'", "'-'", "'*'"},
+        "other": {"'*'"},
+        "another": {"'/'"}
+    }

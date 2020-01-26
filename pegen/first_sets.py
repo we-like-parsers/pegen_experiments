@@ -38,6 +38,8 @@ argparser.add_argument("grammar_file", help="The grammar file")
 class FirstSetCalculator(GrammarVisitor):
     def __init__(self, rules: Dict[str, Rule]) -> None:
         self.rules = rules
+        for rule in rules.values():
+            rule.nullable_visit(rules)
         self.first_sets: Dict[str, Set[str]] = dict()
         self.in_process: Set[str] = set()
 
@@ -56,8 +58,21 @@ class FirstSetCalculator(GrammarVisitor):
             result |= new_terminals
             if to_remove:
                 result -= to_remove
+
+            # If the set of new terminals can start with the empty string,
+            # it means that the item is completelly nullable and we should
+            # also considering at least the next item in case the current
+            # one fails to parse.
+
+            if "" in new_terminals:
+                continue
+
             if not isinstance(other.item, (Opt, NegativeLookahead, Repeat0)):
                 break
+
+        # Do not allow the empty string to propagate.
+        result.discard("")
+
         return result
 
     def visit_Cut(self, item: Cut) -> Set[str]:
@@ -113,7 +128,10 @@ class FirstSetCalculator(GrammarVisitor):
             return set()
         elif item.name not in self.first_sets:
             self.in_process.add(item.name)
-            self.first_sets[item.name] = self.visit(item.rhs)
+            terminals = self.visit(item.rhs)
+            if item.nullable:
+                terminals.add("")
+            self.first_sets[item.name] = terminals
             self.in_process.remove(item.name)
         return self.first_sets[item.name]
 
