@@ -1725,7 +1725,31 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
         return NULL;
     }
     mod_ty (*the_start_rule)(Parser*) = p->start_rule_func;
-    mod = the_start_rule(p);
+
+    Parser *p2 = PyMem_Malloc(sizeof(Parser));
+    if (p2 == NULL) {
+        PyErr_Format(PyExc_MemoryError, "Out of memory for Parser");
+        goto exit;
+    }
+    p2->tok = tok;
+    p2->keywords = p->keywords;
+    p2->n_keyword_lists = p->n_keyword_lists;
+    p2->tokens = PyMem_Malloc(sizeof(Token *));
+    if (!p2->tokens) {
+        PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
+        goto exit;
+    }
+    p2->tokens[0] = PyMem_Malloc(sizeof(Token));
+    memset(p->tokens[0], '\0', sizeof(Token));
+    p2->mark = 0;
+    p2->fill = 0;
+    p2->size = 1;
+    p2->arena = p->arena;
+    if (fill_token(p2) < 0) {
+        goto exit;
+    }
+    PyErr_Clear();
+    mod = the_start_rule(p2);
 
     PyTokenizer_Free(tok);
 
@@ -1735,7 +1759,14 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
     if (!mod) {
         return NULL;
     }
-    return mod->v.Expression.body;
+
+exit:
+    for (int i = 0; i < p2->size; i++) {
+        PyMem_Free(p2->tokens[i]);
+    }
+    PyMem_Free(p2->tokens);
+    PyMem_Free(p2);
+    return mod == NULL ? NULL : mod->v.Expression.body;
 }
 
 /* Return -1 on error.
@@ -2556,6 +2587,7 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     PyObject *u_kind = NULL;
     int kind_unicode = 0;
     PyObject *final_str = NULL;
+    return first;
 
     // TODO(Pablo): This assert will fail because we are returning
     // JoinedStr now here: We need to add logic to join f-strings!
