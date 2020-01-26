@@ -1,6 +1,6 @@
-PYTHON ?= `/usr/bin/which python3.8`
-CPYTHON ?= "./cpython"
-MYPY ?= `/usr/bin/which mypy`
+PYTHON ?= python3.8
+CPYTHON ?= cpython
+MYPY ?= mypy
 
 GRAMMAR = data/simpy.gram
 TESTFILE = data/cprog.txt
@@ -62,7 +62,7 @@ time_stdlib_compile:
 time_stdlib_parse:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
-simpy:
+simpy: clean-cpython
 	$(PYTHON) scripts/test_parse_directory.py \
 		-g data/simpy.gram \
 		-d $(TESTDIR) \
@@ -71,7 +71,7 @@ simpy:
 		--exclude "*/failset/**" \
 		--exclude "*/failset/**/*"
 
-simpy_cpython:
+simpy_cpython: $(CPYTHON)
 	$(PYTHON) scripts/test_parse_directory.py \
 		-g data/simpy.gram \
 		-d $(CPYTHON) \
@@ -81,11 +81,25 @@ simpy_cpython:
 		--exclude "*/bad*" \
 		--exclude "*/lib2to3/tests/data/*"
 
+# To create the tarball, go to the parent of a clean cpython checkout,
+# and run `tar cf cpython-lib.tgz cpython/Lib`.  (This will include
+# non .py files that aren't needed, but they're harmless.)
+cpython:
+	tar xf data/cpython-lib.tgz
+
+clean-cpython:
+	-rm -rf cpython
+
 mypy: regen-metaparser
 	$(MYPY)  # For list of files, see mypy.ini
 
 black:
 	black pegen tatsu test scripts
+
+bench: cpython
+	$(MAKE) -s simpy_cpython 2>/dev/null
+	$(MAKE) -s simpy_cpython 2>/dev/null
+	$(MAKE) -s simpy_cpython 2>/dev/null
 
 find_max_nesting:
 	$(PYTHON) scripts/find_max_nesting.py
