@@ -90,7 +90,7 @@ class ParserGenerator:
     def name_node(self, rhs: Rhs) -> str:
         self.counter += 1
         name = f"_tmp_{self.counter}"  # TODO: Pick a nicer name.
-        self.todo[name] = Rule(name, None, rhs)
+        self.todo[name] = Rule(name, None, rhs, generated=True)
         return name
 
     def name_loop(self, node: Plain, is_repeat1: bool) -> str:

@@ -6,6 +6,7 @@
 #include <token.h>
 #include <Python-ast.h>
 #include <pyarena.h>
+#include <setjmp.h>
 
 enum INPUT_MODE {
     FILE_INPUT,
@@ -109,6 +110,22 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
 PyObject *new_identifier(Parser *, char *);
+jmp_buf error_marker;
+
+#define PROPAGATE_ERROR(errno) \
+    if (!PyErr_Occurred()) { \
+        PyErr_Format(PyExc_RuntimeError, "Unknown error occured when parsing"); \
+    } \
+    longjmp(error_marker, errno); \
+    Py_UNREACHABLE();
+
+static inline void* CHECK_CALL(void* result) {
+    if (result == NULL) {
+        PROPAGATE_ERROR(-1);
+    }
+    return result;
+}
+
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),
                                int mode,

@@ -596,6 +596,12 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
+    int error = setjmp(error_marker);
+    if (error) {
+        PyTokenizer_Free(tok);
+        goto error;
+    }
+
     result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, n_keyword_lists);
 
     PyTokenizer_Free(tok);
@@ -615,11 +621,19 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
     if (tok == NULL) {
         return NULL;
     }
+
+    int error = setjmp(error_marker);
+    if (error) {
+        PyTokenizer_Free(tok);
+        return NULL;
+    }
+
     tok->filename = PyUnicode_FromString("<string>");
     if (tok->filename == NULL) {
         goto exit;
     }
     result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, n_keyword_lists);
+
 exit:
     PyTokenizer_Free(tok);
     return result;

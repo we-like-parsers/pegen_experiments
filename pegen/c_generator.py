@@ -373,6 +373,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 is_loop=False,
                 is_gather=node.is_gather(),
                 rulename=node.name if memoize else None,
+                generated=node.generated,
             )
             if self.debug:
                 self.print(f'fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark);')
@@ -405,6 +406,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 is_loop=True,
                 is_gather=node.is_gather(),
                 rulename=node.name if memoize else None,
+                generated=node.generated,
             )
             if is_repeat1:
                 self.print("if (n == 0) {")
@@ -458,12 +460,14 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"({name} = {call})")
 
     def visit_Rhs(
-        self, node: Rhs, is_loop: bool, is_gather: bool, rulename: Optional[str]
+        self, node: Rhs, is_loop: bool, is_gather: bool, rulename: Optional[str], generated: bool,
     ) -> None:
         if is_loop:
             assert len(node.alts) == 1
         for alt in node.alts:
-            self.visit(alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename)
+            self.visit(
+                alt, is_loop=is_loop, is_gather=is_gather, rulename=rulename, generated=generated
+            )
 
     def join_conditions(self, keyword: str, node: Any, names: List[str]) -> None:
         self.print(f"{keyword} (")
@@ -477,8 +481,14 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 self.visit(item, names=names)
         self.print(")")
 
-    def emit_action(self, node: Alt) -> None:
+    def emit_action(self, node: Alt, generated: bool) -> None:
         self.print(f"res = {node.action};")
+        if not generated:
+            self.print("if (res == NULL){")
+            with self.indent():
+                self.print("PROPAGATE_ERROR(-1);")
+            self.print("}")
+
         if self.debug:
             self.print(
                 f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
@@ -505,7 +515,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     def emit_dummy_action(self) -> None:
         self.print(f"res = CONSTRUCTOR(p);")
 
-    def handle_alt_normal(self, node: Alt, is_gather: bool, names: List[str]) -> None:
+    def handle_alt_normal(
+        self, node: Alt, is_gather: bool, names: List[str], generated: bool
+    ) -> None:
         self.join_conditions(keyword="if", node=node, names=names)
         self.print("{")
         # We have parsed successfully all the conditions for the option.
@@ -516,7 +528,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             if self.skip_actions:
                 self.emit_dummy_action()
             elif node.action:
-                self.emit_action(node)
+                self.emit_action(node, generated)
             else:
                 self.emit_default_action(is_gather, names, node)
 
@@ -525,7 +537,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print("}")
 
     def handle_alt_loop(
-        self, node: Alt, is_gather: bool, rulename: Optional[str], names: List[str]
+        self,
+        node: Alt,
+        is_gather: bool,
+        rulename: Optional[str],
+        names: List[str],
+        generated: bool,
     ) -> None:
         # Condition of the main body of the alternative
         self.join_conditions(keyword="while", node=node, names=names)
@@ -538,7 +555,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             if self.skip_actions:
                 self.emit_dummy_action()
             elif node.action:
-                self.emit_action(node)
+                self.emit_action(node, generated)
             else:
                 self.emit_default_action(is_gather, names, node)
 
@@ -555,7 +572,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print("}")
 
     def visit_Alt(
-        self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str]
+        self, node: Alt, is_loop: bool, is_gather: bool, rulename: Optional[str], generated: bool,
     ) -> None:
         self.print(f"{{ // {node}")
         with self.indent():
@@ -572,9 +589,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
             names: List[str] = []
             if is_loop:
-                self.handle_alt_loop(node, is_gather, rulename, names)
+                self.handle_alt_loop(node, is_gather, rulename, names, generated)
             else:
-                self.handle_alt_normal(node, is_gather, names)
+                self.handle_alt_normal(node, is_gather, names, generated)
 
             self.print("p->mark = mark;")
             if "cut_var" in names:

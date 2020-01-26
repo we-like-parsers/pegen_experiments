@@ -344,3 +344,14 @@ def test_extension_name(tmp_path: PurePath) -> None:
 
     assert "PyInit_alternative_name" in parser_source
     assert '.m_name = "alternative_name"' in parser_source
+
+
+def test_error_in_rules(tmp_path: PurePath) -> None:
+    grammar_source = """
+    start: expr+ NEWLINE? ENDMARKER
+    expr: NAME {NULL}
+    """
+    grammar = parse_string(grammar_source, GrammarParser)
+    extension = generate_parser_c_extension(grammar, tmp_path)
+    with pytest.raises(RuntimeError):
+        extension.parse_string("a")
