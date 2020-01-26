@@ -62,7 +62,7 @@ time_stdlib_compile:
 time_stdlib_parse:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
-simpy: no-cpython
+simpy: clean-cpython
 	$(PYTHON) scripts/test_parse_directory.py \
 		-g data/simpy.gram \
 		-d $(TESTDIR) \
@@ -81,10 +81,13 @@ simpy_cpython: $(CPYTHON)
 		--exclude "*/bad*" \
 		--exclude "*/lib2to3/tests/data/*"
 
+# To create the tarball, go to the parent of a clean cpython checkout,
+# and run `tar cf cpython-lib.tgz cpython/Lib`.  (This will include
+# non .py files that aren't needed, but they're harmless.)
 cpython:
 	tar xf data/cpython-lib.tgz
 
-no-cpython:
+clean-cpython:
 	-rm -rf cpython
 
 mypy: regen-metaparser
@@ -97,7 +100,6 @@ bench: cpython
 	$(MAKE) -s simpy_cpython 2>/dev/null
 	$(MAKE) -s simpy_cpython 2>/dev/null
 	$(MAKE) -s simpy_cpython 2>/dev/null
-
 
 find_max_nesting:
 	$(PYTHON) scripts/find_max_nesting.py
