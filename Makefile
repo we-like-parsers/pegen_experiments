@@ -93,7 +93,7 @@ clean-cpython:
 mypy: regen-metaparser
 	$(MYPY)  # For list of files, see mypy.ini
 
-black:
+format-python:
 	black pegen tatsu test scripts
 
 bench: cpython
@@ -101,12 +101,14 @@ bench: cpython
 	$(MAKE) -s simpy_cpython 2>/dev/null
 	$(MAKE) -s simpy_cpython 2>/dev/null
 
-format-pegen:
-	$(eval COMPILE_OPTIONS = $(shell python-config --cflags))
-	clang-tidy pegen/pegen.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
+format-c:
 	clang-format pegen/pegen.c -i
 
-format: black format-pegen
+clang-tidy:
+	$(eval COMPILE_OPTIONS = $(shell python-config --cflags))
+	clang-tidy pegen/pegen.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
+
+format: format-python format-c
 
 find_max_nesting:
 	$(PYTHON) scripts/find_max_nesting.py
