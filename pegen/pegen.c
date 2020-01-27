@@ -1619,22 +1619,108 @@ parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **resu
 
 // FSTRING STUFF
 
-/* /1* Shift locations for the given node and all its children by adding `lineno` */
-/*    and `col_offset` to existing locations. *1/ */
-/* static void fstring_shift_node_locations(node *n, int lineno, int col_offset) */
-/* { */
-/*     n->n_col_offset = n->n_col_offset + col_offset; */
-/*     n->n_end_col_offset = n->n_end_col_offset + col_offset; */
-/*     for (int i = 0; i < NCH(n); ++i) { */
-/*         if (n->n_lineno && n->n_lineno < CHILD(n, i)->n_lineno) { */
-/*             /1* Shifting column offsets unnecessary if there's been newlines. *1/ */
-/*             col_offset = 0; */
-/*         } */
-/*         fstring_shift_node_locations(CHILD(n, i), lineno, col_offset); */
-/*     } */
-/*     n->n_lineno = n->n_lineno + lineno; */
-/*     n->n_end_lineno = n->n_end_lineno + lineno; */
-/* } */
+static void fstring_shift_node_locations(expr_ty n, int lineno, int col_offset);
+
+static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offset) {
+    for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
+        fstring_shift_node_locations(asdl_seq_GET(seq, i), lineno, col_offset);
+    }
+}
+
+static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offset) {
+    switch (n->kind) {
+        case BoolOp_kind:
+            fstring_shift_seq_locations(n->v.BoolOp.values, lineno, col_offset);
+            break;
+        case NamedExpr_kind:
+            fstring_shift_node_locations(n->v.NamedExpr.target, lineno, col_offset);
+            fstring_shift_node_locations(n->v.NamedExpr.value, lineno, col_offset);
+            break;
+        case BinOp_kind:
+            fstring_shift_node_locations(n->v.BinOp.left, lineno, col_offset);
+            fstring_shift_node_locations(n->v.BinOp.right, lineno, col_offset);
+            break;
+        case UnaryOp_kind:
+            fstring_shift_node_locations(n->v.UnaryOp.operand, lineno, col_offset);
+            break;
+        case Lambda_kind:
+            fstring_shift_node_locations(n->v.Lambda.body, lineno, col_offset);
+            break;
+        case IfExp_kind:
+            fstring_shift_node_locations(n->v.IfExp.test, lineno, col_offset);
+            fstring_shift_node_locations(n->v.IfExp.body, lineno, col_offset);
+            fstring_shift_node_locations(n->v.IfExp.orelse, lineno, col_offset);
+            break;
+        case Dict_kind:
+            fstring_shift_seq_locations(n->v.Dict.keys, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.Dict.values, lineno, col_offset);
+            break;
+        case Set_kind:
+            fstring_shift_seq_locations(n->v.Set.elts, lineno, col_offset);
+            break;
+        case ListComp_kind:
+            fstring_shift_node_locations(n->v.ListComp.elt, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.ListComp.generators, lineno, col_offset);
+            break;
+        case SetComp_kind:
+            fstring_shift_node_locations(n->v.SetComp.elt, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.SetComp.generators, lineno, col_offset);
+            break;
+        case DictComp_kind:
+            fstring_shift_node_locations(n->v.DictComp.key, lineno, col_offset);
+            fstring_shift_node_locations(n->v.DictComp.value, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.DictComp.generators, lineno, col_offset);
+            break;
+        case GeneratorExp_kind:
+            fstring_shift_node_locations(n->v.GeneratorExp.elt, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.GeneratorExp.generators, lineno, col_offset);
+            break;
+        case Await_kind:
+            fstring_shift_node_locations(n->v.Await.value, lineno, col_offset);
+            break;
+        case Yield_kind:
+            fstring_shift_node_locations(n->v.Yield.value, lineno, col_offset);
+            break;
+        case YieldFrom_kind:
+            fstring_shift_node_locations(n->v.YieldFrom.value, lineno, col_offset);
+            break;
+        case Compare_kind:
+            fstring_shift_node_locations(n->v.Compare.left, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.Compare.comparators, lineno, col_offset);
+            break;
+        case Call_kind:
+            fstring_shift_node_locations(n->v.Call.func, lineno, col_offset);
+            break;
+        case Attribute_kind:
+            fstring_shift_node_locations(n->v.Attribute.value, lineno, col_offset);
+            break;
+        case Subscript_kind:
+            fstring_shift_node_locations(n->v.Subscript.value, lineno, col_offset);
+            break;
+        case Starred_kind:
+            fstring_shift_node_locations(n->v.Starred.value, lineno, col_offset);
+            break;
+        case List_kind:
+            fstring_shift_seq_locations(n->v.List.elts, lineno, col_offset);
+            break;
+        case Tuple_kind:
+            fstring_shift_seq_locations(n->v.Tuple.elts, lineno, col_offset);
+            break;
+        default:
+            return;
+    }
+}
+
+/* Shift locations for the given node and all its children by adding `lineno`
+   and `col_offset` to existing locations. */
+static void fstring_shift_node_locations(expr_ty n, int lineno, int col_offset)
+{
+    n->col_offset = n->col_offset + col_offset;
+    n->end_col_offset = n->end_col_offset + col_offset;
+    fstring_shift_children_locations(n, lineno, col_offset);
+    n->lineno = n->lineno + lineno;
+    n->end_lineno = n->end_lineno + lineno;
+}
 
 /* Fix locations for the given node and its children.
 
@@ -1642,43 +1728,46 @@ parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **resu
    `n` is the node which locations are going to be fixed relative to parent.
    `expr_str` is the child node's string representation, including braces.
 */
-/* static void */
-/* fstring_fix_node_location(const node *parent, node *n, char *expr_str) */
-/* { */
-/*     char *substr = NULL; */
-/*     char *start; */
-/*     int lines = LINENO(parent) - 1; */
-/*     int cols = parent->n_col_offset; */
-/*     /1* Find the full fstring to fix location information in `n`. *1/ */
-/*     while (parent && parent->n_type != STRING) */
-/*         parent = parent->n_child; */
-/*     if (parent && parent->n_str) { */
-/*         substr = strstr(parent->n_str, expr_str); */
-/*         if (substr) { */
-/*             start = substr; */
-/*             while (start > parent->n_str) { */
-/*                 if (start[0] == '\n') */
-/*                     break; */
-/*                 start--; */
-/*             } */
-/*             cols += (int)(substr - start); */
-/*             /1* adjust the start based on the number of newlines encountered */
-/*                before the f-string expression *1/ */
-/*             for (char* p = parent->n_str; p < substr; p++) { */
-/*                 if (*p == '\n') { */
-/*                     lines++; */
-/*                 } */
-/*             } */
-/*         } */
-/*     } */
-/*     fstring_shift_node_locations(n, lines, cols); */
-/* } */
+static void
+fstring_fix_node_location(Token *parent, expr_ty n, char *expr_str)
+{
+    char *substr = NULL;
+    char *start;
+    int lines = parent->lineno - 1;
+    int cols = parent->col_offset;
+
+    if (parent && parent->bytes) {
+        char *parent_str = PyBytes_AsString(parent->bytes);
+        if (!parent_str) {
+            return;
+        }
+        substr = strstr(parent_str, expr_str);
+        if (substr) {
+            start = substr;
+            while (start > parent_str) {
+                if (start[0] == '\n')
+                    break;
+                start--;
+            }
+            cols += (int)(substr - start);
+            /* adjust the start based on the number of newlines encountered
+               before the f-string expression */
+            for (char* p = parent_str; p < substr; p++) {
+                if (*p == '\n') {
+                    lines++;
+                }
+            }
+        }
+    }
+    fstring_shift_node_locations(n, lines, cols);
+}
 
 
 /* Compile this expression in to an expr_ty.  Add parens around the
    expression, in order to allow leading spaces in the expression. */
 static expr_ty
-fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
+fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
+                     Token *t)
 {
     mod_ty mod;
     char *str;
@@ -1750,13 +1839,14 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end)
     }
     PyErr_Clear();
     mod = the_start_rule(p2);
-
+    stmt_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
 
     PyTokenizer_Free(tok);
 
     /* Reuse str to find the correct column offset. */
     str[0] = '{';
     str[len+1] = '}';
+    fstring_fix_node_location(t, expr->v.Expr.value, str);
     if (!mod) {
         return NULL;
     }
@@ -1773,7 +1863,7 @@ exit:
     if (asdl_seq_LEN(mod->v.Module.body) != 1) {
         raise_syntax_error(p, "f-string: invalid expression");
     }
-    return expr->v.Subscript.value;
+    return expr->v.Expr.value;
 }
 
 /* Return -1 on error.
@@ -1882,7 +1972,7 @@ fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse
    not a debug expression, *expr_text set to NULL. */
 static int
 fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-                  PyObject **expr_text, expr_ty *expression)
+                  PyObject **expr_text, expr_ty *expression, Token *t)
 {
     /* Return -1 on error, else 0. */
 
@@ -2062,7 +2152,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
     /* Compile the expression as soon as possible, so we show errors
        related to the expression before errors related to the
        conversion or format_spec. */
-    simple_expression = fstring_compile_expr(p, expr_start, expr_end);
+    simple_expression = fstring_compile_expr(p, expr_start, expr_end, t);
     if (!simple_expression)
         goto error;
 
@@ -2136,7 +2226,9 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
        entire expression with the conversion and format spec. */
     //TODO: Fix this
     *expression = FormattedValue(simple_expression, conversion,
-                                 format_spec, 1, 1, 1, 1, p->arena);
+                                 format_spec, t->lineno, t->col_offset,
+                                 t->end_lineno, t->end_col_offset,
+                                 p->arena);
     if (!*expression)
         goto error;
 
@@ -2207,7 +2299,7 @@ fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int 
     assert(**str == '{');
 
     if (fstring_find_expr(p, str, end, raw, recurse_lvl, expr_text,
-                          expression) < 0)
+                          expression, t) < 0)
         goto error;
 
     return 0;
@@ -2459,7 +2551,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
            see below). */
         int result = fstring_find_literal_and_expr(p, str, end, raw, recurse_lvl,
                                                    &literal, &expr_text,
-                                                   &expression);
+                                                   &expression, t);
         if (result < 0)
             return -1;
 
