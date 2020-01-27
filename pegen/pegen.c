@@ -1773,7 +1773,6 @@ exit:
     if (asdl_seq_LEN(mod->v.Module.body) != 1) {
         raise_syntax_error(p, "f-string: invalid expression");
     }
-    expr_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
     return expr->v.Subscript.value;
 }
 
