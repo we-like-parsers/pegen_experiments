@@ -2113,7 +2113,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
             goto unexpected_end_of_string;
 
         /* Parse the format spec. */
-        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, NULL);
+        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, t);
         if (!format_spec)
             goto error;
     }
@@ -2178,7 +2178,8 @@ error:
 static int
 fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int raw,
                               int recurse_lvl, PyObject **literal,
-                              PyObject **expr_text, expr_ty *expression)
+                              PyObject **expr_text, expr_ty *expression,
+                              Token *t)
 {
     int result;
 
