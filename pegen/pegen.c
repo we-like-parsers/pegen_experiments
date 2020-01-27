@@ -1690,6 +1690,11 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             break;
         case Call_kind:
             fstring_shift_node_locations(n->v.Call.func, lineno, col_offset);
+            fstring_shift_seq_locations(n->v.Call.args, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(n->v.Call.keywords); i < l; i++) {
+                keyword_ty keyword = asdl_seq_GET(n->v.Call.keywords, i);
+                fstring_shift_node_locations(keyword->value, lineno, col_offset);
+            }
             break;
         case Attribute_kind:
             fstring_shift_node_locations(n->v.Attribute.value, lineno, col_offset);
