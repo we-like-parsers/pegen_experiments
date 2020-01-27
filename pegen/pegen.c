@@ -1883,7 +1883,7 @@ fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse
    not a debug expression, *expr_text set to NULL. */
 static int
 fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-                  PyObject **expr_text, expr_ty *expression)
+                  PyObject **expr_text, expr_ty *expression, Token* t)
 {
     /* Return -1 on error, else 0. */
 
@@ -2114,7 +2114,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
             goto unexpected_end_of_string;
 
         /* Parse the format spec. */
-        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, NULL);
+        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, t);
         if (!format_spec)
             goto error;
     }
@@ -2179,7 +2179,8 @@ error:
 static int
 fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int raw,
                               int recurse_lvl, PyObject **literal,
-                              PyObject **expr_text, expr_ty *expression)
+                              PyObject **expr_text, expr_ty *expression,
+                              Token *t)
 {
     int result;
 
@@ -2207,7 +2208,7 @@ fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int 
     assert(**str == '{');
 
     if (fstring_find_expr(p, str, end, raw, recurse_lvl, expr_text,
-                          expression) < 0)
+                          expression, t) < 0)
         goto error;
 
     return 0;
@@ -2459,7 +2460,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
            see below). */
         int result = fstring_find_literal_and_expr(p, str, end, raw, recurse_lvl,
                                                    &literal, &expr_text,
-                                                   &expression);
+                                                   &expression, t);
         if (result < 0)
             return -1;
 
