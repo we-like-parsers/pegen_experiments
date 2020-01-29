@@ -890,10 +890,17 @@ _get_exprs(Parser *p, asdl_seq *seq)
 
 /* Wrapper for _Py_Compare, so that the call in the grammar stays concise */
 expr_ty
-Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)
+Pegen_Compare(Parser *p,
+              expr_ty expr,
+              asdl_seq *pairs,
+              int lineno,
+              int col_offset,
+              int end_lineno,
+              int end_col_offset,
+              PyArena *arena)
 {
     return _Py_Compare(expr, _get_cmpops(p, pairs), _get_exprs(p, pairs),
-                       EXTRA_EXPR(expr, ((CmpopExprPair *)seq_get_tail(NULL, pairs))->expr));
+                       lineno, col_offset, end_lineno, end_col_offset, arena);
 }
 
 /* Creates an asdl_seq* where all the elements have been changed to have ctx as context */

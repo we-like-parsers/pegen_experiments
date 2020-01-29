@@ -117,7 +117,7 @@ void *seq_get_head(void *, asdl_seq *);
 void *seq_get_tail(void *, asdl_seq *);
 asdl_seq *map_names_to_ids(Parser *, asdl_seq *);
 CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
-expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *);
+expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *, int, int, int, int, PyArena *);
 expr_ty set_expr_context(Parser *, expr_ty, expr_context_ty);
 KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
 asdl_seq *get_keys(Parser *, asdl_seq *);

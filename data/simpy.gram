@@ -266,7 +266,7 @@ inversion[expr_ty]:
     | comparison
 comparison[expr_ty]:
     | a=bitwise_or b=compare_op_bitwise_or_pair+ {
-        Pegen_Compare(p, a, b) }
+        Pegen_Compare(p, a, b, EXTRA) }
     | bitwise_or
 compare_op_bitwise_or_pair[CmpopExprPair*]:
     | eq_bitwise_or
@@ -290,7 +290,7 @@ in_bitwise_or[CmpopExprPair*]: 'in' a=bitwise_or { cmpop_expr_pair(p, In, a) }
 isnot_bitwise_or[CmpopExprPair*]: 'is' 'not' a=bitwise_or { cmpop_expr_pair(p, IsNot, a) }
 is_bitwise_or[CmpopExprPair*]: 'is' a=bitwise_or { cmpop_expr_pair(p, Is, a) }
 
-bitwise_or[expr_ty]: 
+bitwise_or[expr_ty]:
     | a=bitwise_or '|' b=bitwise_xor { _Py_BinOp(a, BitOr, b, EXTRA) }
     | bitwise_xor
 bitwise_xor[expr_ty]:
@@ -349,7 +349,7 @@ slices[slice_ty]:
 slice[slice_ty]:
     | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { _Py_Slice(a, b, c, p->arena) }
     | a=expression { _Py_Index(a, p->arena) }
-# STRING+'s output is just a hack for now 
+# STRING+'s output is just a hack for now
 atom[expr_ty]:
     | NAME
     | 'True' { _Py_Constant(Py_True, NULL, EXTRA) }

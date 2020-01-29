@@ -84,6 +84,8 @@ TEST_CASES = [
     ('call_subscript', 'f()[0]'),
     ('comp', 'a == b'),
     ('comp_multiple', 'a == b == c'),
+    ('comp_paren_end', 'a == (b-1)'),
+    ('comp_paren_start', '(a-1) == b'),
     ('decorator',
      '''
         @a
