@@ -300,6 +300,14 @@ TEST_CASES = [
     ('set_trailing_comma', '{1, 2, 3,}'),
     ('simple_assignment', 'x = 42'),
     ('simple_assignment_with_yield', 'x = yield 42'),
+    ('string_bytes', 'b"hello"'),
+    ('string_concatenation_bytes', 'b"hello" b"world"'),
+    ('string_concatenationn_format', 'f"{hello} world" f"again {and_again}"'),
+    ('string_concatenation_simple', '"abcd" "efgh"'),
+    ('string_format_simple', 'f"hello"'),
+    ('string_format_with_formatted_value', 'f"hello {world}"'),
+    ('string_simple', '"hello"'),
+    ('string_unicode', 'u"hello"'),
     ('subscript_attribute', 'a[0].b'),
     ('subscript_call', 'a[b]()'),
     ('subscript_multiple_slices', 'a[0:a:2, 1]'),
@@ -506,12 +514,3 @@ def test_correct_ast_generation_on_source_files(parser_extension: Any, source: s
 def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
     with pytest.raises(SyntaxError):
         parser_extension.parse_string(source, mode=0)
-
-
-def test_ast_generation_for_fstrings(parser_extension: Any) -> None:
-    source = "f'{val}'"
-    actual_ast = parser_extension.parse_string(source, mode=1)
-    expected_ast = ast.parse(source)
-    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
-        expected_ast, include_attributes=True
-    ), f"Wrong AST generation for source: {source}"

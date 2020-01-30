@@ -423,8 +423,6 @@ static int
 parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **result,
          const char **fstr, Py_ssize_t *fstrlen);
 
-expr_ty string_token(Parser *p);
-
 void *
 keyword_token(Parser *p, const char *val)
 {
@@ -1958,7 +1956,7 @@ done:
 /* Forward declaration because parsing is recursive. */
 static expr_ty
 fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-              Token* t);
+              Token* t, Token *end_token);
 
 /* Parse the f-string at *str, ending at end.  We know *str starts an
    expression (so it must be a '{'). Returns the FormattedValue node, which
@@ -1977,7 +1975,7 @@ fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse
    not a debug expression, *expr_text set to NULL. */
 static int
 fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-                  PyObject **expr_text, expr_ty *expression, Token *t)
+                  PyObject **expr_text, expr_ty *expression, Token *t, Token *end_token)
 {
     /* Return -1 on error, else 0. */
 
@@ -2208,7 +2206,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
             goto unexpected_end_of_string;
 
         /* Parse the format spec. */
-        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, t);
+        format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1, t, end_token);
         if (!format_spec)
             goto error;
     }
@@ -2232,7 +2230,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
     //TODO: Fix this
     *expression = FormattedValue(simple_expression, conversion,
                                  format_spec, t->lineno, t->col_offset,
-                                 t->end_lineno, t->end_col_offset,
+                                 end_token->end_lineno, end_token->end_col_offset,
                                  p->arena);
     if (!*expression)
         goto error;
@@ -2276,7 +2274,7 @@ static int
 fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int raw,
                               int recurse_lvl, PyObject **literal,
                               PyObject **expr_text, expr_ty *expression,
-                              Token *t)
+                              Token *t, Token *end_token)
 {
     int result;
 
@@ -2304,7 +2302,7 @@ fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int 
     assert(**str == '{');
 
     if (fstring_find_expr(p, str, end, raw, recurse_lvl, expr_text,
-                          expression, t) < 0)
+                          expression, t, end_token) < 0)
         goto error;
 
     return 0;
@@ -2481,7 +2479,7 @@ FstringParser_Dealloc(FstringParser *state)
 
 /* Make a Constant node, but decref the PyUnicode object being added. */
 static expr_ty
-make_str_node_and_del(Parser *p, PyObject **str, Token* t)
+make_str_node_and_del(Parser *p, PyObject **str, Token* start, Token *end)
 {
     PyObject *s = *str;
     PyObject *kind = NULL;
@@ -2493,7 +2491,7 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* t)
     }
     //TODO: Check this logic with the kind
     //
-    const char* the_str = PyUnicode_AsUTF8(s);
+    const char* the_str = PyBytes_AsString(start->bytes);
     if (the_str && the_str[0] == 'u') {
         kind = new_identifier(p, "u");
     }
@@ -2502,8 +2500,8 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* t)
         return NULL;
     }
 
-    return Constant(s, kind, t->lineno, t->col_offset, t->end_lineno,
-                    t->end_col_offset, p->arena);
+    return Constant(s, kind, start->lineno, start->col_offset, end->end_lineno,
+                    end->end_col_offset, p->arena);
 
 }
 
@@ -2539,7 +2537,8 @@ FstringParser_ConcatAndDel(FstringParser *state, PyObject *str)
    'f' or quotes. */
 static int
 FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
-                            const char *end, int raw, int recurse_lvl, Token* t)
+                            const char *end, int raw, int recurse_lvl, Token* t,
+                            Token *last)
 {
     FstringParser_check_invariants(state);
     state->fmode = 1;
@@ -2556,7 +2555,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
            see below). */
         int result = fstring_find_literal_and_expr(p, str, end, raw, recurse_lvl,
                                                    &literal, &expr_text,
-                                                   &expression, t);
+                                                   &expression, t, last);
         if (result < 0)
             return -1;
 
@@ -2590,7 +2589,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
             /* Do nothing. No previous literal. */
         } else {
             /* Convert the existing last_str literal to a Constant node. */
-            expr_ty str = make_str_node_and_del(p, &state->last_str, t);
+            expr_ty str = make_str_node_and_del(p, &state->last_str, t, last);
             if (!str || ExprList_Append(&state->expr_list, str) < 0)
                 return -1;
         }
@@ -2618,7 +2617,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
 /* Convert the partial state reflected in last_str and expr_list to an
    expr_ty. The expr_ty can be a Constant, or a JoinedStr. */
 static expr_ty
-FstringParser_Finish(Parser *p, FstringParser *state, Token* t)
+FstringParser_Finish(Parser *p, FstringParser *state, Token* start, Token *end)
 {
     asdl_seq *seq;
 
@@ -2634,13 +2633,13 @@ FstringParser_Finish(Parser *p, FstringParser *state, Token* t)
             if (!state->last_str)
                 goto error;
         }
-        return make_str_node_and_del(p, &state->last_str, t);
+        return make_str_node_and_del(p, &state->last_str, start, end);
     }
 
     /* Create a Constant node out of last_str, if needed. It will be the
        last node in our expression list. */
     if (state->last_str) {
-        expr_ty str = make_str_node_and_del(p, &state->last_str, t);
+        expr_ty str = make_str_node_and_del(p, &state->last_str, start, end);
         if (!str || ExprList_Append(&state->expr_list, str) < 0)
             goto error;
     }
@@ -2651,10 +2650,8 @@ FstringParser_Finish(Parser *p, FstringParser *state, Token* t)
     if (!seq)
         goto error;
 
-    return _Py_JoinedStr(seq, t->lineno, t->col_offset, t->end_lineno,
-                    t->end_col_offset, p->arena);
-
-
+    return _Py_JoinedStr(seq, start->lineno, start->col_offset,
+                         end->end_lineno, end->end_col_offset, p->arena);
 
 error:
     FstringParser_Dealloc(state);
@@ -2666,17 +2663,17 @@ error:
    str to point past the parsed portion. */
 static expr_ty
 fstring_parse(Parser *p, const char **str, const char *end, int raw,
-              int recurse_lvl, Token* t)
+              int recurse_lvl, Token* t, Token *end_token)
 {
     FstringParser state;
 
     FstringParser_Init(&state);
-    if (FstringParser_ConcatFstring(p, &state, str, end, raw, recurse_lvl, t) < 0) {
+    if (FstringParser_ConcatFstring(p, &state, str, end, raw, recurse_lvl, t, end_token) < 0) {
         FstringParser_Dealloc(&state);
         return NULL;
     }
 
-    return FstringParser_Finish(p, &state, t);
+    return FstringParser_Finish(p, &state, t, t);
 }
 
 expr_ty
@@ -2685,133 +2682,87 @@ concatenate_strings(Parser *p, asdl_seq *strings)
     int len = asdl_seq_LEN(strings);
     assert(len > 0);
 
-    expr_ty first = asdl_seq_GET(strings, 0);
-    expr_ty last = asdl_seq_GET(strings, len - 1);
+    Token *first = asdl_seq_GET(strings, 0);
+    Token *last = asdl_seq_GET(strings, len - 1);
 
     int bytesmode = 0;
-    PyObject *u_kind = NULL;
-    int kind_unicode = 0;
-    PyObject *final_str = NULL;
-    return first;
+    PyObject *bytes_str = NULL;
 
-    // TODO(Pablo): This assert will fail because we are returning
-    // JoinedStr now here: We need to add logic to join f-strings!
-    assert(first->kind == Constant_kind);
-    if (PyBytes_CheckExact(first->v.Constant.value)) {
-        final_str = PyBytes_FromString("");
-    }
-    else {
-        final_str = PyUnicode_FromString("");
-    }
-    if (final_str == NULL) {
-        return NULL;
-    }
+    FstringParser state;
+    FstringParser_Init(&state);
+
     for (int i = 0; i < len; i++) {
-        expr_ty cons = asdl_seq_GET(strings, i);
-        assert(cons->kind == Constant_kind);
-        PyObject *s = cons->v.Constant.value;
-        int this_bytesmode = PyBytes_CheckExact(s);
+        Token *t = asdl_seq_GET(strings, i);
 
+        int this_bytesmode;
+        int this_rawmode;
+        PyObject *s;
+        const char *fstr;
+        Py_ssize_t fstrlen = -1;
+
+        char *this_str = PyBytes_AsString(t->bytes);
+
+        if (parsestr(p, this_str, &this_bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
+            return NULL;
+        }
+
+        /* Check that we are not mixing bytes with unicode. */
         if (i != 0 && bytesmode != this_bytesmode) {
             raise_syntax_error(p, "cannot mix bytes and nonbytes literals");
+            Py_XDECREF(s);
             goto error;
         }
-
         bytesmode = this_bytesmode;
 
-        if (bytesmode) {
-            PyBytes_Concat(&final_str, s);
-            if (!final_str) {
+        if (fstr != NULL) {
+            assert(s == NULL && !bytesmode);
+
+            int result = FstringParser_ConcatFstring(p, &state, &fstr, fstr+fstrlen,
+                                                     this_rawmode, 0, t, last);
+            if (result < 0) {
                 goto error;
             }
-        }
-        else {
-            kind_unicode |= (cons->v.Constant.kind != NULL);
-            PyUnicode_Append(&final_str, s);
-            if (!final_str) {
-                goto error;
+        } else {
+            /* String or byte string. */
+            assert(s != NULL && fstr == NULL);
+            assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
+
+            if (bytesmode) {
+                if (i == 0) {
+                    bytes_str = s;
+                } else {
+                    PyBytes_ConcatAndDel(&bytes_str, s);
+                    if (!bytes_str) {
+                        goto error;
+                    }
+                }
+            } else {
+                /* This is a regular string. Concatenate it. */
+                if (FstringParser_ConcatAndDel(&state, s) < 0) {
+                    goto error;
+                }
             }
         }
     }
 
-    if (kind_unicode) {
-        // TODO: Intern this string when we decide how we will
-        // handle static constants in the module.
-        u_kind = new_identifier(p, "u");
+    if (bytesmode) {
+        if (PyArena_AddPyObject(p->arena, bytes_str) < 0) {
+            goto error;
+        }
+        return Constant(bytes_str, NULL, first->lineno, first->col_offset,
+                        last->end_lineno, last->end_col_offset, p->arena);
     }
-    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
-        Py_DECREF(final_str);
-        return NULL;
-    }
-    return _Py_Constant(final_str, u_kind, EXTRA_EXPR(first, last));
+
+    return FstringParser_Finish(p, &state, first, last);
 
 error:
-    Py_XDECREF(final_str);
+    Py_XDECREF(bytes_str);
+    FstringParser_Dealloc(&state);
     return NULL;
 }
 
-expr_ty
+void *
 string_token(Parser *p)
 {
-    Token *t = expect_token(p, STRING);
-
-    if (t == NULL) {
-        return NULL;
-    }
-
-    char *the_str = PyBytes_AsString(t->bytes);
-    if (the_str == NULL) {
-        return NULL;
-    }
-
-    PyObject *s;
-    int this_rawmode = 0;
-    int bytesmode = 0;
-    const char *fstr;
-    Py_ssize_t fstrlen = -1; /* Silence a compiler warning. */
-    if (parsestr(p, the_str, &bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
-        return NULL;
-    }
-
-    /* Check if it has a 'u' prefix */
-    int kind_unicode = 0;
-    if (the_str[0] == 'u') {
-        assert(!bytesmode);
-        kind_unicode = 1;
-    }
-
-    if (fstr != NULL) {
-        /* We are parsing an f-string. */
-        assert(s == NULL && !bytesmode);
-
-        FstringParser state;
-        FstringParser_Init(&state);
-        int result = FstringParser_ConcatFstring(p, &state, &fstr, fstr+fstrlen, this_rawmode, 0, t);
-        return FstringParser_Finish(p, &state, t);
-    }
-
-    /* A string or byte string. */
-    assert(s != NULL && fstr == NULL);
-    assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
-
-    PyObject *final_str = s;
-    if (PyArena_AddPyObject(p->arena, final_str) < 0) {
-        goto error;
-    }
-
-    PyObject *u_kind = NULL;
-    if (!bytesmode && kind_unicode) {
-        // TODO: Intern this string when we decide how we will
-        // handle static constants in the module.
-        u_kind = new_identifier(p, "u");
-        if (u_kind == NULL) {
-            goto error;
-        }
-    }
-    return Constant(final_str, u_kind, t->lineno, t->col_offset, t->end_lineno,
-                    t->end_col_offset, p->arena);
-
-error:
-    Py_DECREF(final_str);
-    return NULL;
+    return expect_token(p, STRING);
 }
