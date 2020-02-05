@@ -1972,7 +1972,7 @@ done:
 /* Forward declaration because parsing is recursive. */
 static expr_ty
 fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-              Token *start_token, Token* t, Token *end_token);
+              Token *first_token, Token* t, Token *last_token);
 
 /* Parse the f-string at *str, ending at end.  We know *str starts an
    expression (so it must be a '{'). Returns the FormattedValue node, which
@@ -1991,8 +1991,8 @@ fstring_parse(Parser *p, const char **str, const char *end, int raw, int recurse
    not a debug expression, *expr_text set to NULL. */
 static int
 fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int recurse_lvl,
-                  PyObject **expr_text, expr_ty *expression, Token *start_token,
-                  Token *t, Token *end_token)
+                  PyObject **expr_text, expr_ty *expression, Token *first_token,
+                  Token *t, Token *last_token)
 {
     /* Return -1 on error, else 0. */
 
@@ -2224,7 +2224,7 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
 
         /* Parse the format spec. */
         format_spec = fstring_parse(p, str, end, raw, recurse_lvl+1,
-                                    start_token, t, end_token);
+                                    first_token, t, last_token);
         if (!format_spec)
             goto error;
     }
@@ -2247,9 +2247,9 @@ fstring_find_expr(Parser *p, const char **str, const char *end, int raw, int rec
        entire expression with the conversion and format spec. */
     //TODO: Fix this
     *expression = FormattedValue(simple_expression, conversion,
-                                 format_spec, start_token->lineno,
-                                 start_token->col_offset, end_token->end_lineno,
-                                 end_token->end_col_offset, p->arena);
+                                 format_spec, first_token->lineno,
+                                 first_token->col_offset, last_token->end_lineno,
+                                 last_token->end_col_offset, p->arena);
     if (!*expression)
         goto error;
 
@@ -2292,7 +2292,7 @@ static int
 fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int raw,
                               int recurse_lvl, PyObject **literal,
                               PyObject **expr_text, expr_ty *expression,
-                              Token *start_token, Token *t, Token *end_token)
+                              Token *first_token, Token *t, Token *last_token)
 {
     int result;
 
@@ -2320,7 +2320,7 @@ fstring_find_literal_and_expr(Parser *p, const char **str, const char *end, int 
     assert(**str == '{');
 
     if (fstring_find_expr(p, str, end, raw, recurse_lvl, expr_text,
-                          expression, start_token, t, end_token) < 0)
+                          expression, first_token, t, last_token) < 0)
         goto error;
 
     return 0;
@@ -2497,7 +2497,7 @@ FstringParser_Dealloc(FstringParser *state)
 
 /* Make a Constant node, but decref the PyUnicode object being added. */
 static expr_ty
-make_str_node_and_del(Parser *p, PyObject **str, Token* start, Token *end)
+make_str_node_and_del(Parser *p, PyObject **str, Token* first_token, Token *last_token)
 {
     PyObject *s = *str;
     PyObject *kind = NULL;
@@ -2509,7 +2509,7 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* start, Token *end)
     }
     //TODO: Check this logic with the kind
     //
-    const char* the_str = PyBytes_AsString(start->bytes);
+    const char* the_str = PyBytes_AsString(first_token->bytes);
     if (the_str && the_str[0] == 'u') {
         kind = new_identifier(p, "u");
     }
@@ -2518,8 +2518,8 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* start, Token *end)
         return NULL;
     }
 
-    return Constant(s, kind, start->lineno, start->col_offset, end->end_lineno,
-                    end->end_col_offset, p->arena);
+    return Constant(s, kind, first_token->lineno, first_token->col_offset,
+                    last_token->end_lineno, last_token->end_col_offset, p->arena);
 
 }
 
@@ -2556,7 +2556,7 @@ FstringParser_ConcatAndDel(FstringParser *state, PyObject *str)
 static int
 FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
                             const char *end, int raw, int recurse_lvl,
-                            Token *first, Token* t, Token *last)
+                            Token *first_token, Token* t, Token *last_token)
 {
     FstringParser_check_invariants(state);
     state->fmode = 1;
@@ -2573,7 +2573,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
            see below). */
         int result = fstring_find_literal_and_expr(p, str, end, raw, recurse_lvl,
                                                    &literal, &expr_text,
-                                                   &expression, first, t, last);
+                                                   &expression, first_token, t, last_token);
         if (result < 0)
             return -1;
 
@@ -2607,7 +2607,7 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
             /* Do nothing. No previous literal. */
         } else {
             /* Convert the existing last_str literal to a Constant node. */
-            expr_ty str = make_str_node_and_del(p, &state->last_str, first, last);
+            expr_ty str = make_str_node_and_del(p, &state->last_str, first_token, last_token);
             if (!str || ExprList_Append(&state->expr_list, str) < 0)
                 return -1;
         }
@@ -2635,7 +2635,8 @@ FstringParser_ConcatFstring(Parser *p, FstringParser *state, const char **str,
 /* Convert the partial state reflected in last_str and expr_list to an
    expr_ty. The expr_ty can be a Constant, or a JoinedStr. */
 static expr_ty
-FstringParser_Finish(Parser *p, FstringParser *state, Token* start, Token *end)
+FstringParser_Finish(Parser *p, FstringParser *state, Token* first_token,
+                     Token *last_token)
 {
     asdl_seq *seq;
 
@@ -2651,13 +2652,13 @@ FstringParser_Finish(Parser *p, FstringParser *state, Token* start, Token *end)
             if (!state->last_str)
                 goto error;
         }
-        return make_str_node_and_del(p, &state->last_str, start, end);
+        return make_str_node_and_del(p, &state->last_str, first_token, last_token);
     }
 
     /* Create a Constant node out of last_str, if needed. It will be the
        last node in our expression list. */
     if (state->last_str) {
-        expr_ty str = make_str_node_and_del(p, &state->last_str, start, end);
+        expr_ty str = make_str_node_and_del(p, &state->last_str, first_token, last_token);
         if (!str || ExprList_Append(&state->expr_list, str) < 0)
             goto error;
     }
@@ -2668,8 +2669,8 @@ FstringParser_Finish(Parser *p, FstringParser *state, Token* start, Token *end)
     if (!seq)
         goto error;
 
-    return _Py_JoinedStr(seq, start->lineno, start->col_offset,
-                         end->end_lineno, end->end_col_offset, p->arena);
+    return _Py_JoinedStr(seq, first_token->lineno, first_token->col_offset,
+                         last_token->end_lineno, last_token->end_col_offset, p->arena);
 
 error:
     FstringParser_Dealloc(state);
@@ -2681,13 +2682,13 @@ error:
    str to point past the parsed portion. */
 static expr_ty
 fstring_parse(Parser *p, const char **str, const char *end, int raw,
-              int recurse_lvl, Token *start_token, Token* t, Token *end_token)
+              int recurse_lvl, Token *first_token, Token* t, Token *last_token)
 {
     FstringParser state;
 
     FstringParser_Init(&state);
     if (FstringParser_ConcatFstring(p, &state, str, end, raw, recurse_lvl,
-                                    start_token, t, end_token) < 0) {
+                                    first_token, t, last_token) < 0) {
         FstringParser_Dealloc(&state);
         return NULL;
     }
