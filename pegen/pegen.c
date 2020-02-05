@@ -1862,6 +1862,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     p2->fill = 0;
     p2->size = 1;
     p2->arena = p->arena;
+    p2->start_rule_func = the_start_rule;
     if (fill_token(p2) < 0) {
         goto exit;
     }
