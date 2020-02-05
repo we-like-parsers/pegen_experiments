@@ -1617,11 +1617,26 @@ parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **resu
 
 // FSTRING STUFF
 
-static void fstring_shift_node_locations(expr_ty n, int lineno, int col_offset);
+static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset);
 
 static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
-        fstring_shift_node_locations(asdl_seq_GET(seq, i), lineno, col_offset);
+        fstring_shift_expr_locations(asdl_seq_GET(seq, i), lineno, col_offset);
+    }
+}
+
+static void fstring_shift_slice_locations(slice_ty slice, int lineno, int col_offset) {
+    switch (slice->kind) {
+        case Slice_kind:
+            fstring_shift_expr_locations(slice->v.Slice.lower, lineno, col_offset);
+            fstring_shift_expr_locations(slice->v.Slice.upper, lineno, col_offset);
+            fstring_shift_expr_locations(slice->v.Slice.step, lineno, col_offset);
+            break;
+        case ExtSlice_kind:
+            fstring_shift_seq_locations(slice->v.ExtSlice.dims, lineno, col_offset);
+            break;
+        case Index_kind:
+            fstring_shift_expr_locations(slice->v.Index.value, lineno, col_offset);
     }
 }
 
@@ -1631,23 +1646,23 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             fstring_shift_seq_locations(n->v.BoolOp.values, lineno, col_offset);
             break;
         case NamedExpr_kind:
-            fstring_shift_node_locations(n->v.NamedExpr.target, lineno, col_offset);
-            fstring_shift_node_locations(n->v.NamedExpr.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.NamedExpr.target, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.NamedExpr.value, lineno, col_offset);
             break;
         case BinOp_kind:
-            fstring_shift_node_locations(n->v.BinOp.left, lineno, col_offset);
-            fstring_shift_node_locations(n->v.BinOp.right, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.BinOp.left, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.BinOp.right, lineno, col_offset);
             break;
         case UnaryOp_kind:
-            fstring_shift_node_locations(n->v.UnaryOp.operand, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.UnaryOp.operand, lineno, col_offset);
             break;
         case Lambda_kind:
-            fstring_shift_node_locations(n->v.Lambda.body, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Lambda.body, lineno, col_offset);
             break;
         case IfExp_kind:
-            fstring_shift_node_locations(n->v.IfExp.test, lineno, col_offset);
-            fstring_shift_node_locations(n->v.IfExp.body, lineno, col_offset);
-            fstring_shift_node_locations(n->v.IfExp.orelse, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.IfExp.test, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.IfExp.body, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.IfExp.orelse, lineno, col_offset);
             break;
         case Dict_kind:
             fstring_shift_seq_locations(n->v.Dict.keys, lineno, col_offset);
@@ -1657,51 +1672,52 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             fstring_shift_seq_locations(n->v.Set.elts, lineno, col_offset);
             break;
         case ListComp_kind:
-            fstring_shift_node_locations(n->v.ListComp.elt, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.ListComp.elt, lineno, col_offset);
             fstring_shift_seq_locations(n->v.ListComp.generators, lineno, col_offset);
             break;
         case SetComp_kind:
-            fstring_shift_node_locations(n->v.SetComp.elt, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.SetComp.elt, lineno, col_offset);
             fstring_shift_seq_locations(n->v.SetComp.generators, lineno, col_offset);
             break;
         case DictComp_kind:
-            fstring_shift_node_locations(n->v.DictComp.key, lineno, col_offset);
-            fstring_shift_node_locations(n->v.DictComp.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.DictComp.key, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.DictComp.value, lineno, col_offset);
             fstring_shift_seq_locations(n->v.DictComp.generators, lineno, col_offset);
             break;
         case GeneratorExp_kind:
-            fstring_shift_node_locations(n->v.GeneratorExp.elt, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.GeneratorExp.elt, lineno, col_offset);
             fstring_shift_seq_locations(n->v.GeneratorExp.generators, lineno, col_offset);
             break;
         case Await_kind:
-            fstring_shift_node_locations(n->v.Await.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Await.value, lineno, col_offset);
             break;
         case Yield_kind:
-            fstring_shift_node_locations(n->v.Yield.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Yield.value, lineno, col_offset);
             break;
         case YieldFrom_kind:
-            fstring_shift_node_locations(n->v.YieldFrom.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.YieldFrom.value, lineno, col_offset);
             break;
         case Compare_kind:
-            fstring_shift_node_locations(n->v.Compare.left, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Compare.left, lineno, col_offset);
             fstring_shift_seq_locations(n->v.Compare.comparators, lineno, col_offset);
             break;
         case Call_kind:
-            fstring_shift_node_locations(n->v.Call.func, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Call.func, lineno, col_offset);
             fstring_shift_seq_locations(n->v.Call.args, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.Call.keywords); i < l; i++) {
                 keyword_ty keyword = asdl_seq_GET(n->v.Call.keywords, i);
-                fstring_shift_node_locations(keyword->value, lineno, col_offset);
+                fstring_shift_expr_locations(keyword->value, lineno, col_offset);
             }
             break;
         case Attribute_kind:
-            fstring_shift_node_locations(n->v.Attribute.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Attribute.value, lineno, col_offset);
             break;
         case Subscript_kind:
-            fstring_shift_node_locations(n->v.Subscript.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Subscript.value, lineno, col_offset);
+            fstring_shift_slice_locations(n->v.Subscript.slice, lineno, col_offset);
             break;
         case Starred_kind:
-            fstring_shift_node_locations(n->v.Starred.value, lineno, col_offset);
+            fstring_shift_expr_locations(n->v.Starred.value, lineno, col_offset);
             break;
         case List_kind:
             fstring_shift_seq_locations(n->v.List.elts, lineno, col_offset);
@@ -1716,7 +1732,7 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
 
 /* Shift locations for the given node and all its children by adding `lineno`
    and `col_offset` to existing locations. */
-static void fstring_shift_node_locations(expr_ty n, int lineno, int col_offset)
+static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset)
 {
     n->col_offset = n->col_offset + col_offset;
     n->end_col_offset = n->end_col_offset + col_offset;
@@ -1732,7 +1748,7 @@ static void fstring_shift_node_locations(expr_ty n, int lineno, int col_offset)
    `expr_str` is the child node's string representation, including braces.
 */
 static void
-fstring_fix_node_location(Token *parent, expr_ty n, char *expr_str)
+fstring_fix_expr_location(Token *parent, expr_ty n, char *expr_str)
 {
     char *substr = NULL;
     char *start;
@@ -1762,7 +1778,7 @@ fstring_fix_node_location(Token *parent, expr_ty n, char *expr_str)
             }
         }
     }
-    fstring_shift_node_locations(n, lines, cols);
+    fstring_shift_expr_locations(n, lines, cols);
 }
 
 
@@ -1849,7 +1865,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     /* Reuse str to find the correct column offset. */
     str[0] = '{';
     str[len+1] = '}';
-    fstring_fix_node_location(t, expr->v.Expr.value, str);
+    fstring_fix_expr_location(t, expr->v.Expr.value, str);
     if (!mod) {
         return NULL;
     }
