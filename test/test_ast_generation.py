@@ -302,7 +302,11 @@ TEST_CASES = [
     ('simple_assignment_with_yield', 'x = yield 42'),
     ('string_bytes', 'b"hello"'),
     ('string_concatenation_bytes', 'b"hello" b"world"'),
-    ('string_concatenationn_format', 'f"{hello} world" f"again {and_again}"'),
+    ('string_concatenation_format', 'f"{hello} world" f"again {and_again}"'),
+    ('string_concatenation_multiple',
+     '''
+        f"hello" f"{world} again" f"and_again"
+     '''),
     ('string_concatenation_simple', '"abcd" "efgh"'),
     ('string_format_simple', 'f"hello"'),
     ('string_format_with_formatted_value', 'f"hello {world}"'),
