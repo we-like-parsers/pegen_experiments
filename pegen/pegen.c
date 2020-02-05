@@ -1628,12 +1628,21 @@ static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offse
 static void fstring_shift_slice_locations(slice_ty slice, int lineno, int col_offset) {
     switch (slice->kind) {
         case Slice_kind:
-            fstring_shift_expr_locations(slice->v.Slice.lower, lineno, col_offset);
-            fstring_shift_expr_locations(slice->v.Slice.upper, lineno, col_offset);
-            fstring_shift_expr_locations(slice->v.Slice.step, lineno, col_offset);
+            if (slice->v.Slice.lower) {
+                fstring_shift_expr_locations(slice->v.Slice.lower, lineno, col_offset);
+            }
+            if (slice->v.Slice.upper) {
+                fstring_shift_expr_locations(slice->v.Slice.upper, lineno, col_offset);
+            }
+            if (slice->v.Slice.step) {
+                fstring_shift_expr_locations(slice->v.Slice.step, lineno, col_offset);
+            }
             break;
         case ExtSlice_kind:
-            fstring_shift_seq_locations(slice->v.ExtSlice.dims, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(slice->v.ExtSlice.dims); i < l; i++) {
+                slice_ty s = asdl_seq_GET(slice->v.ExtSlice.dims, i);
+                fstring_shift_slice_locations(s, lineno, col_offset);
+            }
             break;
         case Index_kind:
             fstring_shift_expr_locations(slice->v.Index.value, lineno, col_offset);
