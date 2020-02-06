@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 
-from typing import Dict
+from typing import Dict, Any
 from urllib.request import urlretrieve
 
 # This can be either the number of packages to download or 'ALL' to download
@@ -10,7 +10,7 @@ from urllib.request import urlretrieve
 NUMBER_OF_PACKAGES = 3
 
 
-def load_json(filename: str) -> Dict:
+def load_json(filename: str) -> Dict[Any, Any]:
     with open(os.path.join("data", f"{filename}.json"), "r") as f:
         j = json.loads(f.read())
     return j
@@ -26,7 +26,7 @@ def download_package_json(package_name: str) -> None:
     urlretrieve(url, os.path.join("data", f"{package_name}.json"))
 
 
-def download_package_code(name: str, package_json: str) -> None:
+def download_package_code(name: str, package_json: Dict[Any, Any]) -> None:
     source_index = -1
     for idx, url_info in enumerate(package_json["urls"]):
         if url_info["python_version"] == "source":
@@ -37,7 +37,7 @@ def download_package_code(name: str, package_json: str) -> None:
     urlretrieve(url, os.path.join("data", filename))
 
 
-def main():
+def main() -> None:
     top_pypi_packages = load_json("top-pypi-packages-365-days")
     if isinstance(NUMBER_OF_PACKAGES, int):
         top_pypi_packages = top_pypi_packages["rows"][:NUMBER_OF_PACKAGES]
@@ -59,7 +59,7 @@ def main():
             download_package_code(package_name, package_json)
             print("Done")
         except (IndexError, KeyError):
-            print(f"Could not locate source for {name}")
+            print(f"Could not locate source for {package_name}")
             continue
         finally:
             remove_json(package_name)
