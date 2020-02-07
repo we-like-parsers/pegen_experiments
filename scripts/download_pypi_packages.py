@@ -10,7 +10,7 @@ argparser = argparse.ArgumentParser(
     prog="download_pypi_packages", description="Helper program to download PyPI packages",
 )
 argparser.add_argument("-n", "--number", help="Number of packages to download")
-argparser.add_argument("-a", "--all", help="Download all packages listed in the json file")
+argparser.add_argument("-a", "--all", action='store_true', help="Download all packages listed in the json file")
 
 
 def load_json(filename: str) -> Dict[Any, Any]:
@@ -42,7 +42,7 @@ def download_package_code(name: str, package_json: Dict[Any, Any]) -> None:
 
 def main() -> None:
     args = argparser.parse_args()
-    number_packages = int(args.number)
+    number_packages = int(args.number) if args.number is not None else None
     all_packages = args.all
 
     top_pypi_packages = load_json("top-pypi-packages-365-days")
