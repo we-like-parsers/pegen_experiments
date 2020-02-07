@@ -7,8 +7,7 @@ from typing import Dict, Any
 from urllib.request import urlretrieve
 
 argparser = argparse.ArgumentParser(
-    prog="download_pypi_packages",
-    description="Helper program to download PyPI packages",
+    prog="download_pypi_packages", description="Helper program to download PyPI packages",
 )
 argparser.add_argument("-n", "--number", help="Number of packages to download")
 argparser.add_argument("-a", "--all", help="Download all packages listed in the json file")
