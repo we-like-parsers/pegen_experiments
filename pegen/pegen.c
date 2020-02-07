@@ -1,7 +1,7 @@
 #include <Python.h>
 #include "pegen.h"
 #include "v38tokenizer.h"
-#include "strings.h"
+#include "parse_string.h"
 
 PyObject *
 new_identifier(Parser *p, char *identifier)

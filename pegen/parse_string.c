@@ -1,4 +1,5 @@
-#include "strings.h"
+#include "parse_string.h"
+#include "pegen.h"
 #include "v38tokenizer.h"
 
 //// STRING HANDLING FUNCTIONS ////
