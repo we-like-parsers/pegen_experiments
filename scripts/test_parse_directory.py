@@ -80,7 +80,7 @@ def report_status(
 
 def compare_trees(
     actual_tree: ast.AST, file: str, verbose: bool, include_attributes: bool = False,
-) -> None:
+) -> int:
     with open(file) as f:
         expected_tree = ast.parse(f.read())
 
@@ -90,7 +90,7 @@ def compare_trees(
         if verbose:
             print("Tree for {file}:")
             print(show_parse.format_tree(actual_tree, include_attributes))
-        return
+        return 0
 
     print(f"Diffing ASTs for {file} ...")
 
@@ -107,6 +107,8 @@ def compare_trees(
     diff = show_parse.diff_trees(expected_tree, actual_tree, include_attributes)
     for line in diff:
         print(line)
+
+    return 1
 
 
 def parse_directory(
@@ -215,12 +217,14 @@ def parse_directory(
         print(f"Encountered {errors} failures.", file=sys.stderr)
 
     # Compare trees (the dict is empty unless -t is given)
+    compare_trees_errors = 0
     for file, tree in trees.items():
         if not short:
             print("Comparing ASTs for", file)
-        compare_trees(tree, file, verbose, tree_arg >= 2)
+        if compare_trees(tree, file, verbose, tree_arg >= 2) == 1:
+            compare_trees_errors += 1
 
-    if errors:
+    if errors or compare_trees_errors:
         return 1
 
     return 0
