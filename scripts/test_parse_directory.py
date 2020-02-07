@@ -90,7 +90,7 @@ def compare_trees(
         if verbose:
             print("Tree for {file}:")
             print(show_parse.format_tree(actual_tree, include_attributes))
-        return
+        return 0
 
     print(f"Diffing ASTs for {file} ...")
 
@@ -108,7 +108,7 @@ def compare_trees(
     for line in diff:
         print(line)
 
-    return 0 if not diff else 1
+    return 1
 
 
 def parse_directory(
