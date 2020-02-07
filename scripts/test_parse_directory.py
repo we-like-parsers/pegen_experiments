@@ -109,7 +109,7 @@ def compare_trees(
         print(line)
 
 
-def main(
+def test_parse_directory(
     directory: str,
     grammar_file: str,
     verbose: bool,
@@ -224,7 +224,7 @@ def main(
         sys.exit(1)
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = argparser.parse_args()
     directory = args.directory
     grammar_file = args.grammar_file
@@ -233,4 +233,8 @@ if __name__ == "__main__":
     skip_actions = args.skip_actions
     tree = args.tree
     short = args.short
-    main(directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None)
+    test_parse_directory(directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None)
+
+
+if __name__ == "__main__":
+    main()

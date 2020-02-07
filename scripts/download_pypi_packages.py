@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import shutil
@@ -5,9 +6,12 @@ import shutil
 from typing import Dict, Any
 from urllib.request import urlretrieve
 
-# This can be either the number of packages to download or 'ALL' to download
-# all 4000 provided by https://hugovk.github.io/top-pypi-packages/
-NUMBER_OF_PACKAGES = 3
+argparser = argparse.ArgumentParser(
+    prog="download_pypi_packages",
+    description="Helper program to download PyPI packages",
+)
+argparser.add_argument("-n", "--number", help="Number of packages to download")
+argparser.add_argument("-a", "--all", help="Download all packages listed in the json file")
 
 
 def load_json(filename: str) -> Dict[Any, Any]:
@@ -38,11 +42,15 @@ def download_package_code(name: str, package_json: Dict[Any, Any]) -> None:
 
 
 def main() -> None:
+    args = argparser.parse_args()
+    number_packages = int(args.number)
+    all_packages = args.all
+
     top_pypi_packages = load_json("top-pypi-packages-365-days")
-    if isinstance(NUMBER_OF_PACKAGES, int):
-        top_pypi_packages = top_pypi_packages["rows"][:NUMBER_OF_PACKAGES]
-    elif isinstance(NUMBER_OF_PACKAGES, str) and NUMBER_OF_PACKAGES == "ALL":
+    if all_packages:
         top_pypi_packages = top_pypi_packages["rows"]
+    elif number_packages >= 0 and number_packages <= 4000:
+        top_pypi_packages = top_pypi_packages["rows"][:number_packages]
     else:
         raise AssertionError("Unknown value for NUMBER_OF_PACKAGES")
 

@@ -1,16 +1,27 @@
-"""Usage: python -m scripts.test_pypi_packages"""
+#!/usr/bin/env python3.8
+
+import argparse
 import os
 import glob
 import subprocess
 import tarfile
 import zipfile
 import shutil
+import sys
 
 from typing import Generator, Optional, Any
 
+sys.path.insert(0, ".")
 from pegen import build
 from scripts import test_parse_directory
 
+argparser = argparse.ArgumentParser(
+    prog="test_pypi_packages",
+    description="Helper program to test parsing PyPI packages",
+)
+argparser.add_argument(
+    "-t", "--tree", action="count", help="Compare parse tree to official AST", default=0
+)
 
 def get_packages() -> Generator[str, None, None]:
     all_packages = (
@@ -37,8 +48,8 @@ def find_dirname() -> str:
     assert False  # This is to fix mypy, should never be reached
 
 
-def run_tests(dirname: str, extension: Any) -> None:
-    test_parse_directory.main(
+def run_tests(dirname: str, tree: int, extension: Any) -> None:
+    test_parse_directory.test_parse_directory(
         dirname,
         "data/simpy.gram",
         verbose=False,
@@ -52,13 +63,16 @@ def run_tests(dirname: str, extension: Any) -> None:
             "*/lib2to3/tests/data/*",
         ],
         skip_actions=False,
-        tree_arg=False,
+        tree_arg=tree,
         short=True,
         extension=extension,
     )
 
 
 def main() -> None:
+    args = argparser.parse_args()
+    tree = args.tree
+
     extension = build.build_parser_and_generator(
         "data/simpy.gram", "pegen/parse.c", compile_extension=True
     )
@@ -71,10 +85,10 @@ def main() -> None:
             print(e)
             continue
 
-        print(f"Trying to parse all python files ... ", end="")
+        print(f"Trying to parse all python files ... ")
         dirname = find_dirname()
         try:
-            run_tests(dirname, extension)
+            run_tests(dirname, tree, extension)
             print("Done")
         except subprocess.CalledProcessError as e:
             print(f"Failed to parse {dirname}")
