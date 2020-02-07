@@ -109,7 +109,7 @@ def compare_trees(
         print(line)
 
 
-def test_parse_directory(
+def parse_directory(
     directory: str,
     grammar_file: str,
     verbose: bool,
