@@ -3,13 +3,12 @@
 import argparse
 import os
 import glob
-import subprocess
 import tarfile
 import zipfile
 import shutil
 import sys
 
-from typing import Generator, Optional, Any
+from typing import Generator, Any
 
 sys.path.insert(0, ".")
 from pegen import build
@@ -25,24 +24,27 @@ argparser.add_argument(
 
 def get_packages() -> Generator[str, None, None]:
     all_packages = (
-        glob.glob("./data/*.tar.gz") + glob.glob("./data/*.zip") + glob.glob("./data/*.tgz")
+        glob.glob("./data/pypi/*.tar.gz")
+        + glob.glob("./data/pypi/*.zip")
+        + glob.glob("./data/pypi/*.tgz")
     )
     for package in all_packages:
         yield package
 
 
 def extract_files(filename: str) -> None:
+    savedir = os.path.join("data", "pypi")
     if tarfile.is_tarfile(filename):
-        tarfile.open(filename).extractall("data")
+        tarfile.open(filename).extractall(savedir)
     elif zipfile.is_zipfile(filename):
-        zipfile.ZipFile(filename).extractall("data")
+        zipfile.ZipFile(filename).extractall(savedir)
     else:
         raise ValueError(f"Could not identify type of compressed file {filename}")
 
 
 def find_dirname() -> str:
-    for name in os.listdir("data"):
-        full_path = os.path.join("data", name)
+    for name in os.listdir(os.path.join("data", "pypi")):
+        full_path = os.path.join("data", "pypi", name)
         if os.path.isdir(full_path):
             return full_path
     assert False  # This is to fix mypy, should never be reached
@@ -90,7 +92,7 @@ def main() -> None:
         try:
             run_tests(dirname, tree, extension)
             print("Done")
-        except subprocess.CalledProcessError as e:
+        except:
             print(f"Failed to parse {dirname}")
             continue
         finally:

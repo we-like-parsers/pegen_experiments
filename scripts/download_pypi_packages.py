@@ -1,7 +1,8 @@
+#!/usr/bin/env python3.8
+
 import argparse
 import os
 import json
-import shutil
 
 from typing import Dict, Any
 from urllib.request import urlretrieve
@@ -41,7 +42,7 @@ def download_package_code(name: str, package_json: Dict[Any, Any]) -> None:
             break
     filename = package_json["urls"][source_index]["filename"]
     url = package_json["urls"][source_index]["url"]
-    urlretrieve(url, os.path.join("data", filename))
+    urlretrieve(url, os.path.join("data", "pypi", filename))
 
 
 def main() -> None:
@@ -56,6 +57,11 @@ def main() -> None:
         top_pypi_packages = top_pypi_packages["rows"][:number_packages]
     else:
         raise AssertionError("Unknown value for NUMBER_OF_PACKAGES")
+
+    try:
+        os.mkdir(os.path.join("data", "pypi"))
+    except FileExistsError:
+        pass
 
     for package in top_pypi_packages:
         package_name = package["project"]
