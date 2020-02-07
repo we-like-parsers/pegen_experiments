@@ -118,15 +118,15 @@ def parse_directory(
     tree_arg: int,
     short: bool,
     extension: Any,
-) -> None:
+) -> int:
     if not directory:
         print("You must specify a directory of files to test.", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     if grammar_file:
         if not os.path.exists(grammar_file):
             print(f"The specified grammar file, {grammar_file}, does not exist.", file=sys.stderr)
-            sys.exit(1)
+            return 1
 
         try:
             if not extension:
@@ -143,7 +143,7 @@ def parse_directory(
             )
             traceback.print_exception(err.__class__, err, None)
 
-            sys.exit(1)
+            return 1
 
     else:
         print("A grammar file was not provided - attempting to use existing file...\n")
@@ -155,7 +155,7 @@ def parse_directory(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",
             file=sys.stderr,
         )
-        sys.exit(1)
+        return 1
 
     # For a given directory, traverse files and attempt to parse each one
     # - Output success/failure for each file
@@ -221,7 +221,9 @@ def parse_directory(
         compare_trees(tree, file, verbose, tree_arg >= 2)
 
     if errors:
-        sys.exit(1)
+        return 1
+
+    return 0
 
 
 def main() -> None:
@@ -233,8 +235,10 @@ def main() -> None:
     skip_actions = args.skip_actions
     tree = args.tree
     short = args.short
-    parse_directory(
-        directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None
+    sys.exit(
+        parse_directory(
+            directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None
+        )
     )
 
 

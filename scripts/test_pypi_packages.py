@@ -42,16 +42,16 @@ def extract_files(filename: str) -> None:
         raise ValueError(f"Could not identify type of compressed file {filename}")
 
 
-def find_dirname() -> str:
+def find_dirname(package_name: str) -> str:
     for name in os.listdir(os.path.join("data", "pypi")):
         full_path = os.path.join("data", "pypi", name)
-        if os.path.isdir(full_path):
+        if os.path.isdir(full_path) and name in package_name:
             return full_path
     assert False  # This is to fix mypy, should never be reached
 
 
-def run_tests(dirname: str, tree: int, extension: Any) -> None:
-    test_parse_directory.parse_directory(
+def run_tests(dirname: str, tree: int, extension: Any) -> int:
+    return test_parse_directory.parse_directory(
         dirname,
         "data/simpy.gram",
         verbose=False,
@@ -88,15 +88,13 @@ def main() -> None:
             continue
 
         print(f"Trying to parse all python files ... ")
-        dirname = find_dirname()
-        try:
-            run_tests(dirname, tree, extension)
+        dirname = find_dirname(package)
+        status = run_tests(dirname, tree, extension)
+        if status == 0:
             print("Done")
-        except:
-            print(f"Failed to parse {dirname}")
-            continue
-        finally:
             shutil.rmtree(dirname)
+        else:
+            print(f"Failed to parse {dirname}")
 
 
 if __name__ == "__main__":
