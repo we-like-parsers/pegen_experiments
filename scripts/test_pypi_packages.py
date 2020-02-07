@@ -49,7 +49,7 @@ def find_dirname() -> str:
 
 
 def run_tests(dirname: str, tree: int, extension: Any) -> None:
-    test_parse_directory.test_parse_directory(
+    test_parse_directory.parse_directory(
         dirname,
         "data/simpy.gram",
         verbose=False,

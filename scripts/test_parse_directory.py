@@ -233,7 +233,7 @@ def main() -> None:
     skip_actions = args.skip_actions
     tree = args.tree
     short = args.short
-    test_parse_directory(
+    parse_directory(
         directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None
     )
 
