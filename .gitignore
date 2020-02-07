@@ -4,6 +4,8 @@ pegen/parse
 pegen/parse.c
 parse.py
 
+data/pypi/
+
 **/__pycache__
 
 .dmypy.json
