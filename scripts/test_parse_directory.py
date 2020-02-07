@@ -10,7 +10,7 @@ import traceback
 from glob import glob
 from pathlib import PurePath
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
 sys.path.insert(0, ".")
 from pegen.build import build_parser_and_generator
@@ -117,6 +117,7 @@ def main(
     skip_actions: bool,
     tree_arg: int,
     short: bool,
+    extension: Any,
 ) -> None:
     if not directory:
         print("You must specify a directory of files to test.", file=sys.stderr)
@@ -128,9 +129,13 @@ def main(
             sys.exit(1)
 
         try:
-            build_parser_and_generator(
-                grammar_file, "pegen/parse.c", compile_extension=True, skip_actions=skip_actions,
-            )
+            if not extension:
+                build_parser_and_generator(
+                    grammar_file,
+                    "pegen/parse.c",
+                    compile_extension=True,
+                    skip_actions=skip_actions,
+                )
         except Exception as err:
             print(
                 f"{FAIL}The following error occurred when generating the parser. Please check your grammar file.\n{ENDC}",
@@ -228,4 +233,4 @@ if __name__ == "__main__":
     skip_actions = args.skip_actions
     tree = args.tree
     short = args.short
-    main(directory, grammar_file, verbose, excluded_files, skip_actions, tree, short)
+    main(directory, grammar_file, verbose, excluded_files, skip_actions, tree, short, None)

@@ -6,8 +6,9 @@ import tarfile
 import zipfile
 import shutil
 
-from typing import Generator, Optional
+from typing import Generator, Optional, Any
 
+from pegen import build
 from scripts import test_parse_directory
 
 
@@ -36,7 +37,7 @@ def find_dirname() -> str:
     assert False  # This is to fix mypy, should never be reached
 
 
-def run_tests(dirname: str) -> None:
+def run_tests(dirname: str, extension: Any) -> None:
     test_parse_directory.main(
         dirname,
         "data/simpy.gram",
@@ -53,10 +54,14 @@ def run_tests(dirname: str) -> None:
         skip_actions=False,
         tree_arg=False,
         short=True,
+        extension=extension,
     )
 
 
 def main() -> None:
+    extension = build.build_parser_and_generator(
+        "data/simpy.gram", "pegen/parse.c", compile_extension=True
+    )
     for package in get_packages():
         print(f"Extracting files from {package}... ", end="")
         try:
@@ -69,7 +74,7 @@ def main() -> None:
         print(f"Trying to parse all python files ... ", end="")
         dirname = find_dirname()
         try:
-            run_tests(dirname)
+            run_tests(dirname, extension)
             print("Done")
         except subprocess.CalledProcessError as e:
             print(f"Failed to parse {dirname}")
