@@ -14,18 +14,25 @@ simple_stmt[asdl_seq*]:
 small_stmt[stmt_ty]:
     | assignment
     | e=expressions { _Py_Expr(e, EXTRA) }
-    | return_stmt
-    | import_stmt
-    | raise_stmt
-    | pass_stmt
-    | del_stmt
-    | yield_stmt
-    | assert_stmt
-    | break_stmt
-    | continue_stmt
-    | global_stmt
-    | nonlocal_stmt
-compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stmt | try_stmt | while_stmt
+    | &'return' return_stmt
+    | &('import' | 'from') import_stmt
+    | &'raise' raise_stmt
+    | 'pass' { _Py_Pass(EXTRA) }
+    | &'del' del_stmt
+    | &'yield' yield_stmt
+    | &'assert' assert_stmt
+    | 'break' { _Py_Break(EXTRA) }
+    | 'continue' { _Py_Continue(EXTRA) }
+    | &'global' global_stmt
+    | &'nonlocal' nonlocal_stmt
+compound_stmt[stmt_ty]:
+    | &('@' | 'def' | ASYNC) function_def
+    | &'if' if_stmt
+    | &('@' | 'class') class_def
+    | &('with' | ASYNC) with_stmt
+    | &('for' | ASYNC) for_stmt
+    | &'try' try_stmt
+    | &'while' while_stmt
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
@@ -60,12 +67,6 @@ yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
 
 del_stmt[stmt_ty]: 'del' a=del_targets { _Py_Delete(a, EXTRA) }
-
-pass_stmt[stmt_ty]: 'pass' { _Py_Pass(EXTRA) }
-
-break_stmt[stmt_ty]: 'break' { _Py_Break(EXTRA) }
-
-continue_stmt[stmt_ty]: 'continue' { _Py_Continue(EXTRA) }
 
 import_stmt[stmt_ty]: import_name | import_from
 import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(a, EXTRA) }
@@ -134,8 +135,7 @@ except_block[excepthandler_ty]:
 finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
 return_stmt[stmt_ty]:
-    | 'return' a=expressions { _Py_Return(a, EXTRA) }
-    | 'return' { _Py_Return(NULL, EXTRA) }
+    | 'return' a=[expressions] { _Py_Return(a, EXTRA) }
 
 raise_stmt[stmt_ty]:
     | 'raise' a=expression b=['from' z=expression { z }] { _Py_Raise(a, b, EXTRA) }
