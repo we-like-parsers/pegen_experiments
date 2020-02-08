@@ -1335,12 +1335,25 @@ augoperator(Parser *p, operator_ty kind)
 stmt_ty
 function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
 {
-    return _Py_FunctionDef(function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
-                           function_def->v.FunctionDef.body, decorators,
-                           function_def->v.FunctionDef.returns,
-                           function_def->v.FunctionDef.type_comment, function_def->lineno,
-                           function_def->col_offset, function_def->end_lineno,
-                           function_def->end_col_offset, p->arena);
+    if (function_def->kind == AsyncFunctionDef_kind) {
+        return _Py_AsyncFunctionDef(
+            function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
+            function_def->v.FunctionDef.body, decorators,
+            function_def->v.FunctionDef.returns,
+            function_def->v.FunctionDef.type_comment, function_def->lineno,
+            function_def->col_offset, function_def->end_lineno,
+            function_def->end_col_offset, p->arena
+        );
+    }
+
+    return _Py_FunctionDef(
+        function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
+        function_def->v.FunctionDef.body, decorators,
+        function_def->v.FunctionDef.returns,
+        function_def->v.FunctionDef.type_comment, function_def->lineno,
+        function_def->col_offset, function_def->end_lineno,
+        function_def->end_col_offset, p->arena
+    );
 }
 
 /* Construct a ClassDef equivalent to class_def, but with decorators */

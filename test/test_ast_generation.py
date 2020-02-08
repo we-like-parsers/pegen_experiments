@@ -92,6 +92,12 @@ TEST_CASES = [
         def f():
             pass
      '''),
+    ('decorator_async',
+     '''
+        @a
+        async def d():
+            pass
+     '''),
     ('del_attribute', 'del a.b'),
     ('del_call_attribute', 'del a().c'),
     ('del_call_genexp_attribute', 'del a(i for i in b).c'),
