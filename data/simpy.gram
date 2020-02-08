@@ -6,7 +6,9 @@ start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
 statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) } | simple_stmt
-simple_stmt[asdl_seq*]: a=';'.small_stmt+ [';'] NEWLINE { a }
+simple_stmt[asdl_seq*]:
+    | a=small_stmt !';' NEWLINE { singleton_seq(p, a) }  # Not needed, there for speedup
+    | a=';'.small_stmt+ [';'] NEWLINE { a }
 # NOTE: assignment MUST precede expression, else the parser will get stuck;
 # but it must follow all others, else reserved words will match a simple NAME.
 small_stmt[stmt_ty]:
@@ -459,7 +461,7 @@ target[expr_ty]:
 t_primary[expr_ty]:
     | a=t_primary '.' b=NAME &t_lookahead { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
     | a=t_primary b=slicing &t_lookahead { _Py_Subscript(a, b, Load, EXTRA) }
-    | a=t_primary b=genexp  &t_lookahead { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
+    | a=t_primary b=genexp &t_lookahead { _Py_Call(a, singleton_seq(p, b), NULL, EXTRA) }
     | a=t_primary '(' b=[arguments] ')' &t_lookahead {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
