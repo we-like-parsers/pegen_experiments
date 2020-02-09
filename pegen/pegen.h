@@ -129,7 +129,6 @@ arguments_ty make_arguments(Parser *, asdl_seq *, SlashWithDefault *,
                             asdl_seq *, asdl_seq *, StarEtc *);
 arguments_ty empty_arguments(Parser *);
 AugOperator *augoperator(Parser*, operator_ty type);
-expr_ty construct_assign_target(Parser *p, expr_ty node);
 stmt_ty function_def_decorators(Parser *, asdl_seq *, stmt_ty);
 stmt_ty class_def_decorators(Parser *, asdl_seq *, stmt_ty);
 KeywordOrStarred *keyword_or_starred(Parser *, void *, int);

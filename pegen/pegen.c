@@ -959,34 +959,6 @@ _set_starred_context(Parser *p, expr_ty e, expr_context_ty ctx)
     return _Py_Starred(set_expr_context(p, e->v.Starred.value, ctx), ctx, EXTRA_EXPR(e, e));
 }
 
-/* Receives a expr_ty and creates the appropiate node for assignment targets */
-expr_ty
-construct_assign_target(Parser *p, expr_ty node)
-{
-    if (!node) {
-        return NULL;
-    }
-
-    switch (node->kind) {
-        case Tuple_kind:
-            if (asdl_seq_LEN(node->v.Tuple.elts) != 1) {
-                PyErr_Format(PyExc_SyntaxError,
-                             "Only single target (not tuple) can be annotated");
-                // TODO: We need to return a dummy here because we don't have a way to
-                // correctly buble up exceptions for now.
-                return _Py_Name(_create_dummy_identifier(p), Store, EXTRA_EXPR(node, node));
-            }
-            return asdl_seq_GET(node->v.Tuple.elts, 0);
-        case List_kind:
-            PyErr_Format(PyExc_SyntaxError, "Only single target (not list) can be annotated");
-            // TODO: We need to return a dummy here because we don't have a way to correctly
-            // buble up exceptions for now.
-            return _Py_Name(_create_dummy_identifier(p), Store, EXTRA_EXPR(node, node));
-        default:
-            return node;
-    }
-}
-
 /* Creates an `expr_ty` equivalent to `expr` but with `ctx` as context */
 expr_ty
 set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)

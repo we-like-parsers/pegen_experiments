@@ -27,9 +27,10 @@ compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stm
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
-    | !'lambda' a=target ':' b=expression c=['=' d=yield_expression { d }] {
-         _Py_AnnAssign(construct_assign_target(p, a), b, c,
-         a->kind == Name_kind ? 1 : 0, EXTRA) }
+    | !'lambda' '(' a=ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
+        _Py_AnnAssign(a, b, c, 0, EXTRA)}
+    | !'lambda' a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
+        _Py_AnnAssign(a, b, c, 1, EXTRA) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA) }
     | a=target b=augassign c=(yield_expr | expressions) {
@@ -438,8 +439,14 @@ star_target[expr_ty]:
     | star_atom
 star_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Store) }
+    | '(' a=[star_target !','] ')' { set_expr_context(p, a, Store) }
     | '(' a=[star_targets_seq] ')' { _Py_Tuple(a, Store, EXTRA) }
     | '[' a=[star_targets_seq] ']' { _Py_List(a, Store, EXTRA) }
+
+ann_assign_target[expr_ty]:
+    | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
+    | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
+    | a=NAME { set_expr_context(p, a, Store) }
 
 del_targets[asdl_seq*]: a=','.del_target+ [','] { a }
 del_target[expr_ty]:
@@ -448,8 +455,9 @@ del_target[expr_ty]:
     | del_t_atom
 del_t_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Del) }
-    | '(' b=[del_targets] ')' { _Py_Tuple(b, Del, EXTRA) }
-    | '[' b=[del_targets] ']' { _Py_List(b, Del, EXTRA) }
+    | '(' a=[del_target !','] ')' { set_expr_context(p, a, Del) }
+    | '(' a=[del_targets] ')' { _Py_Tuple(a, Del, EXTRA) }
+    | '[' a=[del_targets] ']' { _Py_List(a, Del, EXTRA) }
 
 targets[asdl_seq*]: a=','.target+ [','] { a }
 target[expr_ty]:
@@ -469,5 +477,6 @@ t_primary[expr_ty]:
 t_lookahead: '(' | '[' | '.'
 t_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Store) }
+    | '(' a=[target !','] ')' { set_expr_context(p, a, Store) }
     | '(' b=[targets] ')' { _Py_Tuple(b, Store, EXTRA) }
     | '[' b=[targets] ']' { _Py_List(b, Store, EXTRA) }
