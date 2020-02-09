@@ -185,7 +185,8 @@ def parse_directory(
                 try:
                     ast.parse(file)
                 except Exception:
-                    pass
+                    if not short:
+                        print(f"File {file} cannot be parsed by either pegen or the ast module.")
                 else:
                     report_status(
                         succeeded=False, file=file, verbose=verbose, error=error, short=short
