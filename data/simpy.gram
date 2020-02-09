@@ -359,12 +359,9 @@ atom[expr_ty]:
     | 'None' { _Py_Constant(Py_None, NULL, EXTRA) }
     | &STRING a=STRING+ { concatenate_strings(p, a) }
     | NUMBER
-    | &'(' tuple
-    | &'[' list
-    | &'{' dict
-    | &'[' listcomp
-    | &'(' (group | genexp)
-    | &'{' (set | dictcomp | setcomp)
+    | &'(' (tuple | group | genexp)
+    | &'[' (list | listcomp)
+    | &'{' (dict | set | dictcomp | setcomp)
     | '...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA) }
 
 list[expr_ty]:
