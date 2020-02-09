@@ -444,9 +444,9 @@ star_atom[expr_ty]:
     | '[' a=[star_targets_seq] ']' { _Py_List(a, Store, EXTRA) }
 
 paren_ann_assign_target[expr_ty]:
+    | '(' a=paren_ann_assign_target ')' { a }
     | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
     | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
-    | '(' a=paren_ann_assign_target ')' { a }
     | a=NAME { set_expr_context(p, a, Store) }
 
 ann_assign_target[expr_ty]:
