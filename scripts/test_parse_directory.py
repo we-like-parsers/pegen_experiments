@@ -182,10 +182,16 @@ def parse_directory(
                 if not short:
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
-                report_status(
-                    succeeded=False, file=file, verbose=verbose, error=error, short=short
-                )
-                errors += 1
+                try:
+                    ast.parse(file)
+                except Exception:
+                    if not short:
+                        print(f"File {file} cannot be parsed by either pegen or the ast module.")
+                else:
+                    report_status(
+                        succeeded=False, file=file, verbose=verbose, error=error, short=short
+                    )
+                    errors += 1
             files.append(file)
     t1 = time.time()
 
