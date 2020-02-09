@@ -182,10 +182,15 @@ def parse_directory(
                 if not short:
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
-                report_status(
-                    succeeded=False, file=file, verbose=verbose, error=error, short=short
-                )
-                errors += 1
+                try:
+                    ast.parse(file)
+                except Exception:
+                    pass
+                else:
+                    report_status(
+                        succeeded=False, file=file, verbose=verbose, error=error, short=short
+                    )
+                    errors += 1
             files.append(file)
     t1 = time.time()
 
