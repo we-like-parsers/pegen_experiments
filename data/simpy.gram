@@ -27,7 +27,7 @@ compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stm
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
-    | '(' a=ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
+    | '(' a=paren_ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 0, EXTRA)}
     | a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 1, EXTRA) }
@@ -439,9 +439,15 @@ star_target[expr_ty]:
     | star_atom
 star_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Store) }
-    | '(' a=[star_target !','] ')' { set_expr_context(p, a, Store) }
+    | '(' a=[star_target] ')' { set_expr_context(p, a, Store) }
     | '(' a=[star_targets_seq] ')' { _Py_Tuple(a, Store, EXTRA) }
     | '[' a=[star_targets_seq] ']' { _Py_List(a, Store, EXTRA) }
+
+paren_ann_assign_target[expr_ty]:
+    | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
+    | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
+    | '(' a=paren_ann_assign_target ')' { a }
+    | a=NAME { set_expr_context(p, a, Store) }
 
 ann_assign_target[expr_ty]:
     | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
@@ -455,7 +461,7 @@ del_target[expr_ty]:
     | del_t_atom
 del_t_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Del) }
-    | '(' a=[del_target !','] ')' { set_expr_context(p, a, Del) }
+    | '(' a=[del_target] ')' { set_expr_context(p, a, Del) }
     | '(' a=[del_targets] ')' { _Py_Tuple(a, Del, EXTRA) }
     | '[' a=[del_targets] ']' { _Py_List(a, Del, EXTRA) }
 
@@ -477,6 +483,6 @@ t_primary[expr_ty]:
 t_lookahead: '(' | '[' | '.'
 t_atom[expr_ty]:
     | a=NAME { set_expr_context(p, a, Store) }
-    | '(' a=[target !','] ')' { set_expr_context(p, a, Store) }
+    | '(' a=[target] ')' { set_expr_context(p, a, Store) }
     | '(' b=[targets] ')' { _Py_Tuple(b, Store, EXTRA) }
     | '[' b=[targets] ']' { _Py_List(b, Store, EXTRA) }
