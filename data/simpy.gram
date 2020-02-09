@@ -26,9 +26,9 @@ small_stmt[stmt_ty]:
     | &'global' global_stmt
     | &'nonlocal' nonlocal_stmt
 compound_stmt[stmt_ty]:
-    | &('@' | 'def' | ASYNC) function_def
+    | &('def' | '@' | ASYNC) function_def
     | &'if' if_stmt
-    | &('@' | 'class') class_def
+    | &('class' | '@') class_def
     | &('with' | ASYNC) with_stmt
     | &('for' | ASYNC) for_stmt
     | &'try' try_stmt
