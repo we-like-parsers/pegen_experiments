@@ -363,11 +363,8 @@ atom[expr_ty]:
     | &'[' list
     | &'{' dict
     | &'[' listcomp
-    | &'(' group
-    | &'(' genexp
-    | &'{' set
-    | &'{' dictcomp
-    | &'{' setcomp
+    | &'(' (group | genexp)
+    | &'{' (set | dictcomp | setcomp)
     | '...' { _Py_Constant(Py_Ellipsis, NULL, EXTRA) }
 
 list[expr_ty]:
