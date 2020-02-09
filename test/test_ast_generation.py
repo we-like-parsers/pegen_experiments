@@ -16,12 +16,15 @@ TEST_CASES = [
     ('annotated_assignment_with_parens', '(paren): int = 3+2'),
     ('annotated_assignment_with_yield', 'x: int = yield 42'),
     ('annotated_no_assignment', 'x: int'),
+    ('annotation_with_multiple_parens', '((parens)): int'),
     ('annotation_with_parens', '(parens): int'),
     ('assert', 'assert a'),
     ('assert_message', 'assert a, b'),
     ('assignment_false', 'a = False'),
     ('assignment_none', 'a = None'),
     ('assignment_true', 'a = True'),
+    ('assignment_paren', '(a) = 42'),
+    ('assignment_paren_multiple', '(a, b) = (0, 1)'),
     ('asyncfor',
      '''
         async for i in a:
@@ -105,6 +108,8 @@ TEST_CASES = [
     ('del_mixed', 'del a[0].b().c'),
     ('del_multiple', 'del a, b'),
     ('del_multiple_calls_attribute', 'del a()().b'),
+    ('del_paren', 'del(a,b)'),
+    ('del_paren_single_target', 'del(a)'),
     ('del_subscript_attribute', 'del a[0].b'),
     ('del_tuple', 'del a, (b, c)'),
     ('delete', 'del a'),
@@ -130,6 +135,7 @@ TEST_CASES = [
         else:
             pass
      '''),
+    ('for_star_target_in_paren', 'for (a) in b: pass'),
     ('for_star_targets_attribute', 'for a.b in c: pass'),
     ('for_star_targets_call_attribute', 'for a().c in b: pass'),
     ('for_star_targets_mixed', 'for a[0].b().c in d: pass'),
@@ -427,6 +433,11 @@ TEST_CASES = [
         with a as b:
             pass
      '''),
+    ('with_as_paren',
+     '''
+        with a as (b):
+            pass
+     '''),
     ('with_list_recursive',
      '''
         with a as [x, [y, z]]:
@@ -448,6 +459,12 @@ TEST_CASES = [
 ]
 
 FAIL_TEST_CASES = [
+    ("annotation_multiple_targets", "(a, b): int = 42"),
+    ("annotation_nested_tuple", "((a, b)): int"),
+    ("annotation_list", "[a]: int"),
+    ("annotation_lambda", "lambda: int = 42"),
+    ("annotation_tuple", "(a,): int"),
+    ("annotation_tuple_without_paren", "a,: int"),
     ("assignment_keyword", "a = if"),
     ("del_call", "del a()"),
     ("del_call_genexp", "del a(i for i in b)"),
