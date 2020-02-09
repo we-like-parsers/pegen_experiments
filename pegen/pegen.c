@@ -373,6 +373,82 @@ dedent_token(Parser *p)
     return expect_token(p, DEDENT);
 }
 
+
+static PyObject *
+parsenumber_raw(const char *s)
+{
+    const char *end;
+    long x;
+    double dx;
+    Py_complex compl;
+    int imflag;
+
+    assert(s != NULL);
+    errno = 0;
+    end = s + strlen(s) - 1;
+    imflag = *end == 'j' || *end == 'J';
+    if (s[0] == '0') {
+        x = (long) PyOS_strtoul(s, (char **)&end, 0);
+        if (x < 0 && errno == 0) {
+            return PyLong_FromString(s, (char **)0, 0);
+        }
+    }
+    else
+        x = PyOS_strtol(s, (char **)&end, 0);
+    if (*end == '\0') {
+        if (errno != 0)
+            return PyLong_FromString(s, (char **)0, 0);
+        return PyLong_FromLong(x);
+    }
+    /* XXX Huge floats may silently fail */
+    if (imflag) {
+        compl.real = 0.;
+        compl.imag = PyOS_string_to_double(s, (char **)&end, NULL);
+        if (compl.imag == -1.0 && PyErr_Occurred())
+            return NULL;
+        return PyComplex_FromCComplex(compl);
+    }
+    else
+    {
+        dx = PyOS_string_to_double(s, NULL, NULL);
+        if (dx == -1.0 && PyErr_Occurred())
+            return NULL;
+        return PyFloat_FromDouble(dx);
+    }
+}
+
+
+
+static PyObject *
+parsenumber(const char *s)
+{
+    char *dup, *end;
+    PyObject *res = NULL;
+
+    assert(s != NULL);
+
+    if (strchr(s, '_') == NULL) {
+        return parsenumber_raw(s);
+    }
+    /* Create a duplicate without underscores. */
+    dup = PyMem_Malloc(strlen(s) + 1);
+    if (dup == NULL) {
+        return PyErr_NoMemory();
+    }
+    end = dup;
+    for (; *s; s++) {
+        if (*s != '_') {
+            *end++ = *s;
+        }
+    }
+    *end = '\0';
+    res = parsenumber_raw(dup);
+    PyMem_Free(dup);
+    return res;
+}
+
+
+
 expr_ty
 number_token(Parser *p)
 {
@@ -380,43 +456,24 @@ number_token(Parser *p)
     if (t == NULL) {
         return NULL;
     }
-    // TODO: Just copy CPython's machinery for parsing numbers.
-    PyObject *c = PyLong_FromString(PyBytes_AsString(t->bytes), (char **)0, 0);
-    if (c == NULL) {
-        PyErr_Clear();
-        PyObject *tbytes = t->bytes;
-        Py_ssize_t size = PyBytes_Size(tbytes);
-        char *bytes = PyBytes_AsString(tbytes);
-        char lastc = size == 0 ? 0 : bytes[size - 1];
-        int iscomplex = 0;
-        PyObject *obytes = NULL;
-        if (size > 0 && (lastc == 'j' || lastc == 'J')) {
-            iscomplex = 1;
-            obytes = PyBytes_FromStringAndSize(bytes, size - 1);
-            if (obytes == NULL) {
-                return NULL;
-            }
-            tbytes = obytes;
-        }
-        c = PyFloat_FromString(tbytes);
-        Py_XDECREF(obytes);
-        if (c == NULL) {
-            return NULL;
-        }
-        if (iscomplex) {
-            double real = PyFloat_AsDouble(c);
-            double imag = 0;
-            Py_DECREF(c);
-            c = PyComplex_FromDoubles(real, imag);
-            if (c == NULL) {
-                return NULL;
-            }
-        }
+
+    char* num_raw = PyBytes_AsString(t->bytes);
+
+    if (num_raw == NULL) {
+        return NULL;
     }
+
+    PyObject *c = parsenumber(num_raw);
+
+    if (c == NULL) {
+        return NULL;
+    }
+
     if (PyArena_AddPyObject(p->arena, c) < 0) {
         Py_DECREF(c);
         return NULL;
     }
+
     return Constant(c, NULL, t->lineno, t->col_offset, t->end_lineno, t->end_col_offset,
                     p->arena);
 }
