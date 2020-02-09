@@ -27,9 +27,9 @@ compound_stmt[stmt_ty]: function_def | if_stmt | class_def | with_stmt | for_stm
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
-    | !'lambda' '(' a=ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
+    | '(' a=ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 0, EXTRA)}
-    | !'lambda' a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
+    | a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 1, EXTRA) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA) }

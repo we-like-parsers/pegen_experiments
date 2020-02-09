@@ -457,6 +457,7 @@ FAIL_TEST_CASES = [
     ("annotation_multiple_targets", "(a, b): int = 42"),
     ("annotation_nested_tuple", "((a, b)): int"),
     ("annotation_list", "[a]: int"),
+    ("annotation_lambda", "lambda: int = 42"),
     ("assignment_keyword", "a = if"),
     ("del_call", "del a()"),
     ("del_call_genexp", "del a(i for i in b)"),
