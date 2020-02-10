@@ -271,10 +271,11 @@ TEST_CASES = [
     ('namedexpr_none', '(x := None)'),
     ('namedexpr_true', '(x := True)'),
     ('nonlocal', 'nonlocal a, b'),
-    ('number_float', '-34.2333'),
-    ('number_integer', '-234'),
     ('number_complex', '-2.234+1j'),
+    ('number_float', '-34.2333'),
     ('number_imaginary_literal', '1.1234j'),
+    ('number_integer', '-234'),
+    ('number_underscores', '1_234_567'),
     ('pass', 'pass'),
     ('pos_args',
      '''
