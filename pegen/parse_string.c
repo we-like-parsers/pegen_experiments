@@ -505,9 +505,18 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     }
     PyErr_Clear();
     mod = the_start_rule(p2);
-    stmt_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
 
     PyTokenizer_Free(tok);
+
+    if (mod == NULL){
+        goto exit;
+    }
+
+    if (asdl_seq_LEN(mod->v.Module.body) == 0) {
+        raise_syntax_error(p, "f-string: empty expression not allowed");
+    }
+
+    stmt_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
 
     /* Reuse str to find the correct column offset. */
     str[0] = '{';
@@ -526,7 +535,7 @@ exit:
     if (mod == NULL) {
         return NULL;
     }
-    if (asdl_seq_LEN(mod->v.Module.body) != 1) {
+    if (asdl_seq_LEN(mod->v.Module.body) != 1 || expr->kind != Expr_kind) {
         raise_syntax_error(p, "f-string: invalid expression");
     }
     return expr->v.Expr.value;

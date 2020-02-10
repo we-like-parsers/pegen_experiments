@@ -458,6 +458,10 @@ FAIL_TEST_CASES = [
     ("for_star_targets_subscript_call", "for a[b]() in c: pass"),
     ("for_star_targets_attribute_call", "for a.b() in c: pass"),
     ("for_star_targets_mixed_call", "for a[0].b().c.d() in e: pass"),
+    ("f-string_assignment", "f'{x = 42}'"),
+    ("f-string_empty", "f'{}'"),
+    ("f-string_function_def", "f'{def f(): pass}'"),
+    ("f-string_lambda", "f'{lambda x: 42}'"),
 ]
 
 # fmt: on
