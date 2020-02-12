@@ -1393,9 +1393,12 @@ concatenate_strings(Parser *p, asdl_seq *strings)
         Py_ssize_t fstrlen = -1;
 
         char *this_str = PyBytes_AsString(t->bytes);
+        if (!this_str) {
+            goto error;
+        }
 
         if (parsestr(p, this_str, &this_bytesmode, &this_rawmode, &s, &fstr, &fstrlen) != 0) {
-            return NULL;
+            goto error;
         }
 
         /* Check that we are not mixing bytes with unicode. */

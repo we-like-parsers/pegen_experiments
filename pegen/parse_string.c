@@ -578,9 +578,14 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
 
     if (asdl_seq_LEN(mod->v.Module.body) == 0) {
         raise_syntax_error(p, "f-string: empty expression not allowed");
+        goto exit;
     }
 
     stmt_ty expr = asdl_seq_GET(mod->v.Module.body, 0);
+    if (asdl_seq_LEN(mod->v.Module.body) != 1 || expr->kind != Expr_kind) {
+        raise_syntax_error(p, "f-string: invalid expression");
+        goto exit;
+    }
 
     /* Reuse str to find the correct column offset. */
     str[0] = '{';
@@ -598,9 +603,6 @@ exit:
     PyMem_Free(p2);
     if (mod == NULL) {
         return NULL;
-    }
-    if (asdl_seq_LEN(mod->v.Module.body) != 1 || expr->kind != Expr_kind) {
-        raise_syntax_error(p, "f-string: invalid expression");
     }
     return expr->v.Expr.value;
 }
@@ -1195,7 +1197,6 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* first_token, Token *last
         return NULL;
     }
     //TODO: Check this logic with the kind
-    //
     const char* the_str = PyBytes_AsString(first_token->bytes);
     if (the_str && the_str[0] == 'u') {
         kind = new_identifier(p, "u");
