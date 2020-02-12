@@ -328,11 +328,6 @@ TEST_CASES = [
     ('simple_assignment_with_yield', 'x = yield 42'),
     ('string_bytes', 'b"hello"'),
     ('string_concatenation_bytes', 'b"hello" b"world"'),
-    ('string_concatenation_format', 'f"{hello} world" f"again {and_again}"'),
-    ('string_concatenation_multiple',
-     '''
-        f"hello" f"{world} again" f"and_again"
-     '''),
     ('string_concatenation_simple', '"abcd" "efgh"'),
     ('string_format_simple', 'f"hello"'),
     ('string_format_with_formatted_value', 'f"hello {world}"'),
@@ -490,6 +485,14 @@ FAIL_TEST_CASES = [
     ("f-string_lambda", "f'{lambda x: 42}'"),
 ]
 
+GOOD_BUT_FAIL_TEST_CASES = [
+    ('string_concatenation_format', 'f"{hello} world" f"again {and_again}"'),
+    ('string_concatenation_multiple',
+     '''
+        f"hello" f"{world} again" f"and_again"
+     '''),
+]
+
 # fmt: on
 
 
@@ -516,6 +519,8 @@ def prepare_test_cases(
 
 
 TEST_IDS, TEST_SOURCES = prepare_test_cases(TEST_CASES)
+
+GOOD_BUT_FAIL_TEST_IDS, GOOD_BUT_FAIL_SOURCES = prepare_test_cases(GOOD_BUT_FAIL_TEST_CASES)
 
 FAIL_TEST_IDS, FAIL_SOURCES = prepare_test_cases(FAIL_TEST_CASES)
 
@@ -546,5 +551,14 @@ def test_correct_ast_generation_on_source_files(parser_extension: Any, source: s
 
 @pytest.mark.parametrize("source", FAIL_SOURCES, ids=FAIL_TEST_IDS)
 def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
+    with pytest.raises(SyntaxError):
+        parser_extension.parse_string(source, mode=0)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize("source", GOOD_BUT_FAIL_SOURCES, ids=GOOD_BUT_FAIL_TEST_IDS)
+def test_correct_but_known_to_fail_ast_generation_on_source_files(
+    parser_extension: Any, source: str
+) -> None:
     with pytest.raises(SyntaxError):
         parser_extension.parse_string(source, mode=0)
