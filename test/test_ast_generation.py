@@ -158,7 +158,7 @@ TEST_CASES = [
     ('f-string_named_expr', "f'{(x:=42)}'"),
     ('f-string_binop', "f'{x+y}'"),
     ('f-string_unaryop', "f'{not x}'"),
-    # ('f-string_lambda', "f'{(lambda x: 42)}'"),
+    ('f-string_lambda', "f'{(lambda x, /, y, y2=42 , *z, k1, k2=34, **k3: 42)}'"),
     ('f-string_ifexpr', "f'{x if y else z}'"),
     ('f-string_dict', "f'{ {2:34, 3:34} }'"),
     ('f-string_set', "f'{ {2,-45} }'"),

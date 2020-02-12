@@ -260,7 +260,7 @@ static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offse
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         expr_ty expr = asdl_seq_GET(seq, i);
         if (expr == NULL){
-            return;
+            continue;
         }
         fstring_shift_expr_locations(expr, lineno, col_offset);
     }
@@ -296,6 +296,43 @@ static void fstring_shift_comprehension(comprehension_ty comp, int lineno, int c
     fstring_shift_seq_locations(comp->ifs, lineno, col_offset);
 }
 
+static void fstring_shift_argument(arg_ty arg, int lineno, int col_offset) {
+    if (arg->annotation != NULL){
+        fstring_shift_expr_locations(arg->annotation, lineno, col_offset);
+    }
+    arg->col_offset = arg->col_offset + col_offset;
+    arg->end_col_offset = arg->end_col_offset + col_offset;
+    arg->lineno = arg->lineno + lineno;
+    arg->end_lineno = arg->end_lineno + lineno;
+}
+
+
+static void fstring_shift_arguments(arguments_ty args, int lineno, int col_offset) {
+    for (int i = 0, l = asdl_seq_LEN(args->posonlyargs); i < l; i++) {
+       arg_ty arg = asdl_seq_GET(args->posonlyargs, i);
+       fstring_shift_argument(arg, lineno, col_offset);
+    }
+
+    for (int i = 0, l = asdl_seq_LEN(args->args); i < l; i++) {
+       arg_ty arg = asdl_seq_GET(args->args, i);
+       fstring_shift_argument(arg, lineno, col_offset);
+    }
+
+    fstring_shift_argument(args->vararg, lineno, col_offset);
+
+    for (int i = 0, l = asdl_seq_LEN(args->kwonlyargs); i < l; i++) {
+       arg_ty arg = asdl_seq_GET(args->kwonlyargs, i);
+       fstring_shift_argument(arg, lineno, col_offset);
+    }
+
+    fstring_shift_seq_locations(args->kw_defaults, lineno, col_offset);
+
+    fstring_shift_argument(args->kwarg, lineno, col_offset);
+
+    fstring_shift_seq_locations(args->defaults, lineno, col_offset);
+}
+
+
 static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offset) {
     switch (n->kind) {
         case BoolOp_kind:
@@ -313,6 +350,7 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             fstring_shift_expr_locations(n->v.UnaryOp.operand, lineno, col_offset);
             break;
         case Lambda_kind:
+            fstring_shift_arguments(n->v.Lambda.args, lineno, col_offset);
             fstring_shift_expr_locations(n->v.Lambda.body, lineno, col_offset);
             break;
         case IfExp_kind:
