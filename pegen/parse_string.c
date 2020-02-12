@@ -290,6 +290,12 @@ static void fstring_shift_slice_locations(slice_ty slice, int lineno, int col_of
     }
 }
 
+static void fstring_shift_comprehension(comprehension_ty comp, int lineno, int col_offset) {
+    fstring_shift_expr_locations(comp->target, lineno, col_offset);
+    fstring_shift_expr_locations(comp->iter, lineno, col_offset);
+    fstring_shift_seq_locations(comp->ifs, lineno, col_offset);
+}
+
 static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offset) {
     switch (n->kind) {
         case BoolOp_kind:
@@ -323,20 +329,32 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             break;
         case ListComp_kind:
             fstring_shift_expr_locations(n->v.ListComp.elt, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.ListComp.generators, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(n->v.ListComp.generators); i < l; i++) {
+                comprehension_ty comp = asdl_seq_GET(n->v.ListComp.generators, i);
+                fstring_shift_comprehension(comp, lineno, col_offset);
+            }
             break;
         case SetComp_kind:
             fstring_shift_expr_locations(n->v.SetComp.elt, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.SetComp.generators, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(n->v.SetComp.generators); i < l; i++) {
+                comprehension_ty comp = asdl_seq_GET(n->v.SetComp.generators, i);
+                fstring_shift_comprehension(comp, lineno, col_offset);
+            }
             break;
         case DictComp_kind:
             fstring_shift_expr_locations(n->v.DictComp.key, lineno, col_offset);
             fstring_shift_expr_locations(n->v.DictComp.value, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.DictComp.generators, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(n->v.DictComp.generators); i < l; i++) {
+                comprehension_ty comp = asdl_seq_GET(n->v.DictComp.generators, i);
+                fstring_shift_comprehension(comp, lineno, col_offset);
+            }
             break;
         case GeneratorExp_kind:
             fstring_shift_expr_locations(n->v.GeneratorExp.elt, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.GeneratorExp.generators, lineno, col_offset);
+            for (int i = 0, l = asdl_seq_LEN(n->v.GeneratorExp.generators); i < l; i++) {
+                comprehension_ty comp = asdl_seq_GET(n->v.GeneratorExp.generators, i);
+                fstring_shift_comprehension(comp, lineno, col_offset);
+            }
             break;
         case Await_kind:
             fstring_shift_expr_locations(n->v.Await.value, lineno, col_offset);
