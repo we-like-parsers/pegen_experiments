@@ -591,9 +591,6 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     str[0] = '{';
     str[len+1] = '}';
     fstring_fix_expr_location(t, expr->v.Expr.value, str);
-    if (!mod) {
-        return NULL;
-    }
 
 exit:
     for (int i = 0; i < p2->size; i++) {
