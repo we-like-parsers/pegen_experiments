@@ -1196,7 +1196,6 @@ make_str_node_and_del(Parser *p, PyObject **str, Token* first_token, Token *last
         Py_DECREF(s);
         return NULL;
     }
-    //TODO: Check this logic with the kind
     const char* the_str = PyBytes_AsString(first_token->bytes);
     if (the_str && the_str[0] == 'u') {
         kind = new_identifier(p, "u");
