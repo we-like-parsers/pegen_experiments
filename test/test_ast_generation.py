@@ -560,5 +560,8 @@ def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source:
 def test_correct_but_known_to_fail_ast_generation_on_source_files(
     parser_extension: Any, source: str
 ) -> None:
-    with pytest.raises(SyntaxError):
-        parser_extension.parse_string(source, mode=0)
+    actual_ast = parser_extension.parse_string(source, mode=1)
+    expected_ast = ast.parse(source)
+    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+        expected_ast, include_attributes=True
+    ), f"Wrong AST generation for source: {source}"
