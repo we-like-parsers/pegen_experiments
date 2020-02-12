@@ -565,3 +565,12 @@ def test_correct_but_known_to_fail_ast_generation_on_source_files(
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for source: {source}"
+
+
+@pytest.mark.parametrize("source", GOOD_BUT_FAIL_SOURCES, ids=GOOD_BUT_FAIL_TEST_IDS)
+def test_correct_ast_generation_without_pos_info(parser_extension: Any, source: str) -> None:
+    actual_ast = parser_extension.parse_string(source, mode=1)
+    expected_ast = ast.parse(source)
+    assert ast.dump(actual_ast) == ast.dump(
+        expected_ast
+    ), f"Wrong AST generation for source: {source}"
