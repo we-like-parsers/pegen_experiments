@@ -318,7 +318,9 @@ static void fstring_shift_arguments(arguments_ty args, int lineno, int col_offse
        fstring_shift_argument(arg, lineno, col_offset);
     }
 
-    fstring_shift_argument(args->vararg, lineno, col_offset);
+    if (args->vararg != NULL) {
+        fstring_shift_argument(args->vararg, lineno, col_offset);
+    }
 
     for (int i = 0, l = asdl_seq_LEN(args->kwonlyargs); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->kwonlyargs, i);
@@ -327,7 +329,9 @@ static void fstring_shift_arguments(arguments_ty args, int lineno, int col_offse
 
     fstring_shift_seq_locations(args->kw_defaults, lineno, col_offset);
 
-    fstring_shift_argument(args->kwarg, lineno, col_offset);
+    if (args->kwarg != NULL) {
+        fstring_shift_argument(args->kwarg, lineno, col_offset);
+    }
 
     fstring_shift_seq_locations(args->defaults, lineno, col_offset);
 }
