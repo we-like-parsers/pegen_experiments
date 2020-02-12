@@ -159,6 +159,7 @@ TEST_CASES = [
     ('f-string_binop', "f'{x+y}'"),
     ('f-string_unaryop', "f'{not x}'"),
     ('f-string_lambda', "f'{(lambda x, /, y, y2=42 , *z, k1, k2=34, **k3: 42)}'"),
+    ('f-string_lambda_call', "f'{(lambda: 2)(2)}'"),
     ('f-string_ifexpr', "f'{x if y else z}'"),
     ('f-string_dict', "f'{ {2:34, 3:34} }'"),
     ('f-string_set', "f'{ {2,-45} }'"),
@@ -176,6 +177,13 @@ TEST_CASES = [
     ('f-string_attribute', "f'{ f.x.y.z }'"),
     ('f-string_starred', "f'{ *x, }'"),
     ('f-string_doublestarred', "f'{ {**x} }'"),
+    ('f-string_escape_brace', "f'{{Escape'"),
+    ('f-string_escape_closing_brace', "f'Escape}}'"),
+    ('f-string_repr', "f'{a!r}'"),
+    ('f-string_str', "f'{a!s}'"),
+    ('f-string_ascii', "f'{a!a}'"),
+    ('f-string_debug', "f'{a=}'"),
+    ('f-string_padding', "f'{a:03d}'"),
     ('global', 'global a, b'),
     ('group', '(yield a)'),
     ('if_elif',
@@ -483,6 +491,8 @@ FAIL_TEST_CASES = [
     ("f-string_empty", "f'{}'"),
     ("f-string_function_def", "f'{def f(): pass}'"),
     ("f-string_lambda", "f'{lambda x: 42}'"),
+    ("f-string_singe_brace", "f'{'"),
+    ("f-string_single_closing_brace", "f'}'"),
 ]
 
 GOOD_BUT_FAIL_TEST_CASES = [
