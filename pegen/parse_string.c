@@ -258,7 +258,11 @@ static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset);
 
 static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
-        fstring_shift_expr_locations(asdl_seq_GET(seq, i), lineno, col_offset);
+        expr_ty expr = asdl_seq_GET(seq, i);
+        if (expr == NULL){
+            return;
+        }
+        fstring_shift_expr_locations(expr, lineno, col_offset);
     }
 }
 
