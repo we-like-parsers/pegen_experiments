@@ -164,6 +164,40 @@ TEST_CASES = [
         def f() -> Any:
             pass
      '''),
+    ('f-string_slice', "f'{x[2]}'"),
+    ('f-string_slice_upper', "f'{x[2:3]}'"),
+    ('f-string_slice_step', "f'{x[2:3:-2]}'"),
+    ('f-string_constant', "f'{42}'"),
+    ('f-string_boolop', "f'{x and y}'"),
+    ('f-string_named_expr', "f'{(x:=42)}'"),
+    ('f-string_binop', "f'{x+y}'"),
+    ('f-string_unaryop', "f'{not x}'"),
+    ('f-string_lambda', "f'{(lambda x, /, y, y2=42 , *z, k1, k2=34, **k3: 42)}'"),
+    ('f-string_lambda_call', "f'{(lambda: 2)(2)}'"),
+    ('f-string_ifexpr', "f'{x if y else z}'"),
+    ('f-string_dict', "f'{ {2:34, 3:34} }'"),
+    ('f-string_set', "f'{ {2,-45} }'"),
+    ('f-string_list', "f'{ [2,-45] }'"),
+    ('f-string_tuple', "f'{ (2,-45) }'"),
+    ('f-string_listcomp', "f'{[x for x in y if z]}'"),
+    ('f-string_setcomp', "f'{ {x for x in y if z} }'"),
+    ('f-string_dictcomp', "f'{ {x:x for x in y if z} }'"),
+    ('f-string_genexpr', "f'{ (x for x in y if z) }'"),
+    ('f-string_yield', "f'{ (yield x) }'"),
+    ('f-string_yieldfrom', "f'{ (yield from x) }'"),
+    ('f-string_await', "f'{ await x }'"),
+    ('f-string_compare', "f'{ x == y }'"),
+    ('f-string_call', "f'{ f(x,y,z) }'"),
+    ('f-string_attribute', "f'{ f.x.y.z }'"),
+    ('f-string_starred', "f'{ *x, }'"),
+    ('f-string_doublestarred', "f'{ {**x} }'"),
+    ('f-string_escape_brace', "f'{{Escape'"),
+    ('f-string_escape_closing_brace', "f'Escape}}'"),
+    ('f-string_repr', "f'{a!r}'"),
+    ('f-string_str', "f'{a!s}'"),
+    ('f-string_ascii', "f'{a!a}'"),
+    ('f-string_debug', "f'{a=}'"),
+    ('f-string_padding', "f'{a:03d}'"),
     ('global', 'global a, b'),
     ('group', '(yield a)'),
     ('if_elif',
@@ -319,6 +353,13 @@ TEST_CASES = [
     ('set_trailing_comma', '{1, 2, 3,}'),
     ('simple_assignment', 'x = 42'),
     ('simple_assignment_with_yield', 'x = yield 42'),
+    ('string_bytes', 'b"hello"'),
+    ('string_concatenation_bytes', 'b"hello" b"world"'),
+    ('string_concatenation_simple', '"abcd" "efgh"'),
+    ('string_format_simple', 'f"hello"'),
+    ('string_format_with_formatted_value', 'f"hello {world}"'),
+    ('string_simple', '"hello"'),
+    ('string_unicode', 'u"hello"'),
     ('subscript_attribute', 'a[0].b'),
     ('subscript_call', 'a[b]()'),
     ('subscript_multiple_slices', 'a[0:a:2, 1]'),
@@ -476,6 +517,20 @@ FAIL_TEST_CASES = [
     ("for_star_targets_subscript_call", "for a[b]() in c: pass"),
     ("for_star_targets_attribute_call", "for a.b() in c: pass"),
     ("for_star_targets_mixed_call", "for a[0].b().c.d() in e: pass"),
+    ("f-string_assignment", "f'{x = 42}'"),
+    ("f-string_empty", "f'{}'"),
+    ("f-string_function_def", "f'{def f(): pass}'"),
+    ("f-string_lambda", "f'{lambda x: 42}'"),
+    ("f-string_singe_brace", "f'{'"),
+    ("f-string_single_closing_brace", "f'}'"),
+]
+
+GOOD_BUT_FAIL_TEST_CASES = [
+    ('string_concatenation_format', 'f"{hello} world" f"again {and_again}"'),
+    ('string_concatenation_multiple',
+     '''
+        f"hello" f"{world} again" f"and_again"
+     '''),
 ]
 
 # fmt: on
@@ -504,6 +559,8 @@ def prepare_test_cases(
 
 
 TEST_IDS, TEST_SOURCES = prepare_test_cases(TEST_CASES)
+
+GOOD_BUT_FAIL_TEST_IDS, GOOD_BUT_FAIL_SOURCES = prepare_test_cases(GOOD_BUT_FAIL_TEST_CASES)
 
 FAIL_TEST_IDS, FAIL_SOURCES = prepare_test_cases(FAIL_TEST_CASES)
 
@@ -539,10 +596,21 @@ def test_incorrect_ast_generation_on_source_files(parser_extension: Any, source:
 
 
 @pytest.mark.xfail
-def test_ast_generation_for_fstrings(parser_extension: Any) -> None:
-    source = "f'{val}'"
+@pytest.mark.parametrize("source", GOOD_BUT_FAIL_SOURCES, ids=GOOD_BUT_FAIL_TEST_IDS)
+def test_correct_but_known_to_fail_ast_generation_on_source_files(
+    parser_extension: Any, source: str
+) -> None:
     actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
     assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
         expected_ast, include_attributes=True
+    ), f"Wrong AST generation for source: {source}"
+
+
+@pytest.mark.parametrize("source", GOOD_BUT_FAIL_SOURCES, ids=GOOD_BUT_FAIL_TEST_IDS)
+def test_correct_ast_generation_without_pos_info(parser_extension: Any, source: str) -> None:
+    actual_ast = parser_extension.parse_string(source, mode=1)
+    expected_ast = ast.parse(source)
+    assert ast.dump(actual_ast) == ast.dump(
+        expected_ast
     ), f"Wrong AST generation for source: {source}"

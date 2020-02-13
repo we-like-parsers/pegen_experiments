@@ -47,7 +47,11 @@ def compile_c_extension(
     extension = [
         Extension(
             extension_name,
-            sources=[str(MOD_DIR.parent / "pegen.c"), generated_source_path],
+            sources=[
+                str(MOD_DIR.parent / "pegen.c"),
+                str(MOD_DIR.parent / "parse_string.c"),
+                generated_source_path,
+            ],
             include_dirs=[str(MOD_DIR.parent)],
             extra_compile_args=extra_compile_args,
         )

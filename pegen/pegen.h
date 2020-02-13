@@ -1,3 +1,6 @@
+#ifndef PEGEN_H
+#define PEGEN_H
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <token.h>
@@ -31,6 +34,7 @@ typedef struct {
     PyArena *arena;
     KeywordToken **keywords;
     int n_keyword_lists;
+    void *start_rule_func;
 } Parser;
 
 typedef struct {
@@ -87,7 +91,7 @@ void *newline_token(Parser *p);
 void *indent_token(Parser *p);
 void *dedent_token(Parser *p);
 expr_ty number_token(Parser *p);
-expr_ty string_token(Parser *p);
+void *string_token(Parser *p);
 void *keyword_token(Parser *p, const char *val);
 int raise_syntax_error(Parser *p, const char *errmsg, ...);
 
@@ -97,6 +101,7 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define EXTRA_EXPR(head, tail) head->lineno, head->col_offset, tail->end_lineno, tail->end_col_offset, p->arena
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
+PyObject *new_identifier(Parser *, char *);
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),
                                int mode,
@@ -135,3 +140,5 @@ KeywordOrStarred *keyword_or_starred(Parser *, void *, int);
 asdl_seq *seq_extract_starred_exprs(Parser *, asdl_seq *);
 asdl_seq *seq_delete_starred_exprs(Parser *, asdl_seq *);
 expr_ty concatenate_strings(Parser *p, asdl_seq *);
+
+#endif
