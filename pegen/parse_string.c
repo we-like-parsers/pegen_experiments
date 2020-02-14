@@ -255,50 +255,64 @@ parsestr(Parser *p, const char *s, int *bytesmode, int *rawmode, PyObject **resu
 // FSTRING STUFF
 
 static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset);
+static void fstring_shift_argument(expr_ty parent, arg_ty args, int lineno, int col_offset);
 
-static void fstring_shift_seq_locations(asdl_seq *seq, int lineno, int col_offset) {
+
+#define SHIFT_EXPR(parent, n, line, col)\
+    if (parent->lineno < n->lineno) {   \
+        col = 0;                 \
+    }                                   \
+    fstring_shift_expr_locations(n, line, col);
+
+#define SHIFT_ARG(parent, n, line, col) \
+    if (parent->lineno < n->lineno) {   \
+        col = 0;                 \
+    }                                   \
+    fstring_shift_argument(parent, n, line, col);
+
+static void fstring_shift_seq_locations(expr_ty parent, asdl_seq *seq, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         expr_ty expr = asdl_seq_GET(seq, i);
         if (expr == NULL){
             continue;
         }
-        fstring_shift_expr_locations(expr, lineno, col_offset);
+        SHIFT_EXPR(parent, expr, lineno, col_offset);
     }
 }
 
-static void fstring_shift_slice_locations(slice_ty slice, int lineno, int col_offset) {
+static void fstring_shift_slice_locations(expr_ty parent, slice_ty slice, int lineno, int col_offset) {
     switch (slice->kind) {
         case Slice_kind:
             if (slice->v.Slice.lower) {
-                fstring_shift_expr_locations(slice->v.Slice.lower, lineno, col_offset);
+                SHIFT_EXPR(parent, slice->v.Slice.lower, lineno, col_offset);
             }
             if (slice->v.Slice.upper) {
-                fstring_shift_expr_locations(slice->v.Slice.upper, lineno, col_offset);
+                SHIFT_EXPR(parent, slice->v.Slice.upper, lineno, col_offset);
             }
             if (slice->v.Slice.step) {
-                fstring_shift_expr_locations(slice->v.Slice.step, lineno, col_offset);
+                SHIFT_EXPR(parent, slice->v.Slice.step, lineno, col_offset);
             }
             break;
         case ExtSlice_kind:
             for (int i = 0, l = asdl_seq_LEN(slice->v.ExtSlice.dims); i < l; i++) {
                 slice_ty s = asdl_seq_GET(slice->v.ExtSlice.dims, i);
-                fstring_shift_slice_locations(s, lineno, col_offset);
+                fstring_shift_slice_locations(parent, s, lineno, col_offset);
             }
             break;
         case Index_kind:
-            fstring_shift_expr_locations(slice->v.Index.value, lineno, col_offset);
+            SHIFT_EXPR(parent, slice->v.Index.value, lineno, col_offset);
     }
 }
 
-static void fstring_shift_comprehension(comprehension_ty comp, int lineno, int col_offset) {
-    fstring_shift_expr_locations(comp->target, lineno, col_offset);
-    fstring_shift_expr_locations(comp->iter, lineno, col_offset);
-    fstring_shift_seq_locations(comp->ifs, lineno, col_offset);
+static void fstring_shift_comprehension(expr_ty parent, comprehension_ty comp, int lineno, int col_offset) {
+    SHIFT_EXPR(parent, comp->target, lineno, col_offset);
+    SHIFT_EXPR(parent, comp->iter, lineno, col_offset);
+    fstring_shift_seq_locations(parent, comp->ifs, lineno, col_offset);
 }
 
-static void fstring_shift_argument(arg_ty arg, int lineno, int col_offset) {
+static void fstring_shift_argument(expr_ty parent, arg_ty arg, int lineno, int col_offset) {
     if (arg->annotation != NULL){
-        fstring_shift_expr_locations(arg->annotation, lineno, col_offset);
+        SHIFT_EXPR(parent, arg->annotation, lineno, col_offset);
     }
     arg->col_offset = arg->col_offset + col_offset;
     arg->end_col_offset = arg->end_col_offset + col_offset;
@@ -306,134 +320,132 @@ static void fstring_shift_argument(arg_ty arg, int lineno, int col_offset) {
     arg->end_lineno = arg->end_lineno + lineno;
 }
 
-
-static void fstring_shift_arguments(arguments_ty args, int lineno, int col_offset) {
+static void fstring_shift_arguments(expr_ty parent, arguments_ty args, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(args->posonlyargs); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->posonlyargs, i);
-       fstring_shift_argument(arg, lineno, col_offset);
+       SHIFT_ARG(parent, arg, lineno, col_offset);
     }
 
     for (int i = 0, l = asdl_seq_LEN(args->args); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->args, i);
-       fstring_shift_argument(arg, lineno, col_offset);
+       SHIFT_ARG(parent, arg, lineno, col_offset);
     }
 
     if (args->vararg != NULL) {
-        fstring_shift_argument(args->vararg, lineno, col_offset);
+        SHIFT_ARG(parent, args->vararg, lineno, col_offset);
     }
 
     for (int i = 0, l = asdl_seq_LEN(args->kwonlyargs); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->kwonlyargs, i);
-       fstring_shift_argument(arg, lineno, col_offset);
+       SHIFT_ARG(parent, arg, lineno, col_offset);
     }
 
-    fstring_shift_seq_locations(args->kw_defaults, lineno, col_offset);
+    fstring_shift_seq_locations(parent, args->kw_defaults, lineno, col_offset);
 
     if (args->kwarg != NULL) {
-        fstring_shift_argument(args->kwarg, lineno, col_offset);
+        SHIFT_ARG(parent, args->kwarg, lineno, col_offset);
     }
 
-    fstring_shift_seq_locations(args->defaults, lineno, col_offset);
+    fstring_shift_seq_locations(parent, args->defaults, lineno, col_offset);
 }
-
 
 static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offset) {
     switch (n->kind) {
         case BoolOp_kind:
-            fstring_shift_seq_locations(n->v.BoolOp.values, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.BoolOp.values, lineno, col_offset);
             break;
         case NamedExpr_kind:
-            fstring_shift_expr_locations(n->v.NamedExpr.target, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.NamedExpr.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.NamedExpr.target, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.NamedExpr.value, lineno, col_offset);
             break;
         case BinOp_kind:
-            fstring_shift_expr_locations(n->v.BinOp.left, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.BinOp.right, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.BinOp.left, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.BinOp.right, lineno, col_offset);
             break;
         case UnaryOp_kind:
-            fstring_shift_expr_locations(n->v.UnaryOp.operand, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.UnaryOp.operand, lineno, col_offset);
             break;
         case Lambda_kind:
-            fstring_shift_arguments(n->v.Lambda.args, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.Lambda.body, lineno, col_offset);
+            fstring_shift_arguments(n, n->v.Lambda.args, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Lambda.body, lineno, col_offset);
             break;
         case IfExp_kind:
-            fstring_shift_expr_locations(n->v.IfExp.test, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.IfExp.body, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.IfExp.orelse, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.IfExp.test, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.IfExp.body, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.IfExp.orelse, lineno, col_offset);
             break;
         case Dict_kind:
-            fstring_shift_seq_locations(n->v.Dict.keys, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.Dict.values, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Dict.keys, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Dict.values, lineno, col_offset);
             break;
         case Set_kind:
-            fstring_shift_seq_locations(n->v.Set.elts, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Set.elts, lineno, col_offset);
             break;
         case ListComp_kind:
-            fstring_shift_expr_locations(n->v.ListComp.elt, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.ListComp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.ListComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.ListComp.generators, i);
-                fstring_shift_comprehension(comp, lineno, col_offset);
+                fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case SetComp_kind:
-            fstring_shift_expr_locations(n->v.SetComp.elt, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.SetComp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.SetComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.SetComp.generators, i);
-                fstring_shift_comprehension(comp, lineno, col_offset);
+                fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case DictComp_kind:
-            fstring_shift_expr_locations(n->v.DictComp.key, lineno, col_offset);
-            fstring_shift_expr_locations(n->v.DictComp.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.DictComp.key, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.DictComp.value, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.DictComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.DictComp.generators, i);
-                fstring_shift_comprehension(comp, lineno, col_offset);
+                fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case GeneratorExp_kind:
-            fstring_shift_expr_locations(n->v.GeneratorExp.elt, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.GeneratorExp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.GeneratorExp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.GeneratorExp.generators, i);
-                fstring_shift_comprehension(comp, lineno, col_offset);
+                fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case Await_kind:
-            fstring_shift_expr_locations(n->v.Await.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Await.value, lineno, col_offset);
             break;
         case Yield_kind:
-            fstring_shift_expr_locations(n->v.Yield.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Yield.value, lineno, col_offset);
             break;
         case YieldFrom_kind:
-            fstring_shift_expr_locations(n->v.YieldFrom.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.YieldFrom.value, lineno, col_offset);
             break;
         case Compare_kind:
-            fstring_shift_expr_locations(n->v.Compare.left, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.Compare.comparators, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Compare.left, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Compare.comparators, lineno, col_offset);
             break;
         case Call_kind:
-            fstring_shift_expr_locations(n->v.Call.func, lineno, col_offset);
-            fstring_shift_seq_locations(n->v.Call.args, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Call.func, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Call.args, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.Call.keywords); i < l; i++) {
                 keyword_ty keyword = asdl_seq_GET(n->v.Call.keywords, i);
-                fstring_shift_expr_locations(keyword->value, lineno, col_offset);
+                SHIFT_EXPR(n, keyword->value, lineno, col_offset);
             }
             break;
         case Attribute_kind:
-            fstring_shift_expr_locations(n->v.Attribute.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Attribute.value, lineno, col_offset);
             break;
         case Subscript_kind:
-            fstring_shift_expr_locations(n->v.Subscript.value, lineno, col_offset);
-            fstring_shift_slice_locations(n->v.Subscript.slice, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Subscript.value, lineno, col_offset);
+            fstring_shift_slice_locations(n, n->v.Subscript.slice, lineno, col_offset);
             break;
         case Starred_kind:
-            fstring_shift_expr_locations(n->v.Starred.value, lineno, col_offset);
+            SHIFT_EXPR(n, n->v.Starred.value, lineno, col_offset);
             break;
         case List_kind:
-            fstring_shift_seq_locations(n->v.List.elts, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.List.elts, lineno, col_offset);
             break;
         case Tuple_kind:
-            fstring_shift_seq_locations(n->v.Tuple.elts, lineno, col_offset);
+            fstring_shift_seq_locations(n, n->v.Tuple.elts, lineno, col_offset);
             break;
         default:
             return;
@@ -445,7 +457,9 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
 static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset)
 {
     n->col_offset = n->col_offset + col_offset;
-    n->end_col_offset = n->end_col_offset + col_offset;
+    if (n->lineno == n->end_lineno) {
+        n->end_col_offset = n->end_col_offset + col_offset;
+    }
     fstring_shift_children_locations(n, lineno, col_offset);
     n->lineno = n->lineno + lineno;
     n->end_lineno = n->end_lineno + lineno;
@@ -472,13 +486,24 @@ fstring_fix_expr_location(Token *parent, expr_ty n, char *expr_str)
         }
         substr = strstr(parent_str, expr_str);
         if (substr) {
-            start = substr;
-            while (start > parent_str) {
-                if (start[0] == '\n')
+            int newline_after_brace = 1;
+            start = substr + 1;
+            while (start && *start != '}' && *start != '\n') {
+                if (!(*start == ' ' || *start == '\t' || *start == '\f')) {
+                    newline_after_brace = 0;
                     break;
-                start--;
+                }
+                start++;
             }
-            cols += (int)(substr - start);
+            if (!newline_after_brace) {
+                start = substr;
+                while (start > parent_str) {
+                    if (start[0] == '\n')
+                        break;
+                    start--;
+                }
+                cols += (int)(substr - start);
+            }
             /* adjust the start based on the number of newlines encountered
                before the f-string expression */
             for (char* p = parent_str; p < substr; p++) {
