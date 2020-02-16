@@ -70,7 +70,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
         }
     }
     // We may receive tokens with the col_offset not initialized (-1) since
-    // emited by fill_token(). For instance, this can happen in some error
+    // emitted by fill_token(). For instance, this can happen in some error
     // situations involving invalid indentation.
     int col_offset = t->col_offset == -1 ? 0 : t->col_offset;
     Py_ssize_t col_number = byte_offset_to_character_offset(loc, col_offset) + 1;
