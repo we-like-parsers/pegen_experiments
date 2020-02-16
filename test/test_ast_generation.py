@@ -523,6 +523,12 @@ FAIL_TEST_CASES = [
     ("f-string_lambda", "f'{lambda x: 42}'"),
     ("f-string_singe_brace", "f'{'"),
     ("f-string_single_closing_brace", "f'}'"),
+    ("invalid indentation",
+     """
+     def f():
+         a
+             a
+     """),
 ]
 
 GOOD_BUT_FAIL_TEST_CASES = [

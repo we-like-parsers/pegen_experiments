@@ -69,7 +69,11 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             goto error;
         }
     }
-    Py_ssize_t col_number = byte_offset_to_character_offset(loc, t->col_offset) + 1;
+    // We may receive tokens with the col_offset not initialized (-1) since
+    // emmited by fill_token(). For instance, this can happen in some error
+    // situations involving invalid indentation.
+    int col_offset = t->col_offset == -1 ? 0 : t->col_offset;
+    Py_ssize_t col_number = byte_offset_to_character_offset(loc, col_offset) + 1;
     tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_number, loc);
     if (!tmp) {
         goto error;
