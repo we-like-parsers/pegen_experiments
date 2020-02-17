@@ -38,6 +38,8 @@ compound_stmt[stmt_ty]:
 assignment:
     | '(' a=paren_ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 0, EXTRA)}
+    | a=non_simple_ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
+        _Py_AnnAssign(a, b, c, 0, EXTRA) }
     | a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 1, EXTRA) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
@@ -441,12 +443,14 @@ star_atom[expr_ty]:
 
 paren_ann_assign_target[expr_ty]:
     | '(' a=paren_ann_assign_target ')' { a }
+    | non_simple_ann_assign_target
     | ann_assign_target
 
-ann_assign_target[expr_ty]:
+non_simple_ann_assign_target[expr_ty]:
     | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
     | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
-    | a=NAME { set_expr_context(p, a, Store) }
+
+ann_assign_target[expr_ty]: a=NAME { set_expr_context(p, a, Store) }
 
 del_targets[asdl_seq*]: a=','.del_target+ [','] { a }
 del_target[expr_ty]:
