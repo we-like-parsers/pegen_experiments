@@ -523,6 +523,14 @@ FAIL_TEST_CASES = [
     ("f-string_lambda", "f'{lambda x: 42}'"),
     ("f-string_singe_brace", "f'{'"),
     ("f-string_single_closing_brace", "f'}'"),
+    # This test case checks error paths involving tokens with uninitialized
+    # values of col_offset and end_col_offset.
+    ("invalid indentation",
+     """
+     def f():
+         a
+             a
+     """),
 ]
 
 GOOD_BUT_FAIL_TEST_CASES = [
