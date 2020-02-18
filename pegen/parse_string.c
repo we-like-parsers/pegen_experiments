@@ -486,6 +486,9 @@ fstring_fix_expr_location(Token *parent, expr_ty n, char *expr_str)
         }
         substr = strstr(parent_str, expr_str);
         if (substr) {
+            // The following is needed, in order to correctly shift the column
+            // offset, in the case that (disregarding any whitespace) a newline
+            // immediately follows the opening curly brace of the fstring expression.
             int newline_after_brace = 1;
             start = substr + 1;
             while (start && *start != '}' && *start != '\n') {
