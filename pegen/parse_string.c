@@ -570,9 +570,12 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     PyErr_Clear();
     mod = the_start_rule(p2);
 
-    PyTokenizer_Free(tok);
-
     if (mod == NULL){
+        p2->tok->filename = PyUnicode_FromString("<string>");
+        if (p2->tok->filename == NULL) {
+            goto exit;
+        }
+        raise_syntax_error(p2, "invalid syntax");
         goto exit;
     }
 
@@ -593,6 +596,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     fstring_fix_expr_location(t, expr->v.Expr.value, str);
 
 exit:
+    PyTokenizer_Free(tok);
     for (int i = 0; i < p2->size; i++) {
         PyMem_Free(p2->tokens[i]);
     }

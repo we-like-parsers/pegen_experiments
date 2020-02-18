@@ -53,7 +53,10 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     if (!errstr) {
         goto error;
     }
-    if (p->tok->filename) {
+    if (p->tok->filename && PyUnicode_CompareWithASCIIString(p->tok->filename, "<string>") != 0) {
+        if (PyErr_Occurred()){
+            goto error;
+        }
         filename = p->tok->filename;
         loc = PyErr_ProgramTextObject(filename, t->lineno);
         if (!loc) {
@@ -555,14 +558,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
 
     if (mode == 2) {
-        PyObject *filename = tok->filename ? tok->filename : PyUnicode_FromString("<string>");
-        if (!filename) {
-            goto exit;
-        }
-        result = (PyObject *)PyAST_CompileObject(res, filename, NULL, -1, p->arena);
-        if (!tok->filename) {
-            Py_XDECREF(filename);
-        }
+        result = (PyObject *)PyAST_CompileObject(res, tok->filename, NULL, -1, p->arena);
     }
     else if (mode == 1) {
         result = PyAST_mod2obj(res);
@@ -627,13 +623,17 @@ PyObject *
 run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode,
                        KeywordToken **keywords, int n_keyword_lists)
 {
+    PyObject *result = NULL;
     struct tok_state *tok = PyTokenizer_FromString(str, 1);
-
     if (tok == NULL) {
         return NULL;
     }
-
-    PyObject *result = run_parser(tok, start_rule_func, mode, keywords, n_keyword_lists);
+    tok->filename = PyUnicode_FromString("<string>");
+    if (tok->filename == NULL) {
+        goto exit;
+    }
+    result = run_parser(tok, start_rule_func, mode, keywords, n_keyword_lists);
+exit:
     PyTokenizer_Free(tok);
     return result;
 }
