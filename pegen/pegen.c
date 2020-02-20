@@ -36,14 +36,14 @@ byte_offset_to_character_offset(PyObject *line, int col_offset)
     return size;
 }
 
-static void
-get_error_line(PyObject **loc, char *buffer)
+static inline PyObject*
+get_error_line(char *buffer)
 {
     char *newline = strchr(buffer, '\n');
     if (newline) {
-        *loc = PyUnicode_FromStringAndSize(buffer, newline - buffer);
+        return PyUnicode_FromStringAndSize(buffer, newline - buffer);
     } else {
-        *loc = PyUnicode_FromString(buffer);
+        return PyUnicode_FromString(buffer);
     }
 }
 
@@ -64,16 +64,14 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
         goto error;
     }
     if (p->input_mode == FILE_INPUT) {
-        if (PyErr_Occurred()){
-            goto error;
-        }
         loc = PyErr_ProgramTextObject(p->tok->filename, t->lineno);
         if (!loc) {
             Py_INCREF(Py_None);
             loc = Py_None;
         }
     } else {
-        get_error_line(&loc, p->tok->buf);
+        assert(p->input_mode == STRING_INPUT);
+        loc = get_error_line(p->tok->buf);
         if (!loc) {
             goto error;
         }

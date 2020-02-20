@@ -42,7 +42,7 @@ typedef struct {
     KeywordToken **keywords;
     int n_keyword_lists;
     void *start_rule_func;
-    INPUT_MODE input_mode;  // Where the input comes from (0 for file, 1 for string, 2 for fstring)
+    INPUT_MODE input_mode;
 } Parser;
 
 typedef struct {
