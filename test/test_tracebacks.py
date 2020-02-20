@@ -8,7 +8,7 @@ import pytest  # type: ignore
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
 
-#  fmt: off
+# fmt: off
 
 FSTRINGS: Dict[str, Tuple[str, str]] = {
     'multiline_fstrings_same_line_with_brace': (
@@ -37,7 +37,7 @@ FSTRINGS: Dict[str, Tuple[str, str]] = {
     ),
 }
 
-#  fmt: on
+# fmt: on
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
@@ -54,8 +54,11 @@ def parser_extension(tmp_path_factory: Any) -> Any:
     extension = create_tmp_extension(tmp_path)
     return extension
 
+
 @pytest.mark.parametrize("fstring,error_line", FSTRINGS.values(), ids=tuple(FSTRINGS.keys()))
-def test_fstring_syntax_error_tracebacks(parser_extension: Any, fstring: str, error_line: str) -> None:
+def test_fstring_syntax_error_tracebacks(
+    parser_extension: Any, fstring: str, error_line: str
+) -> None:
     try:
         parser_extension.parse_string(dedent(fstring))
     except SyntaxError as se:
