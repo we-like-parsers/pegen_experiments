@@ -12,6 +12,7 @@ enum INPUT_MODE {
     STRING_INPUT,
     FSTRING_INPUT
 };
+typedef enum INPUT_MODE INPUT_MODE;
 
 typedef struct _memo {
     int type;
@@ -42,7 +43,7 @@ typedef struct {
     KeywordToken **keywords;
     int n_keyword_lists;
     void *start_rule_func;
-    int input_mode;  // Where the input comes from (0 for file, 1 for string, 2 for fstring)
+    INPUT_MODE input_mode;  // Where the input comes from (0 for file, 1 for string, 2 for fstring)
 } Parser;
 
 typedef struct {
