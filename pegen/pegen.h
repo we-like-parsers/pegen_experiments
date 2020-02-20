@@ -10,7 +10,6 @@
 enum INPUT_MODE {
     FILE_INPUT,
     STRING_INPUT,
-    FSTRING_INPUT
 };
 typedef enum INPUT_MODE INPUT_MODE;
 
