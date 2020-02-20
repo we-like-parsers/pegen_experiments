@@ -542,6 +542,11 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     if (tok == NULL) {
         return NULL;
     }
+    tok->filename = PyUnicode_FromString("<fstring>");
+    if (!tok->filename) {
+        PyTokenizer_Free(tok);
+        return NULL;
+    }
     mod_ty (*the_start_rule)(Parser*) = p->start_rule_func;
 
     Parser *p2 = PyMem_Malloc(sizeof(Parser));
@@ -550,6 +555,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
         goto exit;
     }
     p2->tok = tok;
+    p2->input_mode = STRING_INPUT;
     p2->keywords = p->keywords;
     p2->n_keyword_lists = p->n_keyword_lists;
     p2->tokens = PyMem_Malloc(sizeof(Token *));
@@ -570,9 +576,8 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     PyErr_Clear();
     mod = the_start_rule(p2);
 
-    PyTokenizer_Free(tok);
-
     if (mod == NULL){
+        raise_syntax_error(p2, "invalid syntax");
         goto exit;
     }
 
@@ -593,6 +598,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     fstring_fix_expr_location(t, expr->v.Expr.value, str);
 
 exit:
+    PyTokenizer_Free(tok);
     for (int i = 0; i < p2->size; i++) {
         PyMem_Free(p2->tokens[i]);
     }

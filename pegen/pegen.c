@@ -36,6 +36,17 @@ byte_offset_to_character_offset(PyObject *line, int col_offset)
     return size;
 }
 
+static void
+get_error_line(PyObject **loc, char *buffer)
+{
+    char *newline = strchr(buffer, '\n');
+    if (newline) {
+        *loc = PyUnicode_FromStringAndSize(buffer, newline - buffer);
+    } else {
+        *loc = PyUnicode_FromString(buffer);
+    }
+}
+
 int
 raise_syntax_error(Parser *p, const char *errmsg, ...)
 {
@@ -43,7 +54,6 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     PyObject *errstr = NULL;
     PyObject *loc = NULL;
     PyObject *tmp = NULL;
-    PyObject *filename = NULL;
     Token *t = p->tokens[p->fill - 1];
     va_list va;
 
@@ -53,18 +63,17 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     if (!errstr) {
         goto error;
     }
-    if (p->tok->filename) {
-        filename = p->tok->filename;
-        loc = PyErr_ProgramTextObject(filename, t->lineno);
+    if (p->input_mode == FILE_INPUT) {
+        if (PyErr_Occurred()){
+            goto error;
+        }
+        loc = PyErr_ProgramTextObject(p->tok->filename, t->lineno);
         if (!loc) {
             Py_INCREF(Py_None);
             loc = Py_None;
         }
-    }
-    else {
-        Py_INCREF(Py_None);
-        filename = Py_None;
-        loc = PyUnicode_FromString(p->tok->buf);
+    } else {
+        get_error_line(&loc, p->tok->buf);
         if (!loc) {
             goto error;
         }
@@ -74,7 +83,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     // situations involving invalid indentation.
     int col_offset = t->col_offset == -1 ? 0 : t->col_offset;
     Py_ssize_t col_number = byte_offset_to_character_offset(loc, col_offset) + 1;
-    tmp = Py_BuildValue("(OiiN)", filename, t->lineno, col_number, loc);
+    tmp = Py_BuildValue("(OiiN)", p->tok->filename, t->lineno, col_number, loc);
     if (!tmp) {
         goto error;
     }
@@ -90,9 +99,6 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
 
 error:
     Py_XDECREF(errstr);
-    if (!p->tok->filename) {
-        Py_XDECREF(filename);
-    }
     Py_XDECREF(loc);
     return -1;
 }
@@ -504,7 +510,7 @@ keyword_token(Parser *p, const char *val)
 
 PyObject *
 run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
-           KeywordToken **keywords, int n_keyword_lists)
+           int input_mode, KeywordToken **keywords, int n_keyword_lists)
 {
     PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -514,6 +520,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
     assert(tok != NULL);
     p->tok = tok;
+    p->input_mode = input_mode;
     p->keywords = keywords;
     p->n_keyword_lists = n_keyword_lists;
     p->tokens = PyMem_Malloc(sizeof(Token *));
@@ -555,14 +562,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
 
     if (mode == 2) {
-        PyObject *filename = tok->filename ? tok->filename : PyUnicode_FromString("<string>");
-        if (!filename) {
-            goto exit;
-        }
-        result = (PyObject *)PyAST_CompileObject(res, filename, NULL, -1, p->arena);
-        if (!tok->filename) {
-            Py_XDECREF(filename);
-        }
+        result = (PyObject *) PyAST_CompileObject(res, tok->filename, NULL, -1, p->arena);
     }
     else if (mode == 1) {
         result = PyAST_mod2obj(res);
@@ -613,7 +613,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    result = run_parser(tok, start_rule_func, mode, keywords, n_keyword_lists);
+    result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, n_keyword_lists);
 
     PyTokenizer_Free(tok);
 
@@ -627,13 +627,17 @@ PyObject *
 run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode,
                        KeywordToken **keywords, int n_keyword_lists)
 {
+    PyObject *result = NULL;
     struct tok_state *tok = PyTokenizer_FromString(str, 1);
-
     if (tok == NULL) {
         return NULL;
     }
-
-    PyObject *result = run_parser(tok, start_rule_func, mode, keywords, n_keyword_lists);
+    tok->filename = PyUnicode_FromString("<string>");
+    if (tok->filename == NULL) {
+        goto exit;
+    }
+    result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, n_keyword_lists);
+exit:
     PyTokenizer_Free(tok);
     return result;
 }

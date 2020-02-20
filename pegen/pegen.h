@@ -7,6 +7,12 @@
 #include <Python-ast.h>
 #include <pyarena.h>
 
+enum INPUT_MODE {
+    FILE_INPUT,
+    STRING_INPUT,
+};
+typedef enum INPUT_MODE INPUT_MODE;
+
 typedef struct _memo {
     int type;
     void *node;
@@ -26,6 +32,7 @@ typedef struct {
     int type;
 } KeywordToken;
 
+
 typedef struct {
     struct tok_state *tok;
     Token **tokens;
@@ -35,6 +42,7 @@ typedef struct {
     KeywordToken **keywords;
     int n_keyword_lists;
     void *start_rule_func;
+    INPUT_MODE input_mode;  // Where the input comes from (0 for file, 1 for string, 2 for fstring)
 } Parser;
 
 typedef struct {
