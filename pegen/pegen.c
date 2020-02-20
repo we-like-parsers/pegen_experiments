@@ -36,6 +36,17 @@ byte_offset_to_character_offset(PyObject *line, int col_offset)
     return size;
 }
 
+static void
+get_error_line(PyObject **loc, char *buffer)
+{
+    char *newline = strchr(buffer, '\n');
+    if (newline) {
+        *loc = PyUnicode_FromStringAndSize(buffer, newline - buffer);
+    } else {
+        *loc = PyUnicode_FromString(buffer);
+    }
+}
+
 int
 raise_syntax_error(Parser *p, const char *errmsg, ...)
 {
@@ -62,7 +73,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             loc = Py_None;
         }
     } else {
-        loc = PyUnicode_FromString(p->tok->buf);
+        get_error_line(&loc, p->tok->buf);
         if (!loc) {
             goto error;
         }
