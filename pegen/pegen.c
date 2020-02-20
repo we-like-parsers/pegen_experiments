@@ -63,7 +63,7 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
     if (!errstr) {
         goto error;
     }
-    if (p->input_mode == 0) {
+    if (p->input_mode == FILE_INPUT) {
         if (PyErr_Occurred()){
             goto error;
         }
@@ -613,7 +613,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    result = run_parser(tok, start_rule_func, mode, 0, keywords, n_keyword_lists);
+    result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, n_keyword_lists);
 
     PyTokenizer_Free(tok);
 
@@ -636,7 +636,7 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
     if (tok->filename == NULL) {
         goto exit;
     }
-    result = run_parser(tok, start_rule_func, mode, 1, keywords, n_keyword_lists);
+    result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, n_keyword_lists);
 exit:
     PyTokenizer_Free(tok);
     return result;

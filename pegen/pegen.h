@@ -7,6 +7,12 @@
 #include <Python-ast.h>
 #include <pyarena.h>
 
+enum INPUT_MODE {
+    FILE_INPUT,
+    STRING_INPUT,
+    FSTRING_INPUT
+};
+
 typedef struct _memo {
     int type;
     void *node;
@@ -25,6 +31,7 @@ typedef struct {
     char *str;
     int type;
 } KeywordToken;
+
 
 typedef struct {
     struct tok_state *tok;
