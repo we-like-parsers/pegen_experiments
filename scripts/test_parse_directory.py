@@ -180,7 +180,7 @@ def parse_directory(
                     tree = parse.parse_file(file, mode=1)
                     trees[file] = tree
                 else:
-                    parse.parse_file(file)
+                    parse.parse_file(file, mode=0)
                 if not short:
                     report_status(succeeded=True, file=file, verbose=verbose)
             except Exception as error:
