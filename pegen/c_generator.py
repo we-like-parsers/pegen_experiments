@@ -542,7 +542,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             # will populate later an asdl_seq with all elements to return.
             self.print("if (n == children_capacity) {")
             with self.indent():
-                self.print("children_capacity *= 2;");
+                self.print("children_capacity *= 2;")
                 self.print("children = PyMem_Realloc(children, children_capacity*sizeof(void *));")
                 self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
             self.print("}")
