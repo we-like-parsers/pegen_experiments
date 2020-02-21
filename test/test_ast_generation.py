@@ -512,6 +512,8 @@ FAIL_TEST_CASES = [
     ("annotation_tuple", "(a,): int"),
     ("annotation_tuple_without_paren", "a,: int"),
     ("assignment_keyword", "a = if"),
+    ("comprehension_lambda", "(a for a in lambda: b)"),
+    ("comprehension_else", "(a for a in b if c else d"),
     ("del_call", "del a()"),
     ("del_call_genexp", "del a(i for i in b)"),
     ("del_subscript_call", "del a[b]()"),
