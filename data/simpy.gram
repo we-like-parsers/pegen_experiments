@@ -36,10 +36,11 @@ compound_stmt[stmt_ty]:
 
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
-    | '(' a=paren_ann_assign_target ')' ':' b=expression c=['=' d=yield_expression { d }] {
+    | a=NAME ':' b=expression c=['=' d=yield_expression { d }] {
+        _Py_AnnAssign(set_expr_context(p, a, Store), b, c, 1, EXTRA) }
+    | a=('(' b=paren_ann_assign_target ')' { b }
+         | non_simple_ann_assign_target) ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 0, EXTRA)}
-    | a=ann_assign_target ':' b=expression c=['=' d=yield_expression { d }] {
-        _Py_AnnAssign(a, b, c, 1, EXTRA) }
     | a=(z=star_targets '=' { z })+ b=(yield_expr | expressions) {
          _Py_Assign(a, b, NULL, EXTRA) }
     | a=target b=augassign c=(yield_expr | expressions) {
@@ -441,12 +442,12 @@ star_atom[expr_ty]:
 
 paren_ann_assign_target[expr_ty]:
     | '(' a=paren_ann_assign_target ')' { a }
-    | ann_assign_target
+    | non_simple_ann_assign_target
+    | a=NAME { set_expr_context(p, a, Store) }
 
-ann_assign_target[expr_ty]:
+non_simple_ann_assign_target[expr_ty]:
     | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
     | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
-    | a=NAME { set_expr_context(p, a, Store) }
 
 del_targets[asdl_seq*]: a=','.del_target+ [','] { a }
 del_target[expr_ty]:
