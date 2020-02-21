@@ -491,21 +491,6 @@ number_token(Parser *p)
                     p->arena);
 }
 
-void *
-keyword_token(Parser *p, const char *val)
-{
-    int mark = p->mark;
-    Token *t = expect_token(p, NAME);
-    if (t == NULL) {
-        return NULL;
-    }
-    if (strcmp(val, PyBytes_AsString(t->bytes)) == 0) {
-        return t;
-    }
-    p->mark = mark;
-    return NULL;
-}
-
 PyObject *
 run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
            int input_mode, KeywordToken **keywords, int n_keyword_lists)
