@@ -393,8 +393,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
-            self.print("void **children = PyMem_Malloc(0);")
+            self.print("void **children = PyMem_Malloc(sizeof(void *));")
             self.out_of_memory_return(f"!children", "NULL")
+            self.print("ssize_t children_capacity = 1;")
             self.print("ssize_t n = 0;")
             self._set_up_token_start_metadata_extraction()
             self.visit(
@@ -539,8 +540,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
             # Add the result of rule to the temporary buffer of children. This buffer
             # will populate later an asdl_seq with all elements to return.
-            self.print("children = PyMem_Realloc(children, (n+1)*sizeof(void *));")
-            self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
+            self.print("if (n == children_capacity) {")
+            with self.indent():
+                self.print("children_capacity *= 2;");
+                self.print("children = PyMem_Realloc(children, children_capacity*sizeof(void *));")
+                self.out_of_memory_return(f"!children", "NULL", message=f"realloc {rulename}")
+            self.print("}")
             self.print(f"children[n++] = res;")
             self.print("mark = p->mark;")
         self.print("}")
