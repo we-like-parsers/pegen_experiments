@@ -276,7 +276,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                     modulename=modulename,
                     max_keyword_len=len(max(keyword_cache.keys(), key=len))
                     if keyword_cache
-                    else 0
+                    else 0,
                 )
             )
 
