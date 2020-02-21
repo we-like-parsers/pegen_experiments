@@ -366,10 +366,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
-            for alt in rhs.alts:
-                if alt.action and "EXTRA" in alt.action:
-                    self._set_up_token_start_metadata_extraction()
-                    break
+            if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
+                self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=False,
@@ -400,10 +398,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.out_of_memory_return(f"!children", "NULL")
             self.print("ssize_t children_capacity = 1;")
             self.print("ssize_t n = 0;")
-            for alt in node.rhs.alts:
-                if alt.action and "EXTRA" in alt.action:
-                    self._set_up_token_start_metadata_extraction()
-                    break
+            if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
+                self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=True,
