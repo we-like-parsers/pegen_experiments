@@ -388,7 +388,7 @@ kvpair[KeyValuePair*]:
     | '**' a=bitwise_or { key_value_pair(p, NULL, a) }
     | a=expression ':' b=expression { key_value_pair(p, a, b) }
 for_if_clauses[asdl_seq*]:
-    | a=(y=[ASYNC] 'for' a=star_targets 'in' b=expression c=('if' z=expression { z })*
+    | a=(y=[ASYNC] 'for' a=star_targets 'in' b=disjunction c=('if' z=disjunction { z })*
         { _Py_comprehension(a, b, c, (y == NULL) ? 0 : 1, p->arena) })+ { a }
 
 yield_expr[expr_ty]:
