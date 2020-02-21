@@ -556,8 +556,8 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     }
     p2->tok = tok;
     p2->input_mode = STRING_INPUT;
-    p2->keywords = p->keywords;
-    p2->n_keyword_lists = p->n_keyword_lists;
+    p2->keywords_trie = p->keywords_trie;
+    p2->max_keyword_len = p->max_keyword_len;
     p2->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p2->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");

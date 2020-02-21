@@ -7,6 +7,14 @@
 #include <Python-ast.h>
 #include <pyarena.h>
 
+#define KEYWORDS_CHARACTER_SET_SIZE 29
+
+typedef struct _keywordstrienode {
+    int isLeaf;
+    int keyword_type;
+    struct _keywordstrienode *character[KEYWORDS_CHARACTER_SET_SIZE];
+} KeywordsTrieNode;
+
 enum INPUT_MODE {
     FILE_INPUT,
     STRING_INPUT,
@@ -39,8 +47,8 @@ typedef struct {
     int mark;
     int fill, size;
     PyArena *arena;
-    KeywordToken **keywords;
-    int n_keyword_lists;
+    KeywordsTrieNode *keywords_trie;
+    int max_keyword_len;
     void *start_rule_func;
     INPUT_MODE input_mode;
 } Parser;
@@ -100,7 +108,6 @@ void *indent_token(Parser *p);
 void *dedent_token(Parser *p);
 expr_ty number_token(Parser *p);
 void *string_token(Parser *p);
-void *keyword_token(Parser *p, const char *val);
 int raise_syntax_error(Parser *p, const char *errmsg, ...);
 
 void *CONSTRUCTOR(Parser *p, ...);
@@ -113,13 +120,11 @@ PyObject *new_identifier(Parser *, char *);
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),
                                int mode,
-                               KeywordToken **keywords_list,
-                               int n_keyword_lists);
+                               KeywordToken (*keywords_list)[], int max_keyword_len);
 PyObject *run_parser_from_string(const char *str,
                                  void *(start_rule_func)(Parser *),
                                  int mode,
-                                 KeywordToken **keywords_list,
-                                 int n_keyword_lists);
+                                 KeywordToken (*keywords_list)[], int max_keyword_len);
 asdl_seq *singleton_seq(Parser *, void *);
 asdl_seq *seq_insert_in_front(Parser *, void *, asdl_seq *);
 asdl_seq *seq_flatten(Parser *, asdl_seq *);

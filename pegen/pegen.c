@@ -3,6 +3,100 @@
 #include "v38tokenizer.h"
 #include "parse_string.h"
 
+inline int
+CHAR_INDEX(char c)
+{
+    if (c == 'F') {
+        return 26;
+    } else if (c == 'N') {
+        return 27;
+    } else if (c == 'T') {
+        return 28;
+    } else {
+        return c - 'a';
+    }
+}
+
+inline int
+IS_VALID_KEYWORD_CHAR(char c)
+{
+    return c == 'F' || c == 'N' || c == 'T' || (c >= 'a' && c <= 'z');
+}
+
+static KeywordsTrieNode *
+keywords_trie_node_new()
+{
+    KeywordsTrieNode *node = PyMem_Malloc(sizeof(KeywordsTrieNode));
+    if (node == NULL) {
+        PyErr_Format(PyExc_MemoryError, "Out of memory for the keywords trie");
+        return NULL;
+    }
+    node->isLeaf = 0;
+    node->keyword_type = -1;
+
+    for (int i = 0; i < KEYWORDS_CHARACTER_SET_SIZE; i++) {
+        node->character[i] = NULL;
+    }
+
+    return node;
+}
+
+static int
+keywords_trie_insert(KeywordsTrieNode *head, KeywordToken keyword)
+{
+    KeywordsTrieNode *curr = head;
+    for (char *s = keyword.str; *s != '\0'; s++) {
+        if (!IS_VALID_KEYWORD_CHAR(*s)) {
+            PyErr_Format(PyExc_ValueError, "Invalid keyword");
+            return -1;
+        }
+
+        if (curr->character[CHAR_INDEX(*s)] == NULL) {
+            curr->character[CHAR_INDEX(*s)] = keywords_trie_node_new();
+        }
+        curr = curr->character[CHAR_INDEX(*s)];
+    }
+
+    curr->isLeaf = 1;
+    curr->keyword_type = keyword.type;
+    return 0;
+}
+
+static int
+keywords_trie_search(KeywordsTrieNode *head, char *str, int str_len)
+{
+    if (head == NULL)
+        return -1;
+
+    KeywordsTrieNode* curr = head;
+    int i = 0;
+    for (char *s = str; *s != '\0' && i < str_len; s++, i++)
+    {
+        if (!IS_VALID_KEYWORD_CHAR(*s)) {
+            return -1;
+        }
+        curr = curr->character[CHAR_INDEX(*s)];
+        if (curr == NULL)
+            return -1;
+    }
+
+    return (curr->isLeaf) ? curr->keyword_type : -1;
+}
+
+static void
+keywords_trie_free(KeywordsTrieNode *node)
+{
+    if (node == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < KEYWORDS_CHARACTER_SET_SIZE; i++) {
+        keywords_trie_free(node->character[i]);
+    }
+
+    PyMem_Free(node);
+}
+
 PyObject *
 new_identifier(Parser *p, char *identifier)
 {
@@ -165,13 +259,10 @@ CONSTRUCTOR(Parser *p, ...)
 static int
 _get_keyword_or_name_type(Parser *p, char *name, int name_len)
 {
-    if (name_len >= p->n_keyword_lists || p->keywords[name_len] == NULL) {
-        return NAME;
-    }
-    for (KeywordToken *k = p->keywords[name_len]; k->type != -1; k++) {
-        if (strncmp(k->str, name, name_len) == 0) {
-            return k->type;
-        }
+    int type;
+    if (name_len <= p->max_keyword_len &&
+        (type = keywords_trie_search(p->keywords_trie, name, name_len)) != -1) {
+        return type;
     }
     return NAME;
 }
@@ -491,24 +582,9 @@ number_token(Parser *p)
                     p->arena);
 }
 
-void *
-keyword_token(Parser *p, const char *val)
-{
-    int mark = p->mark;
-    Token *t = expect_token(p, NAME);
-    if (t == NULL) {
-        return NULL;
-    }
-    if (strcmp(val, PyBytes_AsString(t->bytes)) == 0) {
-        return t;
-    }
-    p->mark = mark;
-    return NULL;
-}
-
 PyObject *
 run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
-           int input_mode, KeywordToken **keywords, int n_keyword_lists)
+           int input_mode, KeywordToken (*keywords)[], int max_keyword_len)
 {
     PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -519,8 +595,6 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     assert(tok != NULL);
     p->tok = tok;
     p->input_mode = input_mode;
-    p->keywords = keywords;
-    p->n_keyword_lists = n_keyword_lists;
     p->tokens = PyMem_Malloc(sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
@@ -531,6 +605,18 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
+
+    p->max_keyword_len = max_keyword_len;
+    p->keywords_trie = keywords_trie_node_new();
+    if (!p->keywords_trie) {
+        goto exit;
+    }
+    int i = 0;
+    for (KeywordToken k = (*keywords)[i]; k.type != -1; k = (*keywords)[i++]) {
+        if (keywords_trie_insert(p->keywords_trie, k) == -1) {
+            goto exit;
+        }
+    }
 
     p->arena = PyArena_New();
     if (!p->arena) {
@@ -571,7 +657,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
 
 exit:
-
+    keywords_trie_free(p->keywords_trie);
     for (int i = 0; i < p->size; i++) {
         PyMem_Free(p->tokens[i]);
     }
@@ -586,7 +672,7 @@ exit:
 
 PyObject *
 run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode,
-                     KeywordToken **keywords, int n_keyword_lists)
+                     KeywordToken (*keywords)[], int max_keyword_len)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
@@ -611,7 +697,7 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, n_keyword_lists);
+    result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, max_keyword_len);
 
     PyTokenizer_Free(tok);
 
@@ -623,7 +709,7 @@ error:
 
 PyObject *
 run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int mode,
-                       KeywordToken **keywords, int n_keyword_lists)
+                       KeywordToken (*keywords)[], int max_keyword_len)
 {
     PyObject *result = NULL;
     struct tok_state *tok = PyTokenizer_FromString(str, 1);
@@ -634,7 +720,7 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
     if (tok->filename == NULL) {
         goto exit;
     }
-    result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, n_keyword_lists);
+    result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, max_keyword_len);
 exit:
     PyTokenizer_Free(tok);
     return result;

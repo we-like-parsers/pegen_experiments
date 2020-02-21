@@ -145,11 +145,11 @@ def test_advanced_left_recursive(tmp_path: PurePath) -> None:
 
 def test_mutually_left_recursive(tmp_path: PurePath) -> None:
     grammar = """
-    start: foo 'E'
-    foo: bar 'A' | 'B'
-    bar: foo 'C' | 'D'
+    start: foo 'e'
+    foo: bar 'a' | 'b'
+    bar: foo 'c' | 'd'
     """
-    valid_cases = ["B E", "D A C A E"]
+    valid_cases = ["b e", "d a c a e"]
     check_input_strings_for_grammar(grammar, tmp_path, valid_cases)
 
 
