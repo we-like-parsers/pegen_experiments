@@ -220,8 +220,8 @@ named_expression[expr_ty]:
     | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
+    | disjunction !'if'
     | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA) }
-    | disjunction
     | lambdef
 
 lambdef[expr_ty]:
