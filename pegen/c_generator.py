@@ -366,7 +366,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 with self.indent():
                     self.print("return res;")
             self.print("int mark = p->mark;")
-            self._set_up_token_start_metadata_extraction()
+            if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
+                self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=False,
@@ -397,7 +398,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.out_of_memory_return(f"!children", "NULL")
             self.print("ssize_t children_capacity = 1;")
             self.print("ssize_t n = 0;")
-            self._set_up_token_start_metadata_extraction()
+            if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
+                self._set_up_token_start_metadata_extraction()
             self.visit(
                 rhs,
                 is_loop=True,
@@ -509,7 +511,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         # We have parsed successfully all the conditions for the option.
         with self.indent():
             # Prepare to emmit the rule action and do so
-            self._set_up_token_end_metadata_extraction()
+            if node.action and "EXTRA" in node.action:
+                self._set_up_token_end_metadata_extraction()
             if self.skip_actions:
                 self.emit_dummy_action()
             elif node.action:
@@ -530,7 +533,8 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         # We have parsed successfully one item!
         with self.indent():
             # Prepare to emit the rule action and do so
-            self._set_up_token_end_metadata_extraction()
+            if node.action and "EXTRA" in node.action:
+                self._set_up_token_end_metadata_extraction()
             if self.skip_actions:
                 self.emit_dummy_action()
             elif node.action:
