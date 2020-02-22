@@ -92,6 +92,28 @@ after the first keyword argument has been parsed.
 - is_keyword: `int` (`bool`), Must be 0 for `*args`, 1 for `kw=expr` and `**kwargs`
 
 
+Helper Preprocessor Defines
+---------------------------
+
+###### `EXTRA_EXPR(head, tail)`
+
+Expands to `head->lineno, head->col_offset, head->end_lineno, head->end_col_offset, p->arena`
+and can be used, in order to fetch the positional metadata of an `expr_ty` node.
+
+Example: `return _Py_Name(uni, Load, EXTRA_EXPR(first_name, second_name));`
+
+###### `EXTRA`
+
+Expands to `start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena`
+and can be used in grammar actions, so that positional metadata can be fetched in the generated
+C code.
+
+Example: `{ _Py_Pass(EXTRA) }`
+
+Note that `EXTRA` *has to* be used in place of its expanded version, because the
+line and column offset information does not get computed otherwise.
+
+
 Helper Functions
 ----------------
 
