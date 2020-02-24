@@ -258,17 +258,19 @@ static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset);
 static void fstring_shift_argument(expr_ty parent, arg_ty args, int lineno, int col_offset);
 
 
-#define SHIFT_EXPR(parent, n, line, col)\
-    if (parent->lineno < n->lineno) {   \
-        col = 0;                 \
-    }                                   \
+static inline void SHIFT_EXPR(expr_ty parent, expr_ty n, int line, int col) {
+    if (parent->lineno < n->lineno) {
+        col = 0;
+    }
     fstring_shift_expr_locations(n, line, col);
+}
 
-#define SHIFT_ARG(parent, n, line, col) \
-    if (parent->lineno < n->lineno) {   \
-        col = 0;                 \
-    }                                   \
+static inline void SHIFT_ARG(expr_ty parent, arg_ty n, int line, int col) {
+    if (parent->lineno < n->lineno) {
+        col = 0;
+    }
     fstring_shift_argument(parent, n, line, col);
+}
 
 static void fstring_shift_seq_locations(expr_ty parent, asdl_seq *seq, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
@@ -492,17 +494,18 @@ fstring_fix_expr_location(Token *parent, expr_ty n, char *expr_str)
             int newline_after_brace = 1;
             start = substr + 1;
             while (start && *start != '}' && *start != '\n') {
-                if (!(*start == ' ' || *start == '\t' || *start == '\f')) {
+                if (*start != ' ' && *start != '\t' && *start != '\f') {
                     newline_after_brace = 0;
                     break;
                 }
                 start++;
             }
+
+            // Account for the characters from the last newline character to our
+            // left until the beginning of substr.
             if (!newline_after_brace) {
                 start = substr;
-                while (start > parent_str) {
-                    if (start[0] == '\n')
-                        break;
+                while (start > parent_str && start[0] != '\n') {
                     start--;
                 }
                 cols += (int)(substr - start);
