@@ -202,6 +202,28 @@ TEST_CASES = [
     ('f-string_ascii', "f'{a!a}'"),
     ('f-string_debug', "f'{a=}'"),
     ('f-string_padding', "f'{a:03d}'"),
+    ('f-string_multiline',
+     """
+        f'''
+        {hello}
+        '''
+     """),
+    ('f-string_multiline_in_expr',
+     """
+        f'''
+        {
+        hello
+        }
+        '''
+     """),
+    ('f-string_multiline_in_call',
+     """
+        f'''
+        {f(
+            a, b, c
+        )}
+        '''
+     """),
     ('global', 'global a, b'),
     ('group', '(yield a)'),
     ('if_elif',
@@ -547,6 +569,13 @@ GOOD_BUT_FAIL_TEST_CASES = [
      '''
         f"hello" f"{world} again" f"and_again"
      '''),
+    ('f-string_multiline_comp',
+     """
+        f'''
+        {(i for i in a
+            if b)}
+        '''
+     """),
 ]
 
 # fmt: on
