@@ -258,14 +258,14 @@ static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset);
 static void fstring_shift_argument(expr_ty parent, arg_ty args, int lineno, int col_offset);
 
 
-static inline void SHIFT_EXPR(expr_ty parent, expr_ty n, int line, int col) {
+static inline void shift_expr(expr_ty parent, expr_ty n, int line, int col) {
     if (parent->lineno < n->lineno) {
         col = 0;
     }
     fstring_shift_expr_locations(n, line, col);
 }
 
-static inline void SHIFT_ARG(expr_ty parent, arg_ty n, int line, int col) {
+static inline void shift_arg(expr_ty parent, arg_ty n, int line, int col) {
     if (parent->lineno < n->lineno) {
         col = 0;
     }
@@ -278,7 +278,7 @@ static void fstring_shift_seq_locations(expr_ty parent, asdl_seq *seq, int linen
         if (expr == NULL){
             continue;
         }
-        SHIFT_EXPR(parent, expr, lineno, col_offset);
+        shift_expr(parent, expr, lineno, col_offset);
     }
 }
 
@@ -286,13 +286,13 @@ static void fstring_shift_slice_locations(expr_ty parent, slice_ty slice, int li
     switch (slice->kind) {
         case Slice_kind:
             if (slice->v.Slice.lower) {
-                SHIFT_EXPR(parent, slice->v.Slice.lower, lineno, col_offset);
+                shift_expr(parent, slice->v.Slice.lower, lineno, col_offset);
             }
             if (slice->v.Slice.upper) {
-                SHIFT_EXPR(parent, slice->v.Slice.upper, lineno, col_offset);
+                shift_expr(parent, slice->v.Slice.upper, lineno, col_offset);
             }
             if (slice->v.Slice.step) {
-                SHIFT_EXPR(parent, slice->v.Slice.step, lineno, col_offset);
+                shift_expr(parent, slice->v.Slice.step, lineno, col_offset);
             }
             break;
         case ExtSlice_kind:
@@ -302,19 +302,19 @@ static void fstring_shift_slice_locations(expr_ty parent, slice_ty slice, int li
             }
             break;
         case Index_kind:
-            SHIFT_EXPR(parent, slice->v.Index.value, lineno, col_offset);
+            shift_expr(parent, slice->v.Index.value, lineno, col_offset);
     }
 }
 
 static void fstring_shift_comprehension(expr_ty parent, comprehension_ty comp, int lineno, int col_offset) {
-    SHIFT_EXPR(parent, comp->target, lineno, col_offset);
-    SHIFT_EXPR(parent, comp->iter, lineno, col_offset);
+    shift_expr(parent, comp->target, lineno, col_offset);
+    shift_expr(parent, comp->iter, lineno, col_offset);
     fstring_shift_seq_locations(parent, comp->ifs, lineno, col_offset);
 }
 
 static void fstring_shift_argument(expr_ty parent, arg_ty arg, int lineno, int col_offset) {
     if (arg->annotation != NULL){
-        SHIFT_EXPR(parent, arg->annotation, lineno, col_offset);
+        shift_expr(parent, arg->annotation, lineno, col_offset);
     }
     arg->col_offset = arg->col_offset + col_offset;
     arg->end_col_offset = arg->end_col_offset + col_offset;
@@ -325,27 +325,27 @@ static void fstring_shift_argument(expr_ty parent, arg_ty arg, int lineno, int c
 static void fstring_shift_arguments(expr_ty parent, arguments_ty args, int lineno, int col_offset) {
     for (int i = 0, l = asdl_seq_LEN(args->posonlyargs); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->posonlyargs, i);
-       SHIFT_ARG(parent, arg, lineno, col_offset);
+       shift_arg(parent, arg, lineno, col_offset);
     }
 
     for (int i = 0, l = asdl_seq_LEN(args->args); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->args, i);
-       SHIFT_ARG(parent, arg, lineno, col_offset);
+       shift_arg(parent, arg, lineno, col_offset);
     }
 
     if (args->vararg != NULL) {
-        SHIFT_ARG(parent, args->vararg, lineno, col_offset);
+        shift_arg(parent, args->vararg, lineno, col_offset);
     }
 
     for (int i = 0, l = asdl_seq_LEN(args->kwonlyargs); i < l; i++) {
        arg_ty arg = asdl_seq_GET(args->kwonlyargs, i);
-       SHIFT_ARG(parent, arg, lineno, col_offset);
+       shift_arg(parent, arg, lineno, col_offset);
     }
 
     fstring_shift_seq_locations(parent, args->kw_defaults, lineno, col_offset);
 
     if (args->kwarg != NULL) {
-        SHIFT_ARG(parent, args->kwarg, lineno, col_offset);
+        shift_arg(parent, args->kwarg, lineno, col_offset);
     }
 
     fstring_shift_seq_locations(parent, args->defaults, lineno, col_offset);
@@ -357,24 +357,24 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             fstring_shift_seq_locations(n, n->v.BoolOp.values, lineno, col_offset);
             break;
         case NamedExpr_kind:
-            SHIFT_EXPR(n, n->v.NamedExpr.target, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.NamedExpr.value, lineno, col_offset);
+            shift_expr(n, n->v.NamedExpr.target, lineno, col_offset);
+            shift_expr(n, n->v.NamedExpr.value, lineno, col_offset);
             break;
         case BinOp_kind:
-            SHIFT_EXPR(n, n->v.BinOp.left, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.BinOp.right, lineno, col_offset);
+            shift_expr(n, n->v.BinOp.left, lineno, col_offset);
+            shift_expr(n, n->v.BinOp.right, lineno, col_offset);
             break;
         case UnaryOp_kind:
-            SHIFT_EXPR(n, n->v.UnaryOp.operand, lineno, col_offset);
+            shift_expr(n, n->v.UnaryOp.operand, lineno, col_offset);
             break;
         case Lambda_kind:
             fstring_shift_arguments(n, n->v.Lambda.args, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.Lambda.body, lineno, col_offset);
+            shift_expr(n, n->v.Lambda.body, lineno, col_offset);
             break;
         case IfExp_kind:
-            SHIFT_EXPR(n, n->v.IfExp.test, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.IfExp.body, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.IfExp.orelse, lineno, col_offset);
+            shift_expr(n, n->v.IfExp.test, lineno, col_offset);
+            shift_expr(n, n->v.IfExp.body, lineno, col_offset);
+            shift_expr(n, n->v.IfExp.orelse, lineno, col_offset);
             break;
         case Dict_kind:
             fstring_shift_seq_locations(n, n->v.Dict.keys, lineno, col_offset);
@@ -384,64 +384,64 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
             fstring_shift_seq_locations(n, n->v.Set.elts, lineno, col_offset);
             break;
         case ListComp_kind:
-            SHIFT_EXPR(n, n->v.ListComp.elt, lineno, col_offset);
+            shift_expr(n, n->v.ListComp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.ListComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.ListComp.generators, i);
                 fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case SetComp_kind:
-            SHIFT_EXPR(n, n->v.SetComp.elt, lineno, col_offset);
+            shift_expr(n, n->v.SetComp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.SetComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.SetComp.generators, i);
                 fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case DictComp_kind:
-            SHIFT_EXPR(n, n->v.DictComp.key, lineno, col_offset);
-            SHIFT_EXPR(n, n->v.DictComp.value, lineno, col_offset);
+            shift_expr(n, n->v.DictComp.key, lineno, col_offset);
+            shift_expr(n, n->v.DictComp.value, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.DictComp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.DictComp.generators, i);
                 fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case GeneratorExp_kind:
-            SHIFT_EXPR(n, n->v.GeneratorExp.elt, lineno, col_offset);
+            shift_expr(n, n->v.GeneratorExp.elt, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.GeneratorExp.generators); i < l; i++) {
                 comprehension_ty comp = asdl_seq_GET(n->v.GeneratorExp.generators, i);
                 fstring_shift_comprehension(n, comp, lineno, col_offset);
             }
             break;
         case Await_kind:
-            SHIFT_EXPR(n, n->v.Await.value, lineno, col_offset);
+            shift_expr(n, n->v.Await.value, lineno, col_offset);
             break;
         case Yield_kind:
-            SHIFT_EXPR(n, n->v.Yield.value, lineno, col_offset);
+            shift_expr(n, n->v.Yield.value, lineno, col_offset);
             break;
         case YieldFrom_kind:
-            SHIFT_EXPR(n, n->v.YieldFrom.value, lineno, col_offset);
+            shift_expr(n, n->v.YieldFrom.value, lineno, col_offset);
             break;
         case Compare_kind:
-            SHIFT_EXPR(n, n->v.Compare.left, lineno, col_offset);
+            shift_expr(n, n->v.Compare.left, lineno, col_offset);
             fstring_shift_seq_locations(n, n->v.Compare.comparators, lineno, col_offset);
             break;
         case Call_kind:
-            SHIFT_EXPR(n, n->v.Call.func, lineno, col_offset);
+            shift_expr(n, n->v.Call.func, lineno, col_offset);
             fstring_shift_seq_locations(n, n->v.Call.args, lineno, col_offset);
             for (int i = 0, l = asdl_seq_LEN(n->v.Call.keywords); i < l; i++) {
                 keyword_ty keyword = asdl_seq_GET(n->v.Call.keywords, i);
-                SHIFT_EXPR(n, keyword->value, lineno, col_offset);
+                shift_expr(n, keyword->value, lineno, col_offset);
             }
             break;
         case Attribute_kind:
-            SHIFT_EXPR(n, n->v.Attribute.value, lineno, col_offset);
+            shift_expr(n, n->v.Attribute.value, lineno, col_offset);
             break;
         case Subscript_kind:
-            SHIFT_EXPR(n, n->v.Subscript.value, lineno, col_offset);
+            shift_expr(n, n->v.Subscript.value, lineno, col_offset);
             fstring_shift_slice_locations(n, n->v.Subscript.slice, lineno, col_offset);
             break;
         case Starred_kind:
-            SHIFT_EXPR(n, n->v.Starred.value, lineno, col_offset);
+            shift_expr(n, n->v.Starred.value, lineno, col_offset);
             break;
         case List_kind:
             fstring_shift_seq_locations(n, n->v.List.elts, lineno, col_offset);
@@ -455,13 +455,19 @@ static void fstring_shift_children_locations(expr_ty n, int lineno, int col_offs
 }
 
 /* Shift locations for the given node and all its children by adding `lineno`
-   and `col_offset` to existing locations. */
+   and `col_offset` to existing locations. Note that n is the already parsed
+   expression. */
 static void fstring_shift_expr_locations(expr_ty n, int lineno, int col_offset)
 {
     n->col_offset = n->col_offset + col_offset;
+
+    // The following is needed, in order for nodes spanning across multiple lines
+    // to be shifted correctly. An example of such a node is a Call node, the closing
+    // parenthesis of which is not on the same line as its name.
     if (n->lineno == n->end_lineno) {
         n->end_col_offset = n->end_col_offset + col_offset;
     }
+
     fstring_shift_children_locations(n, lineno, col_offset);
     n->lineno = n->lineno + lineno;
     n->end_lineno = n->end_lineno + lineno;
