@@ -44,6 +44,7 @@ typedef struct {
     int n_keyword_lists;
     void *start_rule_func;
     INPUT_MODE input_mode;
+    Py_tss_t *error_marker;
 } Parser;
 
 typedef struct {
@@ -110,18 +111,17 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
 PyObject *new_identifier(Parser *, char *);
-jmp_buf error_marker;
 
-#define PROPAGATE_ERROR(errno) \
+#define PROPAGATE_ERROR(p, errno) \
     if (!PyErr_Occurred()) { \
         PyErr_Format(PyExc_RuntimeError, "Unknown error occured when parsing"); \
     } \
-    longjmp(error_marker, errno); \
+    longjmp(PyThread_tss_get(p->error_marker), errno); \
     Py_UNREACHABLE();
 
-static inline void* CHECK_CALL(void* result) {
+static inline void* CHECK_CALL(Parser* p, void* result) {
     if (result == NULL) {
-        PROPAGATE_ERROR(-1);
+        PROPAGATE_ERROR(p, -1);
     }
     return result;
 }

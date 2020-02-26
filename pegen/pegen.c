@@ -529,8 +529,22 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     PyErr_Clear();
 
     p->start_rule_func = start_rule_func;
+    p->error_marker = PyThread_tss_alloc();
+    if (p->error_marker == NULL || PyThread_tss_create(p->error_marker)) {
+        goto exit;
+    }
 
+    jmp_buf _error_marker;
+    if (PyThread_tss_get(p->error_marker) == NULL) {
+        PyThread_tss_set(p->error_marker, (void *)&_error_marker);
+    }
+
+    int error = setjmp(PyThread_tss_get(p->error_marker));
+    if (error) {
+        goto exit;
+    }
     void *res = (*start_rule_func)(p);
+
     if (res == NULL) {
         if (PyErr_Occurred()) {
             goto exit;
@@ -556,7 +570,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
 
 exit:
-
+    PyThread_tss_delete(p->error_marker);
     for (int i = 0; i < p->size; i++) {
         PyMem_Free(p->tokens[i]);
     }
@@ -596,12 +610,6 @@ run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), in
     tok->filename = filename_ob;
     filename_ob = NULL;
 
-    int error = setjmp(error_marker);
-    if (error) {
-        PyTokenizer_Free(tok);
-        goto error;
-    }
-
     result = run_parser(tok, start_rule_func, mode, FILE_INPUT, keywords, n_keyword_lists);
 
     PyTokenizer_Free(tok);
@@ -622,20 +630,13 @@ run_parser_from_string(const char *str, void *(start_rule_func)(Parser *), int m
         return NULL;
     }
 
-    int error = setjmp(error_marker);
-    if (error) {
+    tok->filename = PyUnicode_FromString("<string>");
+    if (tok->filename == NULL) {
         PyTokenizer_Free(tok);
         return NULL;
     }
 
-    tok->filename = PyUnicode_FromString("<string>");
-    if (tok->filename == NULL) {
-        goto exit;
-    }
     result = run_parser(tok, start_rule_func, mode, STRING_INPUT, keywords, n_keyword_lists);
-
-exit:
-    PyTokenizer_Free(tok);
     return result;
 }
 

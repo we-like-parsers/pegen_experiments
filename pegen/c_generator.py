@@ -484,9 +484,9 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
     def emit_action(self, node: Alt, generated: bool) -> None:
         self.print(f"res = {node.action};")
         if not generated:
-            self.print("if (res == NULL){")
+            self.print("if (res == NULL) {")
             with self.indent():
-                self.print("PROPAGATE_ERROR(-1);")
+                self.print("PROPAGATE_ERROR(p, -1);")
             self.print("}")
 
         if self.debug:
