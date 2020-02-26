@@ -108,6 +108,7 @@ TEST_CASES = [
     ('del_attribute', 'del a.b'),
     ('del_call_attribute', 'del a().c'),
     ('del_call_genexp_attribute', 'del a(i for i in b).c'),
+    ('del_empty', 'del()'),
     ('del_list', 'del a, [b, c]'),
     ('del_mixed', 'del a[0].b().c'),
     ('del_multiple', 'del a, b'),
@@ -142,6 +143,7 @@ TEST_CASES = [
     ('for_star_target_in_paren', 'for (a) in b: pass'),
     ('for_star_targets_attribute', 'for a.b in c: pass'),
     ('for_star_targets_call_attribute', 'for a().c in b: pass'),
+    ('for_star_targets_empty', 'for () in a: pass'),
     ('for_star_targets_mixed', 'for a[0].b().c in d: pass'),
     ('for_star_targets_mixed_starred',
      '''
@@ -506,6 +508,7 @@ TEST_CASES = [
         with a as (b):
             pass
      '''),
+    ('with_as_empty', 'with a as (): pass'),
     ('with_list_recursive',
      '''
         with a as [x, [y, z]]:
