@@ -36,13 +36,14 @@ byte_offset_to_character_offset(PyObject *line, int col_offset)
     return size;
 }
 
-static inline PyObject*
+static inline PyObject *
 get_error_line(char *buffer)
 {
     char *newline = strchr(buffer, '\n');
     if (newline) {
         return PyUnicode_FromStringAndSize(buffer, newline - buffer);
-    } else {
+    }
+    else {
         return PyUnicode_FromString(buffer);
     }
 }
@@ -69,7 +70,8 @@ raise_syntax_error(Parser *p, const char *errmsg, ...)
             Py_INCREF(Py_None);
             loc = Py_None;
         }
-    } else {
+    }
+    else {
         assert(p->input_mode == STRING_INPUT);
         loc = get_error_line(p->tok->buf);
         if (!loc) {
@@ -386,7 +388,6 @@ dedent_token(Parser *p)
     return expect_token(p, DEDENT);
 }
 
-
 static PyObject *
 parsenumber_raw(const char *s)
 {
@@ -401,7 +402,7 @@ parsenumber_raw(const char *s)
     end = s + strlen(s) - 1;
     imflag = *end == 'j' || *end == 'J';
     if (s[0] == '0') {
-        x = (long) PyOS_strtoul(s, (char **)&end, 0);
+        x = (long)PyOS_strtoul(s, (char **)&end, 0);
         if (x < 0 && errno == 0) {
             return PyLong_FromString(s, (char **)0, 0);
         }
@@ -421,16 +422,13 @@ parsenumber_raw(const char *s)
             return NULL;
         return PyComplex_FromCComplex(compl);
     }
-    else
-    {
+    else {
         dx = PyOS_string_to_double(s, NULL, NULL);
         if (dx == -1.0 && PyErr_Occurred())
             return NULL;
         return PyFloat_FromDouble(dx);
     }
 }
-
-
 
 static PyObject *
 parsenumber(const char *s)
@@ -460,8 +458,6 @@ parsenumber(const char *s)
     return res;
 }
 
-
-
 expr_ty
 number_token(Parser *p)
 {
@@ -470,7 +466,7 @@ number_token(Parser *p)
         return NULL;
     }
 
-    char* num_raw = PyBytes_AsString(t->bytes);
+    char *num_raw = PyBytes_AsString(t->bytes);
 
     if (num_raw == NULL) {
         return NULL;
@@ -492,8 +488,8 @@ number_token(Parser *p)
 }
 
 PyObject *
-run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
-           int input_mode, KeywordToken **keywords, int n_keyword_lists)
+run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode, int input_mode,
+           KeywordToken **keywords, int n_keyword_lists)
 {
     PyObject *result = NULL;
     Parser *p = PyMem_Malloc(sizeof(Parser));
@@ -559,7 +555,7 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode,
     }
 
     if (mode == 2) {
-        result = (PyObject *) PyAST_CompileObject(res, tok->filename, NULL, -1, p->arena);
+        result = (PyObject *)PyAST_CompileObject(res, tok->filename, NULL, -1, p->arena);
     }
     else if (mode == 1) {
         result = PyAST_mod2obj(res);
@@ -581,7 +577,6 @@ exit:
     PyMem_Free(p);
     return result;
 }
-
 
 PyObject *
 run_parser_from_file(const char *filename, void *(start_rule_func)(Parser *), int mode,
@@ -892,17 +887,11 @@ _get_exprs(Parser *p, asdl_seq *seq)
 
 /* Wrapper for _Py_Compare, so that the call in the grammar stays concise */
 expr_ty
-Pegen_Compare(Parser *p,
-              expr_ty expr,
-              asdl_seq *pairs,
-              int lineno,
-              int col_offset,
-              int end_lineno,
-              int end_col_offset,
-              PyArena *arena)
+Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs, int lineno, int col_offset,
+              int end_lineno, int end_col_offset, PyArena *arena)
 {
-    return _Py_Compare(expr, _get_cmpops(p, pairs), _get_exprs(p, pairs),
-                       lineno, col_offset, end_lineno, end_col_offset, arena);
+    return _Py_Compare(expr, _get_cmpops(p, pairs), _get_exprs(p, pairs), lineno, col_offset,
+                       end_lineno, end_col_offset, arena);
 }
 
 /* Creates an asdl_seq* where all the elements have been changed to have ctx as context */
@@ -1312,22 +1301,18 @@ function_def_decorators(Parser *p, asdl_seq *decorators, stmt_ty function_def)
     if (function_def->kind == AsyncFunctionDef_kind) {
         return _Py_AsyncFunctionDef(
             function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
-            function_def->v.FunctionDef.body, decorators,
-            function_def->v.FunctionDef.returns,
+            function_def->v.FunctionDef.body, decorators, function_def->v.FunctionDef.returns,
             function_def->v.FunctionDef.type_comment, function_def->lineno,
-            function_def->col_offset, function_def->end_lineno,
-            function_def->end_col_offset, p->arena
-        );
+            function_def->col_offset, function_def->end_lineno, function_def->end_col_offset,
+            p->arena);
     }
 
-    return _Py_FunctionDef(
-        function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
-        function_def->v.FunctionDef.body, decorators,
-        function_def->v.FunctionDef.returns,
-        function_def->v.FunctionDef.type_comment, function_def->lineno,
-        function_def->col_offset, function_def->end_lineno,
-        function_def->end_col_offset, p->arena
-    );
+    return _Py_FunctionDef(function_def->v.FunctionDef.name, function_def->v.FunctionDef.args,
+                           function_def->v.FunctionDef.body, decorators,
+                           function_def->v.FunctionDef.returns,
+                           function_def->v.FunctionDef.type_comment, function_def->lineno,
+                           function_def->col_offset, function_def->end_lineno,
+                           function_def->end_col_offset, p->arena);
 }
 
 /* Construct a ClassDef equivalent to class_def, but with decorators */
@@ -1458,12 +1443,13 @@ concatenate_strings(Parser *p, asdl_seq *strings)
         if (fstr != NULL) {
             assert(s == NULL && !bytesmode);
 
-            int result = FstringParser_ConcatFstring(p, &state, &fstr, fstr+fstrlen,
+            int result = FstringParser_ConcatFstring(p, &state, &fstr, fstr + fstrlen,
                                                      this_rawmode, 0, first, t, last);
             if (result < 0) {
                 goto error;
             }
-        } else {
+        }
+        else {
             /* String or byte string. */
             assert(s != NULL && fstr == NULL);
             assert(bytesmode ? PyBytes_CheckExact(s) : PyUnicode_CheckExact(s));
@@ -1471,13 +1457,15 @@ concatenate_strings(Parser *p, asdl_seq *strings)
             if (bytesmode) {
                 if (i == 0) {
                     bytes_str = s;
-                } else {
+                }
+                else {
                     PyBytes_ConcatAndDel(&bytes_str, s);
                     if (!bytes_str) {
                         goto error;
                     }
                 }
-            } else {
+            }
+            else {
                 /* This is a regular string. Concatenate it. */
                 if (FstringParser_ConcatAndDel(&state, s) < 0) {
                     goto error;
@@ -1490,8 +1478,8 @@ concatenate_strings(Parser *p, asdl_seq *strings)
         if (PyArena_AddPyObject(p->arena, bytes_str) < 0) {
             goto error;
         }
-        return Constant(bytes_str, NULL, first->lineno, first->col_offset,
-                        last->end_lineno, last->end_col_offset, p->arena);
+        return Constant(bytes_str, NULL, first->lineno, first->col_offset, last->end_lineno,
+                        last->end_col_offset, p->arena);
     }
 
     return FstringParser_Finish(p, &state, first, last);
