@@ -482,7 +482,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
         self.print("if (res == NULL && PyErr_Occurred()) {")
         with self.indent():
-            self.print("PROPAGATE_ERROR(p);")
+            self.print("propagate_error(p);")
         self.print("}")
 
         if self.debug:

@@ -112,15 +112,9 @@ void *CONSTRUCTOR(Parser *p, ...);
 
 PyObject *new_identifier(Parser *, char *);
 
-#define PROPAGATE_ERROR(p) \
+static inline void propagate_error(Parser *p) {
     longjmp(p->error_env, 1); \
     Py_UNREACHABLE();
-
-static inline void* CHECK_CALL(Parser* p, void* result) {
-    if (result == NULL) {
-        PROPAGATE_ERROR(p);
-    }
-    return result;
 }
 
 PyObject *run_parser_from_file(const char *filename,
