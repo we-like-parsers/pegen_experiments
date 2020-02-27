@@ -90,7 +90,7 @@ class ParserGenerator:
     def name_node(self, rhs: Rhs) -> str:
         self.counter += 1
         name = f"_tmp_{self.counter}"  # TODO: Pick a nicer name.
-        self.todo[name] = Rule(name, None, rhs, generated=True)
+        self.todo[name] = Rule(name, None, rhs)
         return name
 
     def name_loop(self, node: Plain, is_repeat1: bool) -> str:
@@ -100,7 +100,7 @@ class ParserGenerator:
         else:
             prefix = "_loop0_"
         name = f"{prefix}{self.counter}"  # TODO: It's ugly to signal via the name.
-        self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]), generated=True)
+        self.todo[name] = Rule(name, None, Rhs([Alt([NamedItem(None, node)])]))
         return name
 
     def name_gather(self, node: Gather) -> str:
@@ -117,7 +117,7 @@ class ParserGenerator:
         alt = Alt(
             [NamedItem("elem", node.node), NamedItem("seq", NameLeaf(extra_function_name)),],
         )
-        self.todo[name] = Rule(name, None, Rhs([alt]), generated=True)
+        self.todo[name] = Rule(name, None, Rhs([alt]),)
         return name
 
 

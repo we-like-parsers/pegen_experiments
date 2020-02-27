@@ -525,17 +525,8 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode, i
     PyErr_Clear();
 
     p->start_rule_func = start_rule_func;
-    p->error_marker = PyThread_tss_alloc();
-    if (p->error_marker == NULL || PyThread_tss_create(p->error_marker)) {
-        goto exit;
-    }
 
-    jmp_buf _error_marker;
-    if (PyThread_tss_get(p->error_marker) == NULL) {
-        PyThread_tss_set(p->error_marker, (void *)&_error_marker);
-    }
-
-    int error = setjmp(PyThread_tss_get(p->error_marker));
+    int error = setjmp(p->error_env);
     if (error) {
         goto exit;
     }
@@ -566,7 +557,6 @@ run_parser(struct tok_state *tok, void *(start_rule_func)(Parser *), int mode, i
     }
 
 exit:
-    PyThread_tss_delete(p->error_marker);
     for (int i = 0; i < p->size; i++) {
         PyMem_Free(p->tokens[i]);
     }
