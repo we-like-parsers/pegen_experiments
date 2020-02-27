@@ -113,9 +113,6 @@ void *CONSTRUCTOR(Parser *p, ...);
 PyObject *new_identifier(Parser *, char *);
 
 #define PROPAGATE_ERROR(p) \
-    if (!PyErr_Occurred()) { \
-        PyErr_Format(PyExc_RuntimeError, "Unknown error occured when parsing"); \
-    } \
     longjmp(p->error_env, 1); \
     Py_UNREACHABLE();
 
