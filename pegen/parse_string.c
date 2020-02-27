@@ -535,10 +535,11 @@ static expr_ty
 fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
                      Token *t)
 {
-    mod_ty mod;
+    mod_ty mod = NULL;
     char *str;
     Py_ssize_t len;
     const char *s;
+    expr_ty result = NULL;
 
     assert(expr_end >= expr_start);
     assert(*(expr_start-1) == '{');
@@ -634,6 +635,8 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     str[len+1] = '}';
     fstring_fix_expr_location(t, expr->v.Expr.value, str);
 
+    result = expr->v.Expr.value;
+
 exit:
     PyTokenizer_Free(tok);
     for (int i = 0; i < p2->size; i++) {
@@ -644,7 +647,7 @@ exit:
     if (mod == NULL) {
         return NULL;
     }
-    return expr->v.Expr.value;
+    return result;
 }
 
 /* Return -1 on error.
