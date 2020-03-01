@@ -111,7 +111,6 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
 
 PyObject *new_identifier(Parser *, char *);
-
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),
                                int mode,
