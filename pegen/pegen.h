@@ -6,6 +6,7 @@
 #include <token.h>
 #include <Python-ast.h>
 #include <pyarena.h>
+#include <setjmp.h>
 
 enum INPUT_MODE {
     FILE_INPUT,
@@ -43,6 +44,7 @@ typedef struct {
     int n_keyword_lists;
     void *start_rule_func;
     INPUT_MODE input_mode;
+    jmp_buf error_env;
 } Parser;
 
 typedef struct {

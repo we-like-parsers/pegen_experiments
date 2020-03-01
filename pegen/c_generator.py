@@ -479,6 +479,12 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
 
     def emit_action(self, node: Alt) -> None:
         self.print(f"res = {node.action};")
+
+        self.print("if (res == NULL && PyErr_Occurred()) {")
+        with self.indent():
+            self.print("longjmp(p->error_env, 1);")
+        self.print("}")
+
         if self.debug:
             self.print(
                 f'fprintf(stderr, "Hit with action [%d-%d]: %s\\n", mark, p->mark, "{node}");'
