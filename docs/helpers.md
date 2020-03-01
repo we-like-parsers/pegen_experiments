@@ -135,20 +135,11 @@ Counts the total number of dots in `seq`s tokens.
 ###### `alias_ty alias_for_star(Parser *p)`
 Creates an alias with `*` as the identifier name.
 
-###### `void *seq_get_head(void *previous, asdl_seq *seq)`
-Returns the first element of `seq` or `previous` if `seq` is empty.
-
-###### `void *seq_get_tail(void *previous, asdl_seq *seq)`
-Returns the last element of `seq` or `previous` if `seq` is empty.
-
 ###### `asdl_seq *map_names_to_ids(Parser *p, asdl_seq *seq)`
 Creates a new `asdl_seq *` with the identifiers of all the names in `seq`.
 
 ###### `CmpopExprPair *cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)`
 Constructs a `CmpopExprPair`.
-
-###### `expr_ty Pegen_Compare(Parser *p, expr_ty expr, asdl_seq *pairs)`
-Wrapper for `_Py_Compare`, so that the call in the grammar stays concise.
 
 ###### `expr_ty set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)`
 Creates an `expr_ty` equivalent to `expr` but with `ctx` as context.
