@@ -128,6 +128,7 @@ TEST_CASES = [
      '''),
     ('dict_comp', '{x:1 for x in a}'),
     ('dict_comp_if', '{x:1+2 for x in a if b}'),
+    ('dict_empty', '{}'),
     ('for',
      '''
         for i in a:
