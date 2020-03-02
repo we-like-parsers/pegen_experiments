@@ -127,6 +127,15 @@ Example: `{ _Py_Global(CHECK_CALL(p, map_names_to_ids(p, a)), EXTRA) }`
 Exactly the same functionality with `CHECK_CALL`, except that this should be used
 for functions that are allowed to return `NULL` without an error.
 
+###### `CHECK(result)`
+
+Expands to `CHECK_CALL(p, result)` and is used in grammar actions as an alternate
+to `CHECK_CALL`, so that the Parser doesn't have to be passed explicitly.
+
+###### `CHECK_NULL_ALLOWED(result)`
+
+Same as `CHECK(result)` but this is used to replace calls to `CHECK_CALL_NULL_ALLOWED`.
+
 
 Helper Functions
 ----------------

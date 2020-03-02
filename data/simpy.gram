@@ -37,7 +37,7 @@ compound_stmt[stmt_ty]:
 # NOTE: yield_expression may start with 'yield'; yield_expr must start with 'yield'
 assignment:
     | a=NAME ':' b=expression c=['=' d=yield_expression { d }] {
-        _Py_AnnAssign(CHECK_CALL(p, set_expr_context(p, a, Store)), b, c, 1, EXTRA) }
+        _Py_AnnAssign(CHECK(set_expr_context(p, a, Store)), b, c, 1, EXTRA) }
     | a=('(' b=inside_paren_ann_assign_target ')' { b }
          | ann_assign_subscript_attribute_target) ':' b=expression c=['=' d=yield_expression { d }] {
         _Py_AnnAssign(a, b, c, 0, EXTRA)}
@@ -61,8 +61,8 @@ augassign[AugOperator*]:
     | '**=' {augoperator(p, Pow)}
     | '//=' {augoperator(p, FloorDiv)}
 
-global_stmt[stmt_ty]: 'global' a=','.NAME+ { _Py_Global(CHECK_CALL(p, map_names_to_ids(p, a)), EXTRA) }
-nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ { _Py_Nonlocal(CHECK_CALL(p, map_names_to_ids(p, a)), EXTRA) }
+global_stmt[stmt_ty]: 'global' a=','.NAME+ { _Py_Global(CHECK(map_names_to_ids(p, a)), EXTRA) }
+nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ { _Py_Nonlocal(CHECK(map_names_to_ids(p, a)), EXTRA) }
 
 yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 
@@ -81,7 +81,7 @@ import_from[stmt_ty]:
 import_from_targets[asdl_seq*]:
     | '(' a=import_from_as_names ')' { a }
     | import_from_as_names
-    | '*' { singleton_seq(p, CHECK_CALL(p, alias_for_star(p))) }
+    | '*' { singleton_seq(p, CHECK(alias_for_star(p))) }
 import_from_as_names[asdl_seq*]:
     | a=','.import_from_as_name+ [','] { a }
 import_from_as_name[alias_ty]:
@@ -99,10 +99,10 @@ dotted_name[expr_ty]:
     | NAME
 
 if_stmt[stmt_ty]:
-    | 'if' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK_CALL(p, singleton_seq(p, c)), EXTRA) }
+    | 'if' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK(singleton_seq(p, c)), EXTRA) }
     | 'if' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
 elif_stmt[stmt_ty]:
-    | 'elif' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK_CALL(p, singleton_seq(p, c)), EXTRA) }
+    | 'elif' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK(singleton_seq(p, c)), EXTRA) }
     | 'elif' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
 else_block[asdl_seq*]: 'else' ':' b=block { b }
 
@@ -150,11 +150,11 @@ function_def[stmt_ty]:
 function_def_raw[stmt_ty]:
     | ASYNC 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
         _Py_AsyncFunctionDef(n->v.Name.id,
-                             (params) ? params : CHECK_CALL(p, empty_arguments(p)),
+                             (params) ? params : CHECK(empty_arguments(p)),
                              b, NULL, a, NULL, EXTRA) }
     | 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
         _Py_FunctionDef(n->v.Name.id,
-                        (params) ? params : CHECK_CALL(p, empty_arguments(p)),
+                        (params) ? params : CHECK(empty_arguments(p)),
                         b, NULL, a, NULL, EXTRA) }
 
 parameters[arguments_ty]:
@@ -204,8 +204,8 @@ block[asdl_seq*]: NEWLINE INDENT a=statements DEDENT { a } | simple_stmt
 expressions_list[asdl_seq*]: a=','.star_expression+ [','] { a }
 expressions[expr_ty]:
     | a=star_expression b=(',' c=star_expression { c })+ [','] {
-        _Py_Tuple(CHECK_CALL(p, seq_insert_in_front(p, a, b)), Load, EXTRA) }
-    | a=star_expression ',' { _Py_Tuple(CHECK_CALL(p, singleton_seq(p, a)), Load, EXTRA) }
+        _Py_Tuple(CHECK(seq_insert_in_front(p, a, b)), Load, EXTRA) }
+    | a=star_expression ',' { _Py_Tuple(CHECK(singleton_seq(p, a)), Load, EXTRA) }
     | star_expression
 star_expression[expr_ty]:
     | '*' a=bitwise_or { _Py_Starred(a, Load, EXTRA) }
@@ -216,7 +216,7 @@ star_named_expression[expr_ty]:
     | '*' a=bitwise_or { _Py_Starred(a, Load, EXTRA) }
     | named_expression
 named_expression[expr_ty]:
-    | a=NAME ':=' b=expression { _Py_NamedExpr(CHECK_CALL(p, set_expr_context(p, a, Store)), b, EXTRA) }
+    | a=NAME ':=' b=expression { _Py_NamedExpr(CHECK(set_expr_context(p, a, Store)), b, EXTRA) }
     | expression
 yield_expression: yield_expr | expression
 expression[expr_ty]:
@@ -225,7 +225,7 @@ expression[expr_ty]:
     | lambdef
 
 lambdef[expr_ty]:
-    | 'lambda' a=[lambda_parameters] ':' b=expression { _Py_Lambda((a) ? a : CHECK_CALL(p, empty_arguments(p)), b, EXTRA) }
+    | 'lambda' a=[lambda_parameters] ':' b=expression { _Py_Lambda((a) ? a : CHECK(empty_arguments(p)), b, EXTRA) }
 lambda_parameters[arguments_ty]:
     | a=lambda_slash_without_default b=[',' x=lambda_plain_names { x }] c=[',' y=lambda_names_with_default { y }] d=[',' z=[lambda_star_etc] { z }] {
         make_arguments(p, a, NULL, b, c, d) }
@@ -256,13 +256,13 @@ lambda_kwds[arg_ty]: '**' a=lambda_plain_name { a }
 disjunction[expr_ty]:
     | a=conjunction b=('or' c=conjunction { c })+ { _Py_BoolOp(
         Or,
-        CHECK_CALL(p, seq_insert_in_front(p, a, b)),
+        CHECK(seq_insert_in_front(p, a, b)),
         EXTRA) }
     | conjunction
 conjunction[expr_ty]:
     | a=inversion b=('and' c=inversion { c })+ { _Py_BoolOp(
         And,
-        CHECK_CALL(p, seq_insert_in_front(p, a, b)),
+        CHECK(seq_insert_in_front(p, a, b)),
         EXTRA) }
     | inversion
 inversion[expr_ty]:
@@ -270,7 +270,7 @@ inversion[expr_ty]:
     | comparison
 comparison[expr_ty]:
     | a=bitwise_or b=compare_op_bitwise_or_pair+ {
-        _Py_Compare(a, CHECK_CALL(p, get_cmpops(p, b)), CHECK_CALL(p, get_exprs(p, b)), EXTRA) }
+        _Py_Compare(a, CHECK(get_cmpops(p, b)), CHECK(get_exprs(p, b)), EXTRA) }
     | bitwise_or
 compare_op_bitwise_or_pair[CmpopExprPair*]:
     | eq_bitwise_or
@@ -332,7 +332,7 @@ await_primary[expr_ty]:
     | primary
 primary[expr_ty]:
     | a=primary '.' b=NAME { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
-    | a=primary b=genexp { _Py_Call(a, CHECK_CALL(p, singleton_seq(p, b)), NULL, EXTRA) }
+    | a=primary b=genexp { _Py_Call(a, CHECK(singleton_seq(p, b)), NULL, EXTRA) }
     | a=primary '(' b=[arguments] ')' {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,
@@ -379,8 +379,8 @@ set[expr_ty]: '{' a=expressions_list '}' { _Py_Set(a, EXTRA) }
 setcomp[expr_ty]:
     | '{' a=expression b=for_if_clauses '}' { _Py_SetComp(a, b, EXTRA) }
 dict[expr_ty]:
-    | '{' a=[kvpairs] '}' { _Py_Dict(CHECK_CALL(p, get_keys(p, a)),
-                                     CHECK_CALL(p, get_values(p, a)), EXTRA) }
+    | '{' a=[kvpairs] '}' { _Py_Dict(CHECK(get_keys(p, a)),
+                                     CHECK(get_values(p, a)), EXTRA) }
 dictcomp[expr_ty]:
     | '{' a=kvpair b=for_if_clauses '}' { _Py_DictComp(a->key, a->value, b, EXTRA) }
 kvpairs[asdl_seq*]: a=','.kvpair+ [','] { a }
@@ -400,18 +400,18 @@ arguments[expr_ty]:
 args[expr_ty]:
     | a=starred_expression b=[',' c=args { c }] {
         _Py_Call(CONSTRUCTOR(p),
-                 (b) ? CHECK_CALL(p, seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
-                     : CHECK_CALL(p, singleton_seq(p, a)),
+                 (b) ? CHECK(seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
+                     : CHECK(singleton_seq(p, a)),
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
     | a=kwargs { _Py_Call(CONSTRUCTOR(p),
-                          CHECK_CALL_NULL_ALLOWED(p, seq_extract_starred_exprs(p, a)),
-                          CHECK_CALL_NULL_ALLOWED(p, seq_delete_starred_exprs(p, a)),
+                          CHECK_NULL_ALLOWED(seq_extract_starred_exprs(p, a)),
+                          CHECK_NULL_ALLOWED(seq_delete_starred_exprs(p, a)),
                           EXTRA) }
     | a=named_expression b=[',' c=args { c }] {
         _Py_Call(CONSTRUCTOR(p),
-                 (b) ? CHECK_CALL(p, seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
-                     : CHECK_CALL(p, singleton_seq(p, a)),
+                 (b) ? CHECK(seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
+                     : CHECK(singleton_seq(p, a)),
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
 kwargs[asdl_seq*]: a=','.kwarg+ { a }
@@ -419,18 +419,18 @@ starred_expression[expr_ty]:
     | '*' a=expression { _Py_Starred(a, Load, EXTRA) }
 kwarg[KeywordOrStarred*]:
     | a=NAME '=' b=expression {
-        keyword_or_starred(p, CHECK_CALL(p, _Py_keyword(a->v.Name.id, b, p->arena)), 1) }
+        keyword_or_starred(p, CHECK(_Py_keyword(a->v.Name.id, b, p->arena)), 1) }
     | a=starred_expression { keyword_or_starred(p, a, 0) }
-    | '**' a=expression { keyword_or_starred(p, CHECK_CALL(p, _Py_keyword(NULL, a, p->arena)), 1) }
+    | '**' a=expression { keyword_or_starred(p, CHECK(_Py_keyword(NULL, a, p->arena)), 1) }
 
 # NOTE: star_targets may contain *bitwise_or, targets may not.
 star_targets[expr_ty]:
     | a=star_target !',' { a }
     | a=star_target b=(',' c=star_target { c })* [','] {
-        _Py_Tuple(CHECK_CALL(p, seq_insert_in_front(p, a, b)), Store, EXTRA) }
+        _Py_Tuple(CHECK(seq_insert_in_front(p, a, b)), Store, EXTRA) }
 star_targets_seq[asdl_seq*]: a=','.star_target+ [','] { a }
 star_target[expr_ty]:
-    | '*' a=bitwise_or { _Py_Starred(CHECK_CALL(p, set_expr_context(p, a, Store)), Store, EXTRA) }
+    | '*' a=bitwise_or { _Py_Starred(CHECK(set_expr_context(p, a, Store)), Store, EXTRA) }
     | a=t_primary '.' b=NAME !t_lookahead { _Py_Attribute(a, b->v.Name.id, Store, EXTRA) }
     | a=t_primary b=slicing !t_lookahead { _Py_Subscript(a, b, Store, EXTRA) }
     | star_atom
@@ -468,7 +468,7 @@ target[expr_ty]:
 t_primary[expr_ty]:
     | a=t_primary '.' b=NAME &t_lookahead { _Py_Attribute(a, b->v.Name.id, Load, EXTRA) }
     | a=t_primary b=slicing &t_lookahead { _Py_Subscript(a, b, Load, EXTRA) }
-    | a=t_primary b=genexp &t_lookahead { _Py_Call(a, CHECK_CALL(p, singleton_seq(p, b)), NULL, EXTRA) }
+    | a=t_primary b=genexp &t_lookahead { _Py_Call(a, CHECK(singleton_seq(p, b)), NULL, EXTRA) }
     | a=t_primary '(' b=[arguments] ')' &t_lookahead {
         _Py_Call(a,
                  (b) ? ((expr_ty) b)->v.Call.args : NULL,

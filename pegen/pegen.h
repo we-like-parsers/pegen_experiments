@@ -107,6 +107,8 @@ void *CONSTRUCTOR(Parser *p, ...);
 #define UNUSED(expr) do { (void)(expr); } while (0)
 #define EXTRA_EXPR(head, tail) head->lineno, head->col_offset, tail->end_lineno, tail->end_col_offset, p->arena
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
+#define CHECK(result) CHECK_CALL(p, result)
+#define CHECK_NULL_ALLOWED(result) CHECK_CALL_NULL_ALLOWED(p, result)
 
 inline void *
 CHECK_CALL(Parser *p, void *result)
