@@ -33,7 +33,6 @@ typedef struct {
     int type;
 } KeywordToken;
 
-
 typedef struct {
     struct tok_state *tok;
     Token **tokens;
@@ -103,12 +102,32 @@ void *dedent_token(Parser *p);
 expr_ty number_token(Parser *p);
 void *string_token(Parser *p);
 int raise_syntax_error(Parser *p, const char *errmsg, ...);
-
 void *CONSTRUCTOR(Parser *p, ...);
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 #define EXTRA_EXPR(head, tail) head->lineno, head->col_offset, tail->end_lineno, tail->end_col_offset, p->arena
 #define EXTRA start_lineno, start_col_offset, end_lineno, end_col_offset, p->arena
+
+inline void *
+CHECK_CALL(Parser *p, void *result)
+{
+    if (result == NULL) {
+        assert(PyErr_Occurred());
+        longjmp(p->error_env, 1);
+    }
+    return result;
+}
+
+/* This is needed for helper functions that are allowed to
+   return NULL without an error. Example: seq_extract_starred_exprs */
+inline void *
+CHECK_CALL_NULL_ALLOWED(Parser *p, void *result)
+{
+    if (result == NULL && PyErr_Occurred()) {
+        longjmp(p->error_env, 1);
+    }
+    return result;
+}
 
 PyObject *new_identifier(Parser *, char *);
 PyObject *run_parser_from_file(const char *filename,
@@ -127,11 +146,10 @@ asdl_seq *seq_flatten(Parser *, asdl_seq *);
 expr_ty join_names_with_dot(Parser *, expr_ty, expr_ty);
 int seq_count_dots(asdl_seq *);
 alias_ty alias_for_star(Parser *);
-void *seq_get_head(void *, asdl_seq *);
-void *seq_get_tail(void *, asdl_seq *);
 asdl_seq *map_names_to_ids(Parser *, asdl_seq *);
 CmpopExprPair *cmpop_expr_pair(Parser *, cmpop_ty, expr_ty);
-expr_ty Pegen_Compare(Parser *, expr_ty, asdl_seq *, int, int, int, int, PyArena *);
+asdl_int_seq *get_cmpops(Parser *p, asdl_seq *);
+asdl_seq *get_exprs(Parser *, asdl_seq *);
 expr_ty set_expr_context(Parser *, expr_ty, expr_context_ty);
 KeyValuePair *key_value_pair(Parser *, expr_ty, expr_ty);
 asdl_seq *get_keys(Parser *, asdl_seq *);
