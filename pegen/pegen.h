@@ -112,6 +112,7 @@ inline void *
 CHECK_CALL(Parser *p, void *result)
 {
     if (result == NULL) {
+        assert(PyErr_Occurred());
         longjmp(p->error_env, 1);
     }
     return result;
