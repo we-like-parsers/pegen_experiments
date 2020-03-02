@@ -756,7 +756,6 @@ seq_count_dots(asdl_seq *seq)
     int number_of_dots = 0;
     for (int i = 0, l = asdl_seq_LEN(seq); i < l; i++) {
         Token *current_expr = asdl_seq_GET(seq, i);
-        assert(current_expr->type == ELLIPSIS || current_expr->type == DOT);
         switch (current_expr->type) {
             case ELLIPSIS:
                 number_of_dots += 3;
@@ -764,6 +763,8 @@ seq_count_dots(asdl_seq *seq)
             case DOT:
                 number_of_dots += 1;
                 break;
+            default:
+                assert(current_expr->type == ELLIPSIS || current_expr->type == DOT);
         }
     }
 

@@ -380,7 +380,8 @@ set[expr_ty]: '{' a=expressions_list '}' { _Py_Set(a, EXTRA) }
 setcomp[expr_ty]:
     | '{' a=expression b=for_if_clauses '}' { _Py_SetComp(a, b, EXTRA) }
 dict[expr_ty]:
-    | '{' a=[kvpairs] '}' { _Py_Dict(get_keys(p, a), get_values(p, a), EXTRA) }
+    | '{' a=[kvpairs] '}' { _Py_Dict(CHECK_CALL(p, get_keys(p, a)),
+                                     CHECK_CALL(p, get_values(p, a)), EXTRA) }
 dictcomp[expr_ty]:
     | '{' a=kvpair b=for_if_clauses '}' { _Py_DictComp(a->key, a->value, b, EXTRA) }
 kvpairs[asdl_seq*]: a=','.kvpair+ [','] { a }
