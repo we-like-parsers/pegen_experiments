@@ -118,6 +118,17 @@ CHECK_CALL(Parser *p, void *result)
     return result;
 }
 
+/* This is needed for helper functions that are allowed to
+   return NULL without an error. Example: seq_extract_starred_exprs */
+inline void *
+CHECK_CALL_NULL_ALLOWED(Parser *p, void *result)
+{
+    if (result == NULL && PyErr_Occurred()) {
+        longjmp(p->error_env, 1);
+    }
+    return result;
+}
+
 PyObject *new_identifier(Parser *, char *);
 PyObject *run_parser_from_file(const char *filename,
                                void *(start_rule_func)(Parser *),

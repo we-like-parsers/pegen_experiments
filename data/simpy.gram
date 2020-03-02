@@ -353,7 +353,6 @@ slices[slice_ty]:
 slice[slice_ty]:
     | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { _Py_Slice(a, b, c, p->arena) }
     | a=expression { _Py_Index(a, p->arena) }
-# STRING+'s output is just a hack for now
 atom[expr_ty]:
     | NAME
     | 'True' { _Py_Constant(Py_True, NULL, EXTRA) }
@@ -406,8 +405,8 @@ args[expr_ty]:
                  (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                  EXTRA) }
     | a=kwargs { _Py_Call(CONSTRUCTOR(p),
-                          seq_extract_starred_exprs(p, a),
-                          seq_delete_starred_exprs(p, a),
+                          CHECK_CALL_NULL_ALLOWED(p, seq_extract_starred_exprs(p, a)),
+                          CHECK_CALL_NULL_ALLOWED(p, seq_delete_starred_exprs(p, a)),
                           EXTRA) }
     | a=named_expression b=[',' c=args { c }] {
         _Py_Call(CONSTRUCTOR(p),
