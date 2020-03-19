@@ -12,7 +12,7 @@ from pathlib import PurePath
 
 from typing import List, Optional, Any
 
-sys.path.insert(0, ".")
+sys.path.insert(0, os.getcwd())
 from pegen.build import build_parser_and_generator
 from pegen.testutil import print_memstats
 from scripts import show_parse
