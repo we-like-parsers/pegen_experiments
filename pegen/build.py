@@ -98,6 +98,9 @@ def build_generator(
     keep_asserts_in_extension: bool = True,
     skip_actions: bool = False,
 ) -> ParserGenerator:
+    # TODO: Allow other extensions; pass the output type as an argument.
+    if not output_file.endswith((".c", ".py")):
+        raise RuntimeError("Your output file must either be a .c or .py file")
     with open(output_file, "w") as file:
         gen: ParserGenerator
         if output_file.endswith(".c"):
@@ -105,7 +108,7 @@ def build_generator(
         elif output_file.endswith(".py"):
             gen = PythonParserGenerator(grammar, file)  # TODO: skip_actions
         else:
-            raise Exception("Your output file must either be a .c or .py file")
+            assert False  # Should have been checked above
         gen.generate(grammar_file)
 
     if compile_extension and output_file.endswith(".c"):
