@@ -73,10 +73,10 @@ class ParserGenerator:
             self.print(line)
 
     def collect_todo(self) -> None:
-        done: Set[str] = set()
+        done: List[str] = list()
         while True:
-            alltodo = set(self.todo)
-            todo = alltodo - done
+            alltodo = list(self.todo)
+            todo = [i for i in alltodo if i not in done]
             if not todo:
                 break
             for rulename in todo:
