@@ -1,7 +1,6 @@
 pegen/*.o
 pegen/*.so
 pegen/parse
-pegen/parse.c
 parse.py
 
 data/pypi/
