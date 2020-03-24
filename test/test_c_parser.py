@@ -21,12 +21,12 @@ def check_input_strings_for_grammar(
 
     if valid_cases:
         for case in valid_cases:
-            extension.parse_string(case)
+            extension.parse_string(case, mode=0)
 
     if invalid_cases:
         for case in invalid_cases:
             with pytest.raises(SyntaxError):
-                extension.parse_string(case)
+                extension.parse_string(case, mode=0)
 
 
 def verify_ast_generation(source: str, stmt: str, tmp_path: PurePath) -> None:
@@ -331,19 +331,6 @@ def test_headers_and_trailer(tmp_path: PurePath) -> None:
     assert "SOME HEADER" in parser_source
     assert "SOME SUBHEADER" in parser_source
     assert "SOME TRAILER" in parser_source
-
-
-def test_extension_name(tmp_path: PurePath) -> None:
-    grammar_source = """
-    @modulename 'alternative_name'
-    start: expr+ NEWLINE? ENDMARKER
-    expr: x=NAME
-    """
-    grammar = parse_string(grammar_source, GrammarParser)
-    parser_source = generate_c_parser_source(grammar)
-
-    assert "PyInit_alternative_name" in parser_source
-    assert '.m_name = "alternative_name"' in parser_source
 
 
 def test_error_in_rules(tmp_path: PurePath) -> None:

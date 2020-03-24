@@ -32,7 +32,7 @@ regen-metaparser: pegen/metagrammar.gram pegen/*.py
 test: run
 
 run: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)'); exec(t)"
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=2); exec(t)"
 
 compile: peg_parser/parse.c
 	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"

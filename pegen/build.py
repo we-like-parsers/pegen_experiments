@@ -50,6 +50,7 @@ def compile_c_extension(
             sources=[
                 str(MOD_DIR.parent / "peg_parser" / "pegen.c"),
                 str(MOD_DIR.parent / "peg_parser" / "parse_string.c"),
+                str(MOD_DIR.parent / "peg_parser" / "peg_extension.c"),
                 generated_source_path,
             ],
             include_dirs=[str(MOD_DIR.parent / "peg_parser")],
