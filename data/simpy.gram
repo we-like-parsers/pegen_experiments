@@ -1,15 +1,15 @@
 # Simplified grammar for Python
 
-start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
+~start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
-statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) } | simple_stmt
-simple_stmt[asdl_seq*]:
+~statement[asdl_seq*]: a=compound_stmt { singleton_seq(p, a) } | simple_stmt
+~simple_stmt[asdl_seq*]:
     | a=small_stmt !';' NEWLINE { singleton_seq(p, a) } # Not needed, there for speedup
     | a=';'.small_stmt+ [';'] NEWLINE { a }
 # NOTE: assignment MUST precede expression, else parsing a simple assignment
 # will throw a SyntaxError.
-small_stmt[stmt_ty]:
+~small_stmt[stmt_ty]:
     | assignment
     | e=expressions { _Py_Expr(e, EXTRA) }
     | &'return' return_stmt
@@ -23,7 +23,7 @@ small_stmt[stmt_ty]:
     | 'continue' { _Py_Continue(EXTRA) }
     | &'global' global_stmt
     | &'nonlocal' nonlocal_stmt
-compound_stmt[stmt_ty]:
+~compound_stmt[stmt_ty]:
     | &('def' | '@' | ASYNC) function_def
     | &'if' if_stmt
     | &('class' | '@') class_def
@@ -58,19 +58,19 @@ augassign[AugOperator*]:
     | '**=' {augoperator(p, Pow)}
     | '//=' {augoperator(p, FloorDiv)}
 
-global_stmt[stmt_ty]: 'global' a=','.NAME+ { _Py_Global(CHECK(map_names_to_ids(p, a)), EXTRA) }
-nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ { _Py_Nonlocal(CHECK(map_names_to_ids(p, a)), EXTRA) }
+~global_stmt[stmt_ty]: 'global' a=','.NAME+ { _Py_Global(CHECK(map_names_to_ids(p, a)), EXTRA) }
+~nonlocal_stmt[stmt_ty]: 'nonlocal' a=','.NAME+ { _Py_Nonlocal(CHECK(map_names_to_ids(p, a)), EXTRA) }
 
-yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
+~yield_stmt[stmt_ty]: y=yield_expr { _Py_Expr(y, EXTRA) }
 
-assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
+~assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _Py_Assert(a, b, EXTRA) }
 
-del_stmt[stmt_ty]: 'del' a=del_targets { _Py_Delete(a, EXTRA) }
+~del_stmt[stmt_ty]: 'del' a=del_targets { _Py_Delete(a, EXTRA) }
 
-import_stmt[stmt_ty]: import_name | import_from
-import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(a, EXTRA) }
+~import_stmt[stmt_ty]: import_name | import_from
+~import_name[stmt_ty]: 'import' a=dotted_as_names { _Py_Import(a, EXTRA) }
 # note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
-import_from[stmt_ty]:
+~import_from[stmt_ty]:
     | 'from' a=('.' | '...')* b=dotted_name 'import' c=import_from_targets {
         _Py_ImportFrom(b->v.Name.id, c, seq_count_dots(a), EXTRA) }
     | 'from' a=('.' | '...')+ 'import' b=import_from_targets {
@@ -95,24 +95,24 @@ dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { join_names_with_dot(p, a, b) }
     | NAME
 
-if_stmt[stmt_ty]:
+~if_stmt[stmt_ty]:
     | 'if' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK(singleton_seq(p, c)), EXTRA) }
     | 'if' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
-elif_stmt[stmt_ty]:
+~elif_stmt[stmt_ty]:
     | 'elif' a=named_expression ':' b=block c=elif_stmt { _Py_If(a, b, CHECK(singleton_seq(p, c)), EXTRA) }
     | 'elif' a=named_expression ':' b=block c=[else_block] { _Py_If(a, b, c, EXTRA) }
-else_block[asdl_seq*]: 'else' ':' b=block { b }
+~else_block[asdl_seq*]: 'else' ':' b=block { b }
 
-while_stmt[stmt_ty]:
+~while_stmt[stmt_ty]:
     | 'while' a=named_expression ':' b=block c=[else_block] { _Py_While(a, b, c, EXTRA) }
 
-for_stmt[stmt_ty]:
+~for_stmt[stmt_ty]:
     | ASYNC 'for' t=star_targets 'in' ex=expressions ':' b=block el=[else_block] {
         _Py_AsyncFor(t, ex, b, el, NULL, EXTRA) }
     | 'for' t=star_targets 'in' ex=expressions ':' b=block el=[else_block] {
         _Py_For(t, ex, b, el, NULL, EXTRA) }
 
-with_stmt[stmt_ty]:
+~with_stmt[stmt_ty]:
     | ASYNC 'with' '(' a=','.with_item+ ')' ':' b=block {
         _Py_AsyncWith(a, b, NULL, EXTRA) }
     | ASYNC 'with' a=','.with_item+ ':' b=block {
@@ -124,27 +124,27 @@ with_stmt[stmt_ty]:
 with_item[withitem_ty]:
     | e=expression o=['as' t=target { t }] { _Py_withitem(e, o, p->arena) }
 
-try_stmt[stmt_ty]:
+~try_stmt[stmt_ty]:
     | 'try' ':' b=block f=finally_block { _Py_Try(b, NULL, NULL, f, EXTRA) }
     | 'try' ':' b=block ex=except_block+ el=[else_block] f=[finally_block] { _Py_Try(b, ex, el, f, EXTRA) }
-except_block[excepthandler_ty]:
+~except_block[excepthandler_ty]:
     | 'except' e=expression t=['as' z=target { z }] ':' b=block {
         _Py_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
     | 'except' ':' b=block { _Py_ExceptHandler(NULL, NULL, b, EXTRA) }
-finally_block[asdl_seq*]: 'finally' ':' a=block { a }
+~finally_block[asdl_seq*]: 'finally' ':' a=block { a }
 
 return_stmt[stmt_ty]:
     | 'return' a=[expressions] { _Py_Return(a, EXTRA) }
 
-raise_stmt[stmt_ty]:
+~raise_stmt[stmt_ty]:
     | 'raise' a=expression b=['from' z=expression { z }] { _Py_Raise(a, b, EXTRA) }
     | 'raise' { _Py_Raise(NULL, NULL, EXTRA) }
 
-function_def[stmt_ty]:
+~function_def[stmt_ty]:
     | d=decorators f=function_def_raw { function_def_decorators(p, d, f) }
     | function_def_raw
 
-function_def_raw[stmt_ty]:
+~function_def_raw[stmt_ty]:
     | ASYNC 'def' n=NAME '(' params=[parameters] ')' a=['->' z=annotation { z }] ':' b=block {
         _Py_AsyncFunctionDef(n->v.Name.id,
                              (params) ? params : CHECK(empty_arguments(p)),
@@ -184,12 +184,12 @@ kwds[arg_ty]:
     | '**' a=plain_name { a }
 annotation[expr_ty]: expression
 
-decorators[asdl_seq*]: a=('@' f=factor NEWLINE { f })+ { a }
+~decorators[asdl_seq*]: a=('@' f=factor NEWLINE { f })+ { a }
 
-class_def[stmt_ty]:
+~class_def[stmt_ty]:
     | a=decorators b=class_def_raw { class_def_decorators(p, a, b) }
     | class_def_raw
-class_def_raw[stmt_ty]:
+~class_def_raw[stmt_ty]:
     | 'class' a=NAME b=['(' z=[arguments] ')' { z }] ':' c=block {
         _Py_ClassDef(a->v.Name.id,
                      (b) ? ((expr_ty) b)->v.Call.args : NULL,

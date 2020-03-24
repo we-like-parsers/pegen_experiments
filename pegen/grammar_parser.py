@@ -100,7 +100,7 @@ class GeneratedParser(Parser):
 
     @memoize
     def meta(self) -> Optional[MetaTuple]:
-        # meta: "@" NAME NEWLINE | "@" NAME NAME NEWLINE | "@" NAME STRING NEWLINE
+        # meta: "@" NAME NEWLINE | "@" NAME '='? NAME NEWLINE | "@" NAME '='? STRING NEWLINE
         mark = self.mark()
         cut = False
         if (
@@ -119,6 +119,8 @@ class GeneratedParser(Parser):
             and
             (a := self.name())
             and
+            (opt := self.expect('='),)
+            and
             (b := self.name())
             and
             (newline := self.expect('NEWLINE'))
@@ -131,6 +133,8 @@ class GeneratedParser(Parser):
             (literal := self.expect("@"))
             and
             (name := self.name())
+            and
+            (opt := self.expect('='),)
             and
             (string := self.string())
             and
@@ -165,10 +169,12 @@ class GeneratedParser(Parser):
 
     @memoize
     def rule(self) -> Optional[Rule]:
-        # rule: rulename ":" alts NEWLINE INDENT more_alts DEDENT | rulename ":" NEWLINE INDENT more_alts DEDENT | rulename ":" alts NEWLINE
+        # rule: '~'? rulename ":" alts NEWLINE INDENT more_alts DEDENT | '~'? rulename ":" NEWLINE INDENT more_alts DEDENT | '~'? rulename ":" alts NEWLINE
         mark = self.mark()
         cut = False
         if (
+            (opt := self.expect('~'),)
+            and
             (rulename := self.rulename())
             and
             (literal := self.expect(":"))
@@ -183,11 +189,13 @@ class GeneratedParser(Parser):
             and
             (dedent := self.expect('DEDENT'))
         ):
-            return Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) , nomemo = opt )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
+            (opt := self.expect('~'),)
+            and
             (rulename := self.rulename())
             and
             (literal := self.expect(":"))
@@ -200,11 +208,13 @@ class GeneratedParser(Parser):
             and
             (dedent := self.expect('DEDENT'))
         ):
-            return Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts , nomemo = opt )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
+            (opt := self.expect('~'),)
+            and
             (rulename := self.rulename())
             and
             (literal := self.expect(":"))
@@ -213,7 +223,7 @@ class GeneratedParser(Parser):
             and
             (newline := self.expect('NEWLINE'))
         ):
-            return Rule ( rulename [ 0 ] , rulename [ 1 ] , alts )
+            return Rule ( rulename [ 0 ] , rulename [ 1 ] , alts , nomemo = opt )
         self.reset(mark)
         if cut: return None
         return None

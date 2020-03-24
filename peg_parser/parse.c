@@ -583,8 +583,6 @@ static mod_ty
 start_rule(Parser *p)
 {
     mod_ty res = NULL;
-    if (is_memoized(p, start_type, &res))
-        return res;
     int mark = p->mark;
     { // statements? $
         void *a;
@@ -605,7 +603,6 @@ start_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, start_type, res);
     return res;
 }
 
@@ -642,8 +639,6 @@ static asdl_seq*
 statement_rule(Parser *p)
 {
     asdl_seq* res = NULL;
-    if (is_memoized(p, statement_type, &res))
-        return res;
     int mark = p->mark;
     { // compound_stmt
         stmt_ty a;
@@ -672,7 +667,6 @@ statement_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, statement_type, res);
     return res;
 }
 
@@ -681,8 +675,6 @@ static asdl_seq*
 simple_stmt_rule(Parser *p)
 {
     asdl_seq* res = NULL;
-    if (is_memoized(p, simple_stmt_type, &res))
-        return res;
     int mark = p->mark;
     { // small_stmt !';' NEWLINE
         stmt_ty a;
@@ -725,7 +717,6 @@ simple_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, simple_stmt_type, res);
     return res;
 }
 
@@ -747,8 +738,6 @@ static stmt_ty
 small_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, small_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -962,7 +951,6 @@ small_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, small_stmt_type, res);
     return res;
 }
 
@@ -978,8 +966,6 @@ static stmt_ty
 compound_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, compound_stmt_type, &res))
-        return res;
     int mark = p->mark;
     { // &('def' | '@' | ASYNC) function_def
         stmt_ty function_def_var;
@@ -1074,7 +1060,6 @@ compound_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, compound_stmt_type, res);
     return res;
 }
 
@@ -1432,8 +1417,6 @@ static stmt_ty
 global_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, global_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1469,7 +1452,6 @@ global_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, global_stmt_type, res);
     return res;
 }
 
@@ -1478,8 +1460,6 @@ static stmt_ty
 nonlocal_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, nonlocal_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1515,7 +1495,6 @@ nonlocal_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, nonlocal_stmt_type, res);
     return res;
 }
 
@@ -1524,8 +1503,6 @@ static stmt_ty
 yield_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, yield_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1558,7 +1535,6 @@ yield_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, yield_stmt_type, res);
     return res;
 }
 
@@ -1567,8 +1543,6 @@ static stmt_ty
 assert_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, assert_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1607,7 +1581,6 @@ assert_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, assert_stmt_type, res);
     return res;
 }
 
@@ -1616,8 +1589,6 @@ static stmt_ty
 del_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, del_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1653,7 +1624,6 @@ del_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, del_stmt_type, res);
     return res;
 }
 
@@ -1662,8 +1632,6 @@ static stmt_ty
 import_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, import_stmt_type, &res))
-        return res;
     int mark = p->mark;
     { // import_name
         stmt_ty import_name_var;
@@ -1689,7 +1657,6 @@ import_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, import_stmt_type, res);
     return res;
 }
 
@@ -1698,8 +1665,6 @@ static stmt_ty
 import_name_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, import_name_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1735,7 +1700,6 @@ import_name_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, import_name_type, res);
     return res;
 }
 
@@ -1746,8 +1710,6 @@ static stmt_ty
 import_from_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, import_from_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -1823,7 +1785,6 @@ import_from_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, import_from_type, res);
     return res;
 }
 
@@ -2080,8 +2041,6 @@ static stmt_ty
 if_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, if_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2160,7 +2119,6 @@ if_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, if_stmt_type, res);
     return res;
 }
 
@@ -2171,8 +2129,6 @@ static stmt_ty
 elif_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, elif_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2251,7 +2207,6 @@ elif_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, elif_stmt_type, res);
     return res;
 }
 
@@ -2260,8 +2215,6 @@ static asdl_seq*
 else_block_rule(Parser *p)
 {
     asdl_seq* res = NULL;
-    if (is_memoized(p, else_block_type, &res))
-        return res;
     int mark = p->mark;
     { // 'else' ':' block
         asdl_seq* b;
@@ -2285,7 +2238,6 @@ else_block_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, else_block_type, res);
     return res;
 }
 
@@ -2294,8 +2246,6 @@ static stmt_ty
 while_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, while_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2340,7 +2290,6 @@ while_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, while_stmt_type, res);
     return res;
 }
 
@@ -2351,8 +2300,6 @@ static stmt_ty
 for_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, for_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2446,7 +2393,6 @@ for_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, for_stmt_type, res);
     return res;
 }
 
@@ -2459,8 +2405,6 @@ static stmt_ty
 with_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, with_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2613,7 +2557,6 @@ with_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, with_stmt_type, res);
     return res;
 }
 
@@ -2655,8 +2598,6 @@ static stmt_ty
 try_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, try_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2735,7 +2676,6 @@ try_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, try_stmt_type, res);
     return res;
 }
 
@@ -2744,8 +2684,6 @@ static excepthandler_ty
 except_block_rule(Parser *p)
 {
     excepthandler_ty res = NULL;
-    if (is_memoized(p, except_block_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2818,7 +2756,6 @@ except_block_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, except_block_type, res);
     return res;
 }
 
@@ -2827,8 +2764,6 @@ static asdl_seq*
 finally_block_rule(Parser *p)
 {
     asdl_seq* res = NULL;
-    if (is_memoized(p, finally_block_type, &res))
-        return res;
     int mark = p->mark;
     { // 'finally' ':' block
         asdl_seq* a;
@@ -2852,7 +2787,6 @@ finally_block_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, finally_block_type, res);
     return res;
 }
 
@@ -2907,8 +2841,6 @@ static stmt_ty
 raise_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, raise_stmt_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -2969,7 +2901,6 @@ raise_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, raise_stmt_type, res);
     return res;
 }
 
@@ -2978,8 +2909,6 @@ static stmt_ty
 function_def_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, function_def_type, &res))
-        return res;
     int mark = p->mark;
     { // decorators function_def_raw
         asdl_seq* d;
@@ -3011,7 +2940,6 @@ function_def_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, function_def_type, res);
     return res;
 }
 
@@ -3022,8 +2950,6 @@ static stmt_ty
 function_def_raw_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, function_def_raw_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -3123,7 +3049,6 @@ function_def_raw_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, function_def_raw_type, res);
     return res;
 }
 
@@ -3625,8 +3550,6 @@ static asdl_seq*
 decorators_rule(Parser *p)
 {
     asdl_seq* res = NULL;
-    if (is_memoized(p, decorators_type, &res))
-        return res;
     int mark = p->mark;
     { // (('@' factor NEWLINE))+
         asdl_seq * a;
@@ -3644,7 +3567,6 @@ decorators_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, decorators_type, res);
     return res;
 }
 
@@ -3653,8 +3575,6 @@ static stmt_ty
 class_def_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, class_def_type, &res))
-        return res;
     int mark = p->mark;
     { // decorators class_def_raw
         asdl_seq* a;
@@ -3686,7 +3606,6 @@ class_def_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, class_def_type, res);
     return res;
 }
 
@@ -3695,8 +3614,6 @@ static stmt_ty
 class_def_raw_rule(Parser *p)
 {
     stmt_ty res = NULL;
-    if (is_memoized(p, class_def_raw_type, &res))
-        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -3741,7 +3658,6 @@ class_def_raw_rule(Parser *p)
     }
     res = NULL;
   done:
-    insert_memo(p, mark, class_def_raw_type, res);
     return res;
 }
 
