@@ -17,7 +17,7 @@ from pegen.parser_generator import ParserGenerator
 from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import Tokenizer
 
-MOD_DIR = pathlib.Path(__file__)
+MOD_DIR = pathlib.Path(__file__).parent
 
 
 def compile_c_extension(
@@ -48,11 +48,12 @@ def compile_c_extension(
         Extension(
             extension_name,
             sources=[
-                str(MOD_DIR.parent / "pegen.c"),
-                str(MOD_DIR.parent / "parse_string.c"),
+                str(MOD_DIR.parent / "peg_parser" / "pegen.c"),
+                str(MOD_DIR.parent / "peg_parser" / "parse_string.c"),
+                str(MOD_DIR.parent / "peg_parser" / "peg_extension.c"),
                 generated_source_path,
             ],
-            include_dirs=[str(MOD_DIR.parent)],
+            include_dirs=[str(MOD_DIR.parent / "peg_parser")],
             extra_compile_args=extra_compile_args,
         )
     ]
