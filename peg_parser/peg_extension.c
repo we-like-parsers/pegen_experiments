@@ -90,9 +90,25 @@ error:
     return result;
 }
 
+static PyObject *
+reset()
+{
+    reset_statistics();
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+dump()
+{
+    dump_statistics();
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef ParseMethods[] = {
     {"parse_file", (PyCFunction)(void(*)(void))parse_file, METH_VARARGS|METH_KEYWORDS, "Parse a file."},
     {"parse_string", (PyCFunction)(void(*)(void))parse_string, METH_VARARGS|METH_KEYWORDS, "Parse a string."},
+    {"reset", reset, METH_NOARGS},
+    {"dump", dump, METH_NOARGS},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

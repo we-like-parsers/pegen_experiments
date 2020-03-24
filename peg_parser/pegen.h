@@ -8,6 +8,9 @@
 #include <pyarena.h>
 #include <setjmp.h>
 
+extern void reset_statistics(void);
+extern void dump_statistics(void);
+
 enum INPUT_MODE {
     FILE_INPUT,
     STRING_INPUT,

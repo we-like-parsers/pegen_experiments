@@ -239,6 +239,27 @@ fill_token(Parser *p)
     return 0;
 }
 
+static const int NSTATISTICS = 2000;
+static int statistics[NSTATISTICS];
+
+void
+reset_statistics()
+{
+    for (int i = 0; i < NSTATISTICS; i++) {
+        statistics[i] = 0;
+    }
+}
+
+void
+dump_statistics()
+{
+    for (int i = 0; i < NSTATISTICS; i++) {
+        if (statistics[i] > 0) {
+            printf("%4d  %9d\n", i, statistics[i]);
+        }
+    }
+}
+
 int  // bool
 is_memoized(Parser *p, int type, void *pres)
 {
@@ -254,6 +275,9 @@ is_memoized(Parser *p, int type, void *pres)
         if (m->type == type) {
             p->mark = m->mark;
             *(void **)(pres) = m->node;
+            if (0 <= type && type < NSTATISTICS) {
+                statistics[type]++;
+            }
             // fprintf(stderr, "%d < %d: memoized!\n", p->mark, p->fill);
             return 1;
         }
