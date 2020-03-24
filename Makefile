@@ -8,17 +8,17 @@ TIMEFILE = data/xxl.txt
 TESTDIR = .
 TESTFLAGS = --short
 
-build: pegen/parse.c
+build: peg_parser/parse.c
 
-pegen/parse.c: $(GRAMMAR) pegen/*.py pegen/pegen.c pegen/parse_string.c pegen/*.h pegen/grammar_parser.py
-	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o pegen/parse.c --compile-extension
+peg_parser/parse.c: $(GRAMMAR) pegen/*.py peg_parser/pegen.c peg_parser/parse_string.c peg_parser/*.h pegen/grammar_parser.py
+	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o peg_parser/parse.c --compile-extension
 
 clean:
-	-rm -f pegen/*.o pegen/*.so pegen/parse.c
+	-rm -f peg_parser/*.o peg_parser/*.so peg_parser/parse.c
 
-dump: pegen/parse.c
+dump: peg_parser/parse.c
 	cat -n $(TESTFILE)
-	$(PYTHON) -c "from pegen import parse; import ast; t = parse.parse_file('$(TESTFILE)', mode=1); print(ast.dump(t))"
+	$(PYTHON) -c "from peg_parser import parse; import ast; t = parse.parse_file('$(TESTFILE)', mode=1); print(ast.dump(t))"
 
 regen-metaparser: pegen/metagrammar.gram pegen/*.py
 	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py
@@ -31,28 +31,28 @@ regen-metaparser: pegen/metagrammar.gram pegen/*.py
 
 test: run
 
-run: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)'); exec(t)"
+run: peg_parser/parse.c
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)'); exec(t)"
 
-compile: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"
+compile: peg_parser/parse.c
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"
 
-parse: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=1)"
+parse: peg_parser/parse.c
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=1)"
 
-check: pegen/parse.c
-	$(PYTHON) -c "from pegen import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
+check: peg_parser/parse.c
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
 
 time: time_compile
 
-time_compile: pegen/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
+time_compile: peg_parser/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
 
-time_parse: pegen/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
+time_parse: peg_parser/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
 
-time_check: pegen/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from pegen import parse; parse.parse_file('$(TIMEFILE)', mode=0)"
+time_check: peg_parser/parse.c
+	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=0)"
 
 time_stdlib: time_stdlib_compile
 
