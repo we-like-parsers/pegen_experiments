@@ -735,6 +735,8 @@ static stmt_ty
 small_stmt_rule(Parser *p)
 {
     stmt_ty res = NULL;
+    if (is_memoized(p, small_stmt_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -948,6 +950,7 @@ small_stmt_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, small_stmt_type, res);
     return res;
 }
 
@@ -4546,6 +4549,8 @@ static expr_ty
 disjunction_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, disjunction_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -4592,6 +4597,7 @@ disjunction_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, disjunction_type, res);
     return res;
 }
 
@@ -4600,6 +4606,8 @@ static expr_ty
 conjunction_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, conjunction_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -4646,6 +4654,7 @@ conjunction_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, conjunction_type, res);
     return res;
 }
 
@@ -4654,6 +4663,8 @@ static expr_ty
 inversion_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, inversion_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -4700,6 +4711,7 @@ inversion_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, inversion_type, res);
     return res;
 }
 
@@ -6006,6 +6018,8 @@ static expr_ty
 await_primary_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, await_primary_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -6052,6 +6066,7 @@ await_primary_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, await_primary_type, res);
     return res;
 }
 
@@ -6444,6 +6459,8 @@ static expr_ty
 atom_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, atom_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -6619,6 +6636,7 @@ atom_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, atom_type, res);
     return res;
 }
 

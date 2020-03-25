@@ -9,7 +9,7 @@ simple_stmt[asdl_seq*]:
     | a=';'.small_stmt+ [';'] NEWLINE { a }
 # NOTE: assignment MUST precede expression, else parsing a simple assignment
 # will throw a SyntaxError.
-small_stmt[stmt_ty]:
+~small_stmt[stmt_ty]:
     | assignment
     | e=expressions { _Py_Expr(e, EXTRA) }
     | &'return' return_stmt
@@ -250,19 +250,19 @@ lambda_plain_names[asdl_seq*]: a=','.(lambda_plain_name !'=')+ { a }
 lambda_plain_name[arg_ty]: a=NAME { _Py_arg(a->v.Name.id, NULL, NULL, EXTRA) }
 lambda_kwds[arg_ty]: '**' a=lambda_plain_name { a }
 
-disjunction[expr_ty]:
+~disjunction[expr_ty]:
     | a=conjunction b=('or' c=conjunction { c })+ { _Py_BoolOp(
         Or,
         CHECK(seq_insert_in_front(p, a, b)),
         EXTRA) }
     | conjunction
-conjunction[expr_ty]:
+~conjunction[expr_ty]:
     | a=inversion b=('and' c=inversion { c })+ { _Py_BoolOp(
         And,
         CHECK(seq_insert_in_front(p, a, b)),
         EXTRA) }
     | inversion
-inversion[expr_ty]:
+~inversion[expr_ty]:
     | 'not' a=inversion { _Py_UnaryOp(Not, a, EXTRA) }
     | comparison
 comparison[expr_ty]:
@@ -324,7 +324,7 @@ factor[expr_ty]:
 power[expr_ty]:
     | a=await_primary '**' b=factor { _Py_BinOp(a, Pow, b, EXTRA) }
     | await_primary
-await_primary[expr_ty]:
+~await_primary[expr_ty]:
     | AWAIT a=primary { _Py_Await(a, EXTRA) }
     | primary
 primary[expr_ty]:
@@ -350,7 +350,7 @@ slices[slice_ty]:
 slice[slice_ty]:
     | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { _Py_Slice(a, b, c, p->arena) }
     | a=expression { _Py_Index(a, p->arena) }
-atom[expr_ty]:
+~atom[expr_ty]:
     | NAME
     | 'True' { _Py_Constant(Py_True, NULL, EXTRA) }
     | 'False' { _Py_Constant(Py_False, NULL, EXTRA) }
