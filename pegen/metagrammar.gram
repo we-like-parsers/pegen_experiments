@@ -41,17 +41,17 @@ metas[MetaList]:
 
 meta[MetaTuple]:
     | "@" NAME NEWLINE { (name.string, None) }
-    | "@" a=NAME ['='] b=NAME NEWLINE { (a.string, b.string) }
-    | "@" NAME ['='] STRING NEWLINE { (name.string, literal_eval(string.string)) }
+    | "@" a=NAME b=NAME NEWLINE { (a.string, b.string) }
+    | "@" NAME STRING NEWLINE { (name.string, literal_eval(string.string)) }
 
 rules[RuleList]:
     | rule rules { [rule] + rules }
     | rule { [rule] }
 
 rule[Rule]:
-    | '~'? rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(rulename[0], rulename[1], Rhs(alts.alts + more_alts.alts), nomemo=opt) }
-    | '~'? rulename ":" NEWLINE INDENT more_alts DEDENT { Rule(rulename[0], rulename[1], more_alts, nomemo=opt) }
-    | '~'? rulename ":" alts NEWLINE { Rule(rulename[0], rulename[1], alts, nomemo=opt) }
+    | '~'? rulename ":" alts NEWLINE INDENT more_alts DEDENT { Rule(rulename[0], rulename[1], Rhs(alts.alts + more_alts.alts), memo=opt) }
+    | '~'? rulename ":" NEWLINE INDENT more_alts DEDENT { Rule(rulename[0], rulename[1], more_alts, memo=opt) }
+    | '~'? rulename ":" alts NEWLINE { Rule(rulename[0], rulename[1], alts, memo=opt) }
 
 rulename[RuleName]:
     | NAME '[' type=NAME '*' ']' {(name.string, type.string+"*")}

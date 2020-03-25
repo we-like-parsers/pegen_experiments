@@ -311,8 +311,11 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"static {result_type}")
         self.print(f"{node.name}_raw(Parser *p)")
 
+    def _should_memoize(self, node):
+        return node.memo and not node.left_recursive
+
     def _handle_default_rule_body(self, node: Rule, rhs: Rhs, result_type: str) -> None:
-        memoize = node.nomemo and not node.left_recursive
+        memoize = self._should_memoize(node)
 
         with self.indent():
             self.print(f"{result_type} res = NULL;")
@@ -339,7 +342,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print("return res;")
 
     def _handle_loop_rule_body(self, node: Rule, rhs: Rhs) -> None:
-        memoize = node.nomemo and not node.left_recursive
+        memoize = self._should_memoize(node)
         is_repeat1 = node.name.startswith("_loop1")
 
         with self.indent():

@@ -71,11 +71,11 @@ SIMPLE_STR = True
 
 
 class Rule:
-    def __init__(self, name: str, type: Optional[str], rhs: Rhs, nomemo=None):
+    def __init__(self, name: str, type: Optional[str], rhs: Rhs, memo=None):
         self.name = name
         self.type = type
         self.rhs = rhs
-        self.nomemo = bool(nomemo)
+        self.memo = bool(memo)
         self.visited = False
         self.nullable = False
         self.left_recursive = False
