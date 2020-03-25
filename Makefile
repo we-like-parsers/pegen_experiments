@@ -49,7 +49,7 @@ stats: peg_parser/parse.c
 time: time_compile
 
 time_compile: peg_parser/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2); parse.dump()"
+	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2); parse.dump()" >@data
 
 time_parse: peg_parser/parse.c
 	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
