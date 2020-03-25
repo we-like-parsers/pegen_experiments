@@ -219,6 +219,7 @@ def parse_directory(
         )
 
     if short:
+        parse.dump()
         print_memstats()
 
     if errors:
