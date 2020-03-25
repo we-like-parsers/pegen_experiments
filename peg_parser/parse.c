@@ -80,7 +80,7 @@ KeywordToken *reserved_keywords[] = {
 #define import_from_as_name_type 1018
 #define dotted_as_names_type 1019
 #define dotted_as_name_type 1020
-#define dotted_name_type 1021
+#define dotted_name_type 1021  // Left-recursive
 #define if_stmt_type 1022
 #define elif_stmt_type 1023
 #define else_block_type 1024
@@ -144,16 +144,16 @@ KeywordToken *reserved_keywords[] = {
 #define in_bitwise_or_type 1082
 #define isnot_bitwise_or_type 1083
 #define is_bitwise_or_type 1084
-#define bitwise_or_type 1085
-#define bitwise_xor_type 1086
-#define bitwise_and_type 1087
-#define shift_expr_type 1088
-#define sum_type 1089
-#define term_type 1090
+#define bitwise_or_type 1085  // Left-recursive
+#define bitwise_xor_type 1086  // Left-recursive
+#define bitwise_and_type 1087  // Left-recursive
+#define shift_expr_type 1088  // Left-recursive
+#define sum_type 1089  // Left-recursive
+#define term_type 1090  // Left-recursive
 #define factor_type 1091
 #define power_type 1092
 #define await_primary_type 1093
-#define primary_type 1094
+#define primary_type 1094  // Left-recursive
 #define slicing_type 1095
 #define slice_expressions_type 1096
 #define slices_type 1097
@@ -188,7 +188,7 @@ KeywordToken *reserved_keywords[] = {
 #define del_t_atom_type 1126
 #define targets_type 1127
 #define target_type 1128
-#define t_primary_type 1129
+#define t_primary_type 1129  // Left-recursive
 #define t_lookahead_type 1130
 #define t_atom_type 1131
 #define _loop1_1_type 1132
@@ -1944,6 +1944,7 @@ dotted_as_name_rule(Parser *p)
     return res;
 }
 
+// Left-recursive
 // dotted_name: dotted_name '.' NAME | NAME
 static expr_ty dotted_name_raw(Parser *);
 static expr_ty
@@ -5173,6 +5174,7 @@ is_bitwise_or_rule(Parser *p)
     return res;
 }
 
+// Left-recursive
 // bitwise_or: bitwise_or '|' bitwise_xor | bitwise_xor
 static expr_ty bitwise_or_raw(Parser *);
 static expr_ty
@@ -5254,6 +5256,7 @@ bitwise_or_raw(Parser *p)
     return res;
 }
 
+// Left-recursive
 // bitwise_xor: bitwise_xor '^' bitwise_and | bitwise_and
 static expr_ty bitwise_xor_raw(Parser *);
 static expr_ty
@@ -5335,6 +5338,7 @@ bitwise_xor_raw(Parser *p)
     return res;
 }
 
+// Left-recursive
 // bitwise_and: bitwise_and '&' shift_expr | shift_expr
 static expr_ty bitwise_and_raw(Parser *);
 static expr_ty
@@ -5416,6 +5420,7 @@ bitwise_and_raw(Parser *p)
     return res;
 }
 
+// Left-recursive
 // shift_expr: shift_expr '<<' sum | shift_expr '>>' sum | sum
 static expr_ty shift_expr_raw(Parser *);
 static expr_ty
@@ -5525,6 +5530,7 @@ shift_expr_raw(Parser *p)
     return res;
 }
 
+// Left-recursive
 // sum: sum '+' term | sum '-' term | term
 static expr_ty sum_raw(Parser *);
 static expr_ty
@@ -5634,6 +5640,7 @@ sum_raw(Parser *p)
     return res;
 }
 
+// Left-recursive
 // term:
 //     | term '*' factor
 //     | term '/' factor
@@ -6048,6 +6055,7 @@ await_primary_rule(Parser *p)
     return res;
 }
 
+// Left-recursive
 // primary:
 //     | primary '.' NAME
 //     | primary genexp
@@ -8237,6 +8245,7 @@ target_rule(Parser *p)
     return res;
 }
 
+// Left-recursive
 // t_primary:
 //     | t_primary '.' NAME &t_lookahead
 //     | t_primary slicing &t_lookahead
