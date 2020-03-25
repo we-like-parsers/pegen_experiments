@@ -273,11 +273,11 @@ is_memoized(Parser *p, int type, void *pres)
 
     for (Memo *m = t->memo; m != NULL; m = m->next) {
         if (m->type == type) {
+            if (0 <= type && type < NSTATISTICS) {
+                statistics[type] += m->mark - p->mark;
+            }
             p->mark = m->mark;
             *(void **)(pres) = m->node;
-            if (0 <= type && type < NSTATISTICS) {
-                statistics[type]++;
-            }
             // fprintf(stderr, "%d < %d: memoized!\n", p->mark, p->fill);
             return 1;
         }
