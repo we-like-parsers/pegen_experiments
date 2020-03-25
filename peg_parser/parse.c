@@ -3373,6 +3373,8 @@ static asdl_seq*
 plain_names_rule(Parser *p)
 {
     asdl_seq* res = NULL;
+    if (is_memoized(p, plain_names_type, &res))
+        return res;
     int mark = p->mark;
     { // ','.(plain_name !'=')+
         asdl_seq * a;
@@ -3390,6 +3392,7 @@ plain_names_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, plain_names_type, res);
     return res;
 }
 
@@ -3607,6 +3610,8 @@ static asdl_seq*
 block_rule(Parser *p)
 {
     asdl_seq* res = NULL;
+    if (is_memoized(p, block_type, &res))
+        return res;
     int mark = p->mark;
     { // NEWLINE INDENT statements DEDENT
         asdl_seq* a;
@@ -3644,6 +3649,7 @@ block_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, block_type, res);
     return res;
 }
 
@@ -3765,6 +3771,8 @@ static expr_ty
 star_expression_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, star_expression_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -3811,6 +3819,7 @@ star_expression_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, star_expression_type, res);
     return res;
 }
 
@@ -3991,6 +4000,8 @@ static expr_ty
 expression_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, expression_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -4057,6 +4068,7 @@ expression_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, expression_type, res);
     return res;
 }
 
@@ -5857,6 +5869,8 @@ static expr_ty
 factor_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, factor_type, &res))
+        return res;
     int mark = p->mark;
     if (p->mark == p->fill && fill_token(p) < 0) {
         return NULL;
@@ -5953,6 +5967,7 @@ factor_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, factor_type, res);
     return res;
 }
 
@@ -7228,6 +7243,8 @@ static expr_ty
 arguments_rule(Parser *p)
 {
     expr_ty res = NULL;
+    if (is_memoized(p, arguments_type, &res))
+        return res;
     int mark = p->mark;
     { // args ','?
         expr_ty a;
@@ -7248,6 +7265,7 @@ arguments_rule(Parser *p)
     }
     res = NULL;
   done:
+    insert_memo(p, mark, arguments_type, res);
     return res;
 }
 
