@@ -13,28 +13,31 @@ import os
 import re
 import sys
 
+from typing import Dict
+
 reporoot = os.path.dirname(os.path.dirname(__file__))
 parse_c = os.path.join(reporoot, "peg_parser", "parse.c")
+
 
 class TypeMapper:
     """State used to map types to names."""
 
-    def __init__(self, filename):
-        self.table = {}
+    def __init__(self, filename: str) -> None:
+        self.table: Dict[int, str] = {}
         with open(filename) as f:
             for line in f:
-                ##if line.startswith("#def"): breakpoint()
-                if match := re.match(r"#define (\w+)_type (\d+)", line):
+                match = re.match(r"#define (\w+)_type (\d+)", line)
+                if match:
                     name, type = match.groups()
                     if "left" in line.lower():
                         name += " // Left-recursive"
                     self.table[int(type)] = name
 
-    def lookup(self, type):
+    def lookup(self, type: int) -> str:
         return self.table.get(type, str(type))
 
 
-def main():
+def main() -> None:
     mapper = TypeMapper(parse_c)
     table = []
     filename = sys.argv[1]
