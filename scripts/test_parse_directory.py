@@ -218,8 +218,13 @@ def parse_directory(
             f"or {total_bytes / total_seconds :,.0f} bytes/sec.",
         )
 
+    # Dump memo stats to @data.
+    with open("@data", "w") as f:
+        for i, count in enumerate(parse.get_memo_stats()):
+            if count:
+                f.write(f"{i:4d} {count:9d}\n")
+
     if short:
-        parse.dump_memo_stats()
         print_memstats()
 
     if errors:
