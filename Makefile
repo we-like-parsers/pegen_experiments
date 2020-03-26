@@ -44,12 +44,13 @@ check: peg_parser/parse.c
 	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
 
 stats: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TIMEFILE)', mode=0); parse.dump()"
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TIMEFILE)', mode=0); parse.dump_memo_stats()" >@data
+	$(PYTHON) scripts/joinstats.py @data
 
 time: time_compile
 
 time_compile: peg_parser/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2); parse.dump()" >@data
+	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
 
 time_parse: peg_parser/parse.c
 	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=1)"

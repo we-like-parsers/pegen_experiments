@@ -8,9 +8,6 @@
 #include <pyarena.h>
 #include <setjmp.h>
 
-extern void reset_statistics(void);
-extern void dump_statistics(void);
-
 enum INPUT_MODE {
     FILE_INPUT,
     STRING_INPUT,
@@ -86,6 +83,9 @@ typedef struct {
 
 extern const int n_keyword_lists;
 extern KeywordToken *reserved_keywords[];
+
+void clear_memo_statistics(void);
+PyObject *get_memo_statistics(void);
 
 int insert_memo(Parser *p, int mark, int type, void *node);
 int update_memo(Parser *p, int mark, int type, void *node);
