@@ -243,7 +243,7 @@ fill_token(Parser *p)
 // The array counts the number of tokens skipped by memoization,
 // indexed by type.
 
-static const int NSTATISTICS = 2000;
+#define NSTATISTICS 2000
 static long memo_statistics[NSTATISTICS];
 
 void
