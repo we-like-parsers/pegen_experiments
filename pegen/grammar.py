@@ -71,7 +71,7 @@ SIMPLE_STR = True
 
 
 class Rule:
-    def __init__(self, name: str, type: Optional[str], rhs: Rhs, memo=None):
+    def __init__(self, name: str, type: Optional[str], rhs: Rhs, memo: Optional[object] = None):
         self.name = name
         self.type = type
         self.rhs = rhs

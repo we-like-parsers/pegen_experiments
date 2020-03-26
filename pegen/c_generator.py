@@ -311,7 +311,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         self.print(f"static {result_type}")
         self.print(f"{node.name}_raw(Parser *p)")
 
-    def _should_memoize(self, node):
+    def _should_memoize(self, node: Rule) -> bool:
         return node.memo and not node.left_recursive
 
     def _handle_default_rule_body(self, node: Rule, rhs: Rhs, result_type: str) -> None:

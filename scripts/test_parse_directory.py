@@ -151,7 +151,7 @@ def parse_directory(
         print("A grammar file was not provided - attempting to use existing file...\n")
 
     try:
-        from peg_parser import parse
+        from peg_parser import parse  # type: ignore
     except:
         print(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",
@@ -219,10 +219,10 @@ def parse_directory(
         )
 
     # Dump memo stats to @data.
-    with open("@data", "w") as f:
+    with open("@data", "w") as datafile:
         for i, count in enumerate(parse.get_memo_stats()):
             if count:
-                f.write(f"{i:4d} {count:9d}\n")
+                datafile.write(f"{i:4d} {count:9d}\n")
 
     if short:
         print_memstats()
