@@ -43,6 +43,10 @@ parse: peg_parser/parse.c
 check: peg_parser/parse.c
 	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
 
+stats: peg_parser/parse.c
+	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TIMEFILE)', mode=0); parse.dump_memo_stats()" >@data
+	$(PYTHON) scripts/joinstats.py @data
+
 time: time_compile
 
 time_compile: peg_parser/parse.c

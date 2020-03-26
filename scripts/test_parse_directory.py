@@ -134,7 +134,7 @@ def parse_directory(
             if not extension:
                 build_parser_and_generator(
                     grammar_file,
-                    "pegen/parse.c",
+                    "peg_parser/parse.c",
                     compile_extension=True,
                     skip_actions=skip_actions,
                 )
@@ -151,7 +151,7 @@ def parse_directory(
         print("A grammar file was not provided - attempting to use existing file...\n")
 
     try:
-        from pegen import parse
+        from peg_parser import parse  # type: ignore
     except:
         print(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",
@@ -217,6 +217,12 @@ def parse_directory(
             f"That's {total_lines / total_seconds :,.0f} lines/sec,",
             f"or {total_bytes / total_seconds :,.0f} bytes/sec.",
         )
+
+    # Dump memo stats to @data.
+    with open("@data", "w") as datafile:
+        for i, count in enumerate(parse.get_memo_stats()):
+            if count:
+                datafile.write(f"{i:4d} {count:9d}\n")
 
     if short:
         print_memstats()
