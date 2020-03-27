@@ -1,5 +1,27 @@
 # Simplified grammar for Python
 
+@trailer '''
+void *
+parse(Parser *p)
+{
+    // Initialize keywords
+    p->keywords = reserved_keywords;
+    p->n_keyword_lists = n_keyword_lists;
+
+    // Run parser
+    void *result = NULL;
+    if (p->start_rule_func == START) {
+        result = start_rule(p);
+    } else if (p->start_rule_func == EXPRESSIONS) {
+        result = expressions_rule(p);
+    }
+
+    return result;
+}
+
+// The end
+'''
+
 start[mod_ty]: a=[statements] ENDMARKER { Module(a, NULL, p->arena) }
 statements[asdl_seq*]: a=statement+ { seq_flatten(p, a) }
 
