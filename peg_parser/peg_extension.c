@@ -40,7 +40,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
         goto error;
     }
 
-    mod_ty res = run_parser_from_file(filename, parse_start, filename_ob, arena);
+    mod_ty res = run_parser_from_file(filename, START, filename_ob, arena);
     if (res == NULL) {
         goto error;
     }
@@ -78,7 +78,7 @@ parse_string(PyObject *self, PyObject *args, PyObject *kwds)
         goto error;
     }
 
-    mod_ty res = run_parser_from_string(the_string, parse_start, filename_ob, arena);
+    mod_ty res = run_parser_from_string(the_string, START, filename_ob, arena);
     if (res == NULL) {
         goto error;
     }

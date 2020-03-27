@@ -30,11 +30,17 @@ EXTENSION_PREFIX = """\
 """
 
 EXTENSION_SUFFIX = """
-mod_ty
-parse_start(Parser *p)
+void *
+parse(Parser *p)
 {
+    // Initialize keywords
+    p->keywords = reserved_keywords;
+    p->n_keyword_lists = n_keyword_lists;
+
+    // Run parser
     return start_rule(p);
 }
+
 // The end
 """
 

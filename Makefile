@@ -10,7 +10,7 @@ TESTFLAGS = --short
 
 build: peg_parser/parse.c
 
-peg_parser/parse.c: $(GRAMMAR) pegen/*.py peg_parser/pegen.c peg_parser/parse_string.c peg_parser/*.h pegen/grammar_parser.py
+peg_parser/parse.c: $(GRAMMAR) pegen/*.py peg_parser/peg_extension.c peg_parser/pegen.c peg_parser/parse_string.c peg_parser/*.h pegen/grammar_parser.py
 	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o peg_parser/parse.c --compile-extension
 
 clean:
