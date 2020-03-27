@@ -203,7 +203,7 @@ fill_token(Parser *p)
             return -1;
         }
         for (int i = p->size; i < newsize; i++) {
-            p->tokens[i] = PyMem_Malloc(sizeof(Token));
+            p->tokens[i] = PyArena_Malloc(p->arena, sizeof(Token));
             memset(p->tokens[i], '\0', sizeof(Token));
         }
         p->size = newsize;
@@ -538,9 +538,6 @@ number_token(Parser *p)
 void
 Parser_Free(Parser *p)
 {
-    for (int i = 0; i < p->size; i++) {
-        PyMem_Free(p->tokens[i]);
-    }
     PyMem_Free(p->tokens);
     PyMem_Free(p);
 }
@@ -564,7 +561,7 @@ Parser_New(struct tok_state *tok, mod_ty (*parse_func)(Parser *), int input_mode
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
         return NULL;
     }
-    p->tokens[0] = PyMem_Malloc(sizeof(Token));
+    p->tokens[0] = PyArena_Malloc(arena, sizeof(Token));
     memset(p->tokens[0], '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
