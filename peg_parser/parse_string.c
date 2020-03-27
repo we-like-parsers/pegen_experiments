@@ -596,13 +596,11 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
     p2->input_mode = STRING_INPUT;
     p2->keywords = p->keywords;
     p2->n_keyword_lists = p->n_keyword_lists;
-    p2->tokens = PyMem_Malloc(sizeof(Token *));
+    p2->tokens = PyMem_Calloc(1, sizeof(Token *));
     if (!p2->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
         goto exit;
     }
-    p2->tokens[0] = PyMem_Malloc(sizeof(Token));
-    memset(p2->tokens[0], '\0', sizeof(Token));
     p2->mark = 0;
     p2->fill = 0;
     p2->size = 1;
@@ -639,7 +637,7 @@ fstring_compile_expr(Parser *p, const char *expr_start, const char *expr_end,
 
 exit:
     PyTokenizer_Free(tok);
-    for (int i = 0; i < p2->size; i++) {
+    for (int i = 0; i < p2->fill; i++) {
         PyMem_Free(p2->tokens[i]);
     }
     PyMem_Free(p2->tokens);

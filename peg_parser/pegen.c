@@ -103,18 +103,6 @@ error:
     return -1;
 }
 
-// Enable this if you uncomment any of the comments calling token_name().
-#if 0
-static const char *
-token_name(int type)
-{
-    if (0 <= type && type <= N_TOKENS) {
-        return _PyParser_TokenNames[type];
-    }
-    return "<Huh?>";
-}
-#endif
-
 // Here, mark is the start of the node, while p->mark is the end.
 // If node==NULL, they should be the same.
 int
@@ -202,20 +190,24 @@ fill_token(Parser *p)
             PyErr_Format(PyExc_MemoryError, "Realloc tokens failed");
             return -1;
         }
-        for (int i = p->size; i < newsize; i++) {
-            p->tokens[i] = PyMem_Malloc(sizeof(Token));
-            memset(p->tokens[i], '\0', sizeof(Token));
-        }
+        memset(p->tokens + p->size, '\0', (newsize - p->size) * sizeof(Token *));
         p->size = newsize;
     }
 
-    Token *t = p->tokens[p->fill];
-    t->type = (type == NAME) ? _get_keyword_or_name_type(p, start, (int)(end - start)) : type;
-    t->bytes = PyBytes_FromStringAndSize(start, end - start);
-    if (t->bytes == NULL) {
+    Token *t = PyMem_Malloc(sizeof(Token));
+    if (t == NULL) {
         return -1;
     }
-    PyArena_AddPyObject(p->arena, t->bytes);
+
+    PyObject *bytes = PyBytes_FromStringAndSize(start, end - start);
+    if (bytes == NULL) {
+        PyMem_Free(t);
+        return -1;
+    }
+    PyArena_AddPyObject(p->arena, bytes);
+
+    t->type = (type == NAME) ? _get_keyword_or_name_type(p, start, (int)(end - start)) : type;
+    t->bytes = bytes;
 
     int lineno = type == STRING ? p->tok->first_lineno : p->tok->lineno;
     const char *line_start = type == STRING ? p->tok->multi_line_start : p->tok->line_start;
@@ -233,8 +225,9 @@ fill_token(Parser *p)
     t->end_lineno = end_lineno;
     t->end_col_offset = end_col_offset;
 
-    // if (p->fill % 100 == 0) fprintf(stderr, "Filled at %d: %s \"%s\"\n", p->fill,
-    // token_name(type), PyBytes_AsString(t->bytes));
+    t->memo = NULL;
+
+    p->tokens[p->fill] = t;
     p->fill += 1;
     return 0;
 }
@@ -345,11 +338,9 @@ expect_token(Parser *p, int type)
     }
     Token *t = p->tokens[p->mark];
     if (t->type != type) {
-        // fprintf(stderr, "No %s at %d\n", token_name(type), p->mark);
         return NULL;
     }
     p->mark += 1;
-    // fprintf(stderr, "Got %s at %d: %s\n", token_name(type), p->mark,
     // PyBytes_AsString(t->bytes));
 
     return t;
@@ -538,7 +529,7 @@ number_token(Parser *p)
 void
 Parser_Free(Parser *p)
 {
-    for (int i = 0; i < p->size; i++) {
+    for (int i = 0; i < p->fill; i++) {
         PyMem_Free(p->tokens[i]);
     }
     PyMem_Free(p->tokens);
@@ -559,13 +550,11 @@ Parser_New(struct tok_state *tok, mod_ty (*parse_func)(Parser *), int input_mode
     p->input_mode = input_mode;
     p->keywords = reserved_keywords;
     p->n_keyword_lists = n_keyword_lists;
-    p->tokens = PyMem_Malloc(sizeof(Token *));
+    p->tokens = PyMem_Calloc(1, sizeof(Token *));
     if (!p->tokens) {
         PyErr_Format(PyExc_MemoryError, "Out of memory for tokens");
         return NULL;
     }
-    p->tokens[0] = PyMem_Malloc(sizeof(Token));
-    memset(p->tokens[0], '\0', sizeof(Token));
     p->mark = 0;
     p->fill = 0;
     p->size = 1;
