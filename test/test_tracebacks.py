@@ -17,7 +17,7 @@ FSTRINGS: Dict[str, Tuple[str, str]] = {
             {a$b}
             '''
         """,
-        '(a$b)',
+        '(a$b)\n',
     ),
     'multiline_fstring_brace_on_next_line': (
         """
@@ -25,7 +25,7 @@ FSTRINGS: Dict[str, Tuple[str, str]] = {
             {a$b
             }'''
         """,
-        '(a$b',
+        '(a$b\n',
     ),
     'multiline_fstring_brace_on_previous_line': (
         """
@@ -33,7 +33,7 @@ FSTRINGS: Dict[str, Tuple[str, str]] = {
             {
             a$b}'''
         """,
-        'a$b)',
+        'a$b)\n',
     ),
 }
 
