@@ -41,7 +41,7 @@ FSTRINGS: Dict[str, Tuple[str, str]] = {
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
-    with open(os.path.join("data", "simpy.gram"), "r") as grammar_file:
+    with open(os.path.join("data", "python.gram"), "r") as grammar_file:
         grammar_source = grammar_file.read()
     grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)

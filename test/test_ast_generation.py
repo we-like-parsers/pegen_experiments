@@ -1,7 +1,7 @@
 import ast
 import os
 from pathlib import PurePath
-from typing import Any, Union, Iterable, Tuple
+from typing import Any, Iterable, List, Tuple, Union
 from textwrap import dedent
 
 import pytest  # type: ignore
@@ -598,13 +598,11 @@ def cleanup_source(source: Any) -> str:
 
 def prepare_test_cases(
     test_cases: Iterable[Tuple[str, Union[str, Iterable[str]]]]
-) -> Tuple[Iterable[str], Iterable[str]]:
+) -> Tuple[Tuple[str, ...], List[str]]:
 
+    test_ids: Tuple[str, ...]
     test_ids, _test_sources = zip(*test_cases)
-    test_sources = list(_test_sources)
-    for index, source in enumerate(test_sources):
-        result = cleanup_source(source)
-        test_sources[index] = result
+    test_sources = [cleanup_source(source) for source in _test_sources]
     return test_ids, test_sources
 
 
@@ -616,7 +614,7 @@ FAIL_TEST_IDS, FAIL_SOURCES = prepare_test_cases(FAIL_TEST_CASES)
 
 
 def create_tmp_extension(tmp_path: PurePath) -> Any:
-    with open(os.path.join("data", "simpy.gram"), "r") as grammar_file:
+    with open(os.path.join("data", "python.gram"), "r") as grammar_file:
         grammar_source = grammar_file.read()
     grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)

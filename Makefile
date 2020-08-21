@@ -1,27 +1,30 @@
-PYTHON ?= python3.8
+PYTHON ?= python3.10
 CPYTHON ?= cpython
 MYPY ?= mypy
 
-GRAMMAR = data/simpy.gram
+GRAMMAR = data/python.gram
+TOKENS = data/Tokens
 TESTFILE = data/cprog.txt
 TIMEFILE = data/xxl.txt
 TESTDIR = .
 TESTFLAGS = --short
 
-build: peg_parser/parse.c
+PARSE_C = peg_extension/parse.c
 
-peg_parser/parse.c: $(GRAMMAR) pegen/*.py peg_parser/peg_extension.c peg_parser/pegen.c peg_parser/parse_string.c peg_parser/*.h pegen/grammar_parser.py
-	$(PYTHON) -m pegen -q -c $(GRAMMAR) -o peg_parser/parse.c --compile-extension
+build: $(PARSE_C)
+
+$(PARSE_C): $(GRAMMAR) pegen/*.py peg_extension/peg_extension.c pegen/grammar_parser.py
+	$(PYTHON) -m pegen -q c $(GRAMMAR) $(TOKENS) -o $(PARSE_C) --compile-extension
 
 clean:
-	-rm -f peg_parser/*.o peg_parser/*.so peg_parser/parse.c
+	-rm -f peg_extension/*.o peg_extension/*.so $(PARSE_C)
 
-dump: peg_parser/parse.c
+dump: $(PARSE_C)
 	cat -n $(TESTFILE)
-	$(PYTHON) -c "from peg_parser import parse; import ast; t = parse.parse_file('$(TESTFILE)', mode=1); print(ast.dump(t))"
+	$(PYTHON) -c "from peg_extension import parse; import ast; t = parse.parse_file('$(TESTFILE)', mode=1); print(ast.dump(t))"
 
 regen-metaparser: pegen/metagrammar.gram pegen/*.py
-	$(PYTHON) -m pegen -q -c pegen/metagrammar.gram -o pegen/grammar_parser.py
+	$(PYTHON) -m pegen -q python pegen/metagrammar.gram -o pegen/grammar_parser.py
 
 # Note: These targets really depend on the generated shared object in pegen/parse.*.so but
 # this has different names in different systems so we are abusing the implicit dependency on
@@ -31,32 +34,32 @@ regen-metaparser: pegen/metagrammar.gram pegen/*.py
 
 test: run
 
-run: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=2); exec(t)"
+run: $(PARSE_C)
+	$(PYTHON) -c "from peg_extension import parse; t = parse.parse_file('$(TESTFILE)', mode=2); exec(t)"
 
-compile: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"
+compile: $(PARSE_C)
+	$(PYTHON) -c "from peg_extension import parse; t = parse.parse_file('$(TESTFILE)', mode=2)"
 
-parse: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=1)"
+parse: $(PARSE_C)
+	$(PYTHON) -c "from peg_extension import parse; t = parse.parse_file('$(TESTFILE)', mode=1)"
 
-check: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
+check: $(PARSE_C)
+	$(PYTHON) -c "from peg_extension import parse; t = parse.parse_file('$(TESTFILE)', mode=0)"
 
-stats: peg_parser/parse.c
-	$(PYTHON) -c "from peg_parser import parse; t = parse.parse_file('$(TIMEFILE)', mode=0); parse.dump_memo_stats()" >@data
+stats: $(PARSE_C)
+	$(PYTHON) -c "from peg_extension import parse; t = parse.parse_file('$(TIMEFILE)', mode=0); parse.dump_memo_stats()" >@data
 	$(PYTHON) scripts/joinstats.py @data
 
 time: time_compile
 
-time_compile: peg_parser/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
+time_compile: $(PARSE_C)
+	/usr/bin/time -l $(PYTHON) -c "from peg_extension import parse; parse.parse_file('$(TIMEFILE)', mode=2)"
 
-time_parse: peg_parser/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
+time_parse: $(PARSE_C)
+	/usr/bin/time -l $(PYTHON) -c "from peg_extension import parse; parse.parse_file('$(TIMEFILE)', mode=1)"
 
-time_check: peg_parser/parse.c
-	/usr/bin/time -l $(PYTHON) -c "from peg_parser import parse; parse.parse_file('$(TIMEFILE)', mode=0)"
+time_check: $(PARSE_C)
+	/usr/bin/time -l $(PYTHON) -c "from peg_extension import parse; parse.parse_file('$(TIMEFILE)', mode=0)"
 
 time_stdlib: time_stdlib_compile
 
