@@ -1,5 +1,5 @@
 language: python
-python: 3.8-dev
+python: 3.10-dev
 
 notifications:
   on_success: change
@@ -17,9 +17,9 @@ script:
 
 matrix:
   include:
-    - name: "mypy"
-      script:
-          - make mypy
+##    - name: "mypy"
+##      script:
+##          - make mypy
 
     - name: "black"
       script:
@@ -36,11 +36,11 @@ matrix:
           - make clean
           - make dump
           - make test
-          - make simpy
-          - make regen-metaparser
+##          - make simpy
+##          - make regen-metaparser
 
-    - name: "simpy_cpython"
-      script:
-          - tar xzf data/cpython-lib.tgz
-          - make clean
-          - make simpy_cpython
+##    - name: "simpy_cpython"
+##      script:
+##          - tar xzf data/cpython-lib.tgz
+##          - make clean
+##          - make simpy_cpython
