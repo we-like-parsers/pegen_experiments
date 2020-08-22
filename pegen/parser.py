@@ -273,8 +273,7 @@ class Parser:
 
     def clear_excess(self, pos: Mark) -> None:
         """Delete cache entries with farthest > pos."""
-        to_delete = [key for key, (tree, mark, farthest) in self._cache.items()
-                     if farthest > pos]
+        to_delete = [key for key, (tree, mark, farthest) in self._cache.items() if farthest > pos]
         for key in to_delete:
             del self._cache[key]
 
@@ -374,6 +373,7 @@ def simple_parser_main(parser_class: Type[Parser]) -> None:
 
     if not args.quiet:
         import pprint
+
         pprint.pprint(tree, indent=2)
 
     if verbose:

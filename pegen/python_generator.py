@@ -150,7 +150,9 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
     ):
         if skip_actions and ("start" not in grammar.rules and "trailer" not in grammar.metas):
             first_rule = next(iter(grammar.rules))
-            grammar.rules["start"] = Rule("start", None, Rhs([Alt([NamedItem(None, NameLeaf(first_rule))])]))
+            grammar.rules["start"] = Rule(
+                "start", None, Rhs([Alt([NamedItem(None, NameLeaf(first_rule))])])
+            )
         super().__init__(grammar, tokens, file)
         self.skip_actions = skip_actions
         self.callmakervisitor = PythonCallMakerVisitor(self)
