@@ -75,7 +75,7 @@ def main() -> None:
     args = argparser.parse_args()
     tree = args.tree
 
-    extension = build.build_parser_and_generator(
+    extension = build.build_c_parser_and_generator(
         "data/simpy.gram", "pegen/parse.c", compile_extension=True
     )
     for package in get_packages():

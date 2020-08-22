@@ -13,7 +13,7 @@ from pathlib import PurePath
 from typing import List, Optional, Any
 
 sys.path.insert(0, os.getcwd())
-from pegen.build import build_parser_and_generator
+from pegen.build import build_c_parser_and_generator
 from pegen.testutil import print_memstats
 from scripts import show_parse
 
@@ -132,7 +132,7 @@ def parse_directory(
 
         try:
             if not extension:
-                build_parser_and_generator(
+                build_c_parser_and_generator(
                     grammar_file,
                     "peg_parser/parse.c",
                     compile_extension=True,
