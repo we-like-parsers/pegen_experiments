@@ -5,9 +5,12 @@ import ast
 import sys
 import tokenize
 
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple
 
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
+
+# TODO: Replace List[Any] with List[NodeType] once recursive type alias are in
+NodeType = Tuple[str, int, List[Any]]
 from ast import literal_eval
 
 from pegen.grammar import (
@@ -47,7 +50,7 @@ class GeneratedParser(Parser):
         if (
             (grammar := self.grammar())
             and
-            (endmarker := self.expect('ENDMARKER'))
+            (endmarker_ := self.expect('ENDMARKER'))
         ):
             return grammar
         self.reset(mark)
@@ -106,11 +109,11 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect("@"))
             and
-            (name := self.name())
+            (a := self.name())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
         ):
-            return ( name . string , None )
+            return ( a . string , None )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -121,7 +124,7 @@ class GeneratedParser(Parser):
             and
             (b := self.name())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
         ):
             return ( a . string , b . string )
         self.reset(mark)
@@ -130,13 +133,13 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect("@"))
             and
-            (name := self.name())
+            (a := self.name())
             and
-            (string := self.string())
+            (b := self.string())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
         ):
-            return ( name . string , literal_eval ( string . string ) )
+            return ( a . string , literal_eval ( b . string ) )
         self.reset(mark)
         if cut: return None
         return None
@@ -177,13 +180,13 @@ class GeneratedParser(Parser):
             and
             (alts := self.alts())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
             and
-            (indent := self.expect('INDENT'))
+            (indent_ := self.expect('INDENT'))
             and
             (more_alts := self.more_alts())
             and
-            (dedent := self.expect('DEDENT'))
+            (dedent_ := self.expect('DEDENT'))
         ):
             return Rule ( rulename [ 0 ] , rulename [ 1 ] , Rhs ( alts . alts + more_alts . alts ) , memo = opt )
         self.reset(mark)
@@ -196,13 +199,13 @@ class GeneratedParser(Parser):
             and
             (literal := self.expect(":"))
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
             and
-            (indent := self.expect('INDENT'))
+            (indent_ := self.expect('INDENT'))
             and
             (more_alts := self.more_alts())
             and
-            (dedent := self.expect('DEDENT'))
+            (dedent_ := self.expect('DEDENT'))
         ):
             return Rule ( rulename [ 0 ] , rulename [ 1 ] , more_alts , memo = opt )
         self.reset(mark)
@@ -217,7 +220,7 @@ class GeneratedParser(Parser):
             and
             (alts := self.alts())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
         ):
             return Rule ( rulename [ 0 ] , rulename [ 1 ] , alts , memo = opt )
         self.reset(mark)
@@ -230,7 +233,7 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
             and
             (literal := self.expect('['))
             and
@@ -240,12 +243,12 @@ class GeneratedParser(Parser):
             and
             (literal_2 := self.expect(']'))
         ):
-            return ( name . string , type . string + "*" )
+            return ( a . string , type . string + "*" )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
             and
             (literal := self.expect('['))
             and
@@ -253,14 +256,14 @@ class GeneratedParser(Parser):
             and
             (literal_1 := self.expect(']'))
         ):
-            return ( name . string , type . string )
+            return ( a . string , type . string )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
         ):
-            return ( name . string , None )
+            return ( a . string , None )
         self.reset(mark)
         if cut: return None
         return None
@@ -273,9 +276,9 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('('))
             and
-            (literal_1 := self.expect('memo'))
+            (keyword := self.expect('memo'))
             and
-            (literal_2 := self.expect(')'))
+            (literal_1 := self.expect(')'))
         ):
             return "memo"
         self.reset(mark)
@@ -316,7 +319,7 @@ class GeneratedParser(Parser):
             and
             (alts := self.alts())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
             and
             (more_alts := self.more_alts())
         ):
@@ -329,7 +332,7 @@ class GeneratedParser(Parser):
             and
             (alts := self.alts())
             and
-            (newline := self.expect('NEWLINE'))
+            (newline_ := self.expect('NEWLINE'))
         ):
             return Rhs ( alts . alts )
         self.reset(mark)
@@ -406,7 +409,7 @@ class GeneratedParser(Parser):
         mark = self.mark()
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
             and
             (literal := self.expect('='))
             and
@@ -414,7 +417,7 @@ class GeneratedParser(Parser):
             and
             (item := self.item())
         ):
-            return NamedItem ( name . string , item )
+            return NamedItem ( a . string , item )
         self.reset(mark)
         if cut: return None
         cut = False
@@ -553,16 +556,16 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
         ):
-            return NameLeaf ( name . string )
+            return NameLeaf ( a . string )
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.string())
+            (a := self.string())
         ):
-            return StringLeaf ( string . string )
+            return StringLeaf ( a . string )
         self.reset(mark)
         if cut: return None
         return None
@@ -627,23 +630,23 @@ class GeneratedParser(Parser):
         if cut: return None
         cut = False
         if (
-            (name := self.name())
+            (a := self.name())
         ):
-            return name . string
+            return a . string
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (number := self.number())
+            (a := self.number())
         ):
-            return number . string
+            return a . string
         self.reset(mark)
         if cut: return None
         cut = False
         if (
-            (string := self.string())
+            (a := self.string())
         ):
-            return string . string
+            return a . string
         self.reset(mark)
         if cut: return None
         cut = False
@@ -664,12 +667,15 @@ class GeneratedParser(Parser):
         if (
             self.negative_lookahead(self.expect, "}")
             and
-            (op := self.op())
+            (a := self.op())
         ):
-            return op . string
+            return a . string
         self.reset(mark)
         if cut: return None
         return None
+
+    _keywords = {
+    }
 
 
 if __name__ == '__main__':

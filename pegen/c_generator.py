@@ -318,6 +318,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
         exact_tokens: Dict[str, int],
         non_exact_tokens: Set[str],
         file: Optional[IO[Text]],
+        *,
         debug: bool = False,
         skip_actions: bool = False,
     ):

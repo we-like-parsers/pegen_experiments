@@ -11,6 +11,13 @@ def shorttok(tok: tokenize.TokenInfo) -> str:
     return "%-25.25s" % f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
 
+def token_repr(self) -> str:
+    return f"{tokenize.tok_name[self.type]}({self.string!r:.25})"
+
+
+tokenize.TokenInfo.__repr__ = token_repr
+
+
 class Tokenizer:
     """Caching wrapper for the tokenize module.
 
@@ -23,6 +30,7 @@ class Tokenizer:
         self._tokengen = tokengen
         self._tokens = []
         self._index = 0
+        self._farthest = 0
         self._verbose = verbose
         if verbose:
             self.report(False, False)
@@ -31,7 +39,10 @@ class Tokenizer:
         """Return the next token and updates the index."""
         cached = True
         while self._index == len(self._tokens):
-            tok = next(self._tokengen)
+            try:
+                tok = next(self._tokengen)
+            except tokenize.TokenError as err:
+                tok = self.fix_token_error(err)
             if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
             if tok.type == token.ERRORTOKEN and tok.string.isspace():
@@ -40,6 +51,7 @@ class Tokenizer:
             cached = False
         tok = self._tokens[self._index]
         self._index += 1
+        self._farthest = max(self._farthest, self._index)
         if self._verbose:
             self.report(cached, False)
         return tok
@@ -47,13 +59,26 @@ class Tokenizer:
     def peek(self) -> tokenize.TokenInfo:
         """Return the next token *without* updating the index."""
         while self._index == len(self._tokens):
-            tok = next(self._tokengen)
+            try:
+                tok = next(self._tokengen)
+            except tokenize.TokenError as err:
+                tok = self.fix_token_error(err)
             if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
             if tok.type == token.ERRORTOKEN and tok.string.isspace():
                 continue
             self._tokens.append(tok)
+        self._farthest = max(self._farthest, self._index + 1)
         return self._tokens[self._index]
+
+    def fix_token_error(self, err: tokenize.TokenError) -> tokenize.TokenInfo:
+        msg = err.args[0]
+        if msg == "EOF in multi-line statement":
+            return tokenize.TokenInfo(token.ENDMARKER, "", (0, 0), (0, 0), "")
+        elif msg == "EOF in multi-line string":
+            return tokenize.TokenInfo(token.ERRORTOKEN, "", (0, 0), (0, 0), "")
+        else:
+            raise err
 
     def diagnose(self) -> tokenize.TokenInfo:
         if not self._tokens:
@@ -71,6 +96,14 @@ class Tokenizer:
         self._index = index
         if self._verbose:
             self.report(True, index < old_index)
+
+    def update_farthest(self, farthest: Mark) -> Mark:
+        self._farthest = max(self._farthest, farthest)
+
+    def reset_farthest(self, farthest: Mark) -> Mark:
+        prior_farthest = self._farthest
+        self._farthest = farthest
+        return prior_farthest
 
     def report(self, cached: bool, back: bool) -> None:
         if back:

@@ -40,9 +40,9 @@ metas[MetaList]:
     | meta { [meta] }
 
 meta[MetaTuple]:
-    | "@" NAME NEWLINE { (name.string, None) }
+    | "@" a=NAME NEWLINE { (a.string, None) }
     | "@" a=NAME b=NAME NEWLINE { (a.string, b.string) }
-    | "@" NAME STRING NEWLINE { (name.string, literal_eval(string.string)) }
+    | "@" a=NAME b=STRING NEWLINE { (a.string, literal_eval(b.string)) }
 
 rules[RuleList]:
     | rule rules { [rule] + rules }
@@ -56,9 +56,9 @@ rule[Rule]:
     | rulename memoflag? ":" alts NEWLINE { Rule(rulename[0], rulename[1], alts, memo=opt) }
 
 rulename[RuleName]:
-    | NAME '[' type=NAME '*' ']' { (name.string, type.string+"*") }
-    | NAME '[' type=NAME ']' { (name.string, type.string) }
-    | NAME { (name.string, None) }
+    | a=NAME '[' type=NAME '*' ']' { (a.string, type.string+"*") }
+    | a=NAME '[' type=NAME ']' { (a.string, type.string) }
+    | a=NAME { (a.string, None) }
 
 # In the future this may return something more complicated
 memoflag[str]:
@@ -83,7 +83,7 @@ items[NamedItemList]:
     | named_item { [named_item] }
 
 named_item[NamedItem]:
-    | NAME '=' ~ item {NamedItem(name.string, item)}
+    | a=NAME '=' ~ item {NamedItem(a.string, item)}
     | item {NamedItem(None, item)}
     | it=lookahead {NamedItem(None, it)}
 
@@ -102,8 +102,8 @@ item[Item]:
 
 atom[Plain]:
     | '(' ~ alts ')' {Group(alts)}
-    | NAME {NameLeaf(name.string) }
-    | STRING {StringLeaf(string.string)}
+    | a=NAME {NameLeaf(a.string) }
+    | a=STRING {StringLeaf(a.string)}
 
 # Mini-grammar for the actions
 
@@ -115,9 +115,9 @@ target_atoms[str]:
 
 target_atom[str]:
     | "{" ~ target_atoms "}" { "{" + target_atoms + "}" }
-    | NAME { name.string }
-    | NUMBER { number.string }
-    | STRING { string.string }
+    | a=NAME { a.string }
+    | a=NUMBER { a.string }
+    | a=STRING { a.string }
     | "?" { "?" }
     | ":" { ":" }
-    | !"}" OP { op.string }
+    | !"}" a=OP { a.string }

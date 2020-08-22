@@ -184,7 +184,7 @@ def build_python_generator(
     grammar: Grammar, grammar_file: str, output_file: str, skip_actions: bool = False,
 ) -> ParserGenerator:
     with open(output_file, "w") as file:
-        gen: ParserGenerator = PythonParserGenerator(grammar, file)  # TODO: skip_actions
+        gen: ParserGenerator = PythonParserGenerator(grammar, file, skip_actions=skip_actions)
         gen.generate(grammar_file)
     return gen
 
