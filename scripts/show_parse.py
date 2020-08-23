@@ -91,7 +91,7 @@ def main() -> None:
         from pegen.build import build_c_parser_and_generator
 
         build_c_parser_and_generator(
-            args.grammar_file, os.devnull, "pegen/parse.c", compile_extension=True
+            args.grammar_file, "data/Tokens", "pegen/parse.c", compile_extension=True
         )
         from pegen.parse import parse_string  # type: ignore[import]
 
