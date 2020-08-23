@@ -85,7 +85,7 @@ Succeed if e can be parsed, without consuming any input.
 ##### `!e`
 Fail if e can be parsed, without consuming any input.
 
-An example taken from `data/simpy.gram` specifies that a primary
+An example taken from `data/python.gram` specifies that a primary
 consists of an atom, which is not followed by a `.` or a `(` or
 a `[`:
 ```

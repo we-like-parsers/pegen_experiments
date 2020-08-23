@@ -23,7 +23,7 @@ sys.path.insert(0, ".")
 from pegen.build import build_parser
 from pegen.testutil import generate_parser, generate_parser_c_extension, make_parser, parse_string
 
-GRAMMAR_FILE = "data/simpy.gram"
+GRAMMAR_FILE = "data/python.gram"
 INITIAL_NESTING_DEPTH = 10
 NESTED_INCR_AMT = 10
 

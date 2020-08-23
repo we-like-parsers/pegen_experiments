@@ -69,18 +69,18 @@ time_stdlib_compile:
 time_stdlib_parse:
 	/usr/bin/time -l $(PYTHON) -c "import ast; ast.parse(open('$(TIMEFILE)').read())"
 
-simpy: clean-cpython
+test_local: clean-cpython
 	$(PYTHON) scripts/test_parse_directory.py \
-		-g data/simpy.gram \
+		-g data/python.gram \
 		-d $(TESTDIR) \
 		$(TESTFLAGS) \
 		--exclude "*/failset/*" \
 		--exclude "*/failset/**" \
 		--exclude "*/failset/**/*"
 
-simpy_cpython: $(CPYTHON)
+test_global: $(CPYTHON)
 	$(PYTHON) scripts/test_parse_directory.py \
-		-g data/simpy.gram \
+		-g data/python.gram \
 		-d $(CPYTHON) \
 		$(TESTFLAGS) \
 		--exclude "*/test2to3/*" \
@@ -106,9 +106,9 @@ format-python:
 	black pegen tatsu test scripts
 
 bench: cpython
-	$(MAKE) -s simpy_cpython 2>/dev/null
-	$(MAKE) -s simpy_cpython 2>/dev/null
-	$(MAKE) -s simpy_cpython 2>/dev/null
+	$(MAKE) -s test_global 2>/dev/null
+	$(MAKE) -s test_global 2>/dev/null
+	$(MAKE) -s test_global 2>/dev/null
 
 # To install clang-format:
 #    on mac: "brew install clang-format"

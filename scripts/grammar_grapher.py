@@ -4,15 +4,15 @@
 
     For example:
         Generate the GraphViz file:
-        # scripts/grammar_grapher.py data/simpy.gram > simpy.gv
+        # scripts/grammar_grapher.py data/python.gram > python.gv
 
         Then generate the graph...
 
-        # twopi simpy.gv -Tpng > simpy_twopi.png
+        # twopi python.gv -Tpng > python_twopi.png
 
         or
 
-        # dot simpy.gv -Tpng > simpy_dot.png
+        # dot python.gv -Tpng > python_dot.png
 
         NOTE: The _dot_ and _twopi_ tools seem to produce the most useful results.
               The _circo_ tool is the worst of the bunch. Don't even bother.

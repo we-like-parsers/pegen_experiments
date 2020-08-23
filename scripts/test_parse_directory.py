@@ -134,7 +134,7 @@ def parse_directory(
             if not extension:
                 build_c_parser_and_generator(
                     grammar_file,
-                    os.devnull,
+                    "data/Tokens",  # TODO: Don't hardcode this
                     "peg_extension/parse.c",
                     compile_extension=True,
                     skip_actions=skip_actions,

@@ -53,7 +53,7 @@ def find_dirname(package_name: str) -> str:
 def run_tests(dirname: str, tree: int, extension: Any) -> int:
     return test_parse_directory.parse_directory(
         dirname,
-        "data/simpy.gram",
+        "data/python.gram",
         verbose=False,
         excluded_files=[
             "*/failset/*",
