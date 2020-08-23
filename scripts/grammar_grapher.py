@@ -92,7 +92,7 @@ def main() -> None:
 
     # Flatten the start node if has only a single reference
     root_node = "start"
-    if start := references["start"]:
+    if start := references.get("start"):
         if len(start) == 1:
             root_node = list(start)[0]
             del references["start"]
@@ -100,7 +100,8 @@ def main() -> None:
     print("digraph g1 {")
     print('\toverlap="scale";')  # Force twopi to scale the graph to avoid overlaps
     print(f'\troot="{root_node}";')
-    print(f"\t{root_node} [color=green, shape=circle]")
+    if start:
+        print(f"\t{root_node} [color=green, shape=circle]")
     for name, refs in references.items():
         if refs:  # Ignore empty sets
             print(f"\t{name} -> {','.join(refs)};")
