@@ -77,12 +77,16 @@ def main() -> None:
                 farthest = parser.reset_farthest(0)
                 if tree is not None or farthest > pos:
                     howfar.setdefault(farthest, []).append(tok)
+            else:
+                print("Stopped after trying 100 things")
             if howfar:
                 # Only report those tokens that got the farthest
-                expected = sorted(howfar[max(howfar)])
+                farthest = max(howfar)
+                expected = sorted(howfar[farthest])
                 print(
                     f"Got {describe(got, parser)}, expected one of the following:",
                     ", ".join(describe(tok, parser) for tok in expected),
+                    f"[reached {farthest}]",
                 )
                 ## pprint.pprint(howfar)
             sys.exit(1)
