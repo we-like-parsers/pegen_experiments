@@ -115,7 +115,7 @@ bench: cpython
 #    on ubuntu: "apt-get install clang-format"
 #    on arch: "pacman -S clang"
 format-c:
-	clang-format pegen/pegen.c -i
+	clang-format peg_extension/peg_extension.c -i
 
 # To install clang-tidy:
 #    on mac:
@@ -127,7 +127,7 @@ format-c:
 #    on arch: "pacman -S clang"
 clang-tidy:
 	$(eval COMPILE_OPTIONS = $(shell python-config --cflags))
-	clang-tidy pegen/pegen.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
+	clang-tidy peg_extension/peg_extension.c -fix-errors -fix -checks="readability-braces-around-statements" -- $(COMPILE_OPTIONS) 1>/dev/null
 
 format: format-python format-c
 
