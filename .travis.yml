@@ -17,6 +17,10 @@ script:
 
 matrix:
   include:
+    - name: "pip_list"
+      script:
+          - $PYTHON -m pip list
+
     - name: "mypy"
       script:
           - make mypy
