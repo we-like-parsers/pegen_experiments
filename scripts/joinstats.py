@@ -16,7 +16,7 @@ import sys
 from typing import Dict
 
 reporoot = os.path.dirname(os.path.dirname(__file__))
-parse_c = os.path.join(reporoot, "peg_parser", "parse.c")
+parse_c = os.path.join(reporoot, "peg_extension", "parse.c")
 
 
 class TypeMapper:

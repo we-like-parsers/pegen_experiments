@@ -38,7 +38,7 @@ issoftkeyword = frozenset(softkwlist).__contains__
 EXTRA_KEYWORDS = ["async", "await"]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate the Lib/keywords.py file from the grammar."
     )
@@ -58,7 +58,7 @@ def main():
     grammar, _, _ = build_parser(args.grammar)
     with args.tokens_file as tok_file:
         all_tokens, exact_tok, non_exact_tok = generate_token_definitions(tok_file)
-    gen: ParserGenerator = CParserGenerator(
+    gen: CParserGenerator = CParserGenerator(
         grammar, all_tokens, exact_tok, non_exact_tok, file=None
     )
     gen.collect_todo()

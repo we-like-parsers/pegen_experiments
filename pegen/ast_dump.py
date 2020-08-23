@@ -1,3 +1,5 @@
+# type: ignore
+
 """
 Copy-parse of ast.dump, removing the `isinstance` checks. This is needed,
 because testing pegen requires generating a C extension module, which contains

@@ -134,7 +134,8 @@ def parse_directory(
             if not extension:
                 build_c_parser_and_generator(
                     grammar_file,
-                    "peg_parser/parse.c",
+                    os.devnull,
+                    "peg_extension/parse.c",
                     compile_extension=True,
                     skip_actions=skip_actions,
                 )
@@ -151,7 +152,7 @@ def parse_directory(
         print("A grammar file was not provided - attempting to use existing file...\n")
 
     try:
-        from peg_parser import parse  # type: ignore
+        from peg_extension import parse  # type: ignore
     except:
         print(
             "An existing parser was not found. Please run `make` or specify a grammar file with the `-g` flag.",

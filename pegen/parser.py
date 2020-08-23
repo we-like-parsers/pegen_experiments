@@ -172,10 +172,10 @@ class Parser:
         self._tokenizer = tokenizer
         self._verbose = verbose
         self._level = 0
-        self._cache: Dict[Tuple[Mark, str, Tuple[Any, ...]], Tuple[Any, Mark]] = {}
-        self._dummy_pos = None
-        self._dummy_count = None
-        self._dummy_inserted = None
+        self._cache: Dict[Tuple[Mark, str, Tuple[Any, ...]], Tuple[Any, Mark, Mark]] = {}
+        self._dummy_pos: Optional[Mark] = None
+        self._dummy_count: Optional[int] = None
+        self._dummy_inserted: Optional[Mark] = None
         # Pass through common tokenizer methods.
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
@@ -183,7 +183,7 @@ class Parser:
         self.update_farthest = self._tokenizer.update_farthest
         self.reset_farthest = self._tokenizer.reset_farthest
 
-    _keywords: ClassVar[Optional[Set[str]]] = set()
+    _keywords: Set[str] = set()
 
     @abstractmethod
     def start(self) -> Any:
@@ -294,6 +294,7 @@ class Parser:
         """Check whether this is the position where we should insert a dummy token."""
         if self._dummy_pos is None or self._dummy_pos != self.mark():
             return
+        assert self._dummy_count is not None
         if self._dummy_count > 0:
             self._dummy_count -= 1
             return
@@ -307,7 +308,7 @@ class Parser:
     def still_dummy(self) -> bool:
         return self._dummy_pos is not None
 
-    def remove_dummy(self):
+    def remove_dummy(self) -> Optional[tokenize.TokenInfo]:
         if self._dummy_inserted is None:
             return None
         tok = self._tokenizer._tokens[self._dummy_inserted]
@@ -317,7 +318,7 @@ class Parser:
 
 
 def make_dummy_token_type(type: str) -> int:
-    if type in token.EXACT_TOKEN_TYPES:
+    if type in token.EXACT_TOKEN_TYPES:  # type: ignore
         return token.OP
     return getattr(token, type, token.ERRORTOKEN)
 

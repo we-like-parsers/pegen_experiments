@@ -76,7 +76,7 @@ def main() -> None:
     tree = args.tree
 
     extension = build.build_c_parser_and_generator(
-        "data/simpy.gram", "pegen/parse.c", compile_extension=True
+        "data/python.gram", "data/Tokens", "pegen/parse.c", compile_extension=True
     )
     for package in get_packages():
         print(f"Extracting files from {package}... ", end="")

@@ -100,6 +100,8 @@ clean-cpython:
 mypy: regen-metaparser
 	$(MYPY)  # For list of files, see mypy.ini
 
+black: format-python
+
 format-python:
 	black pegen tatsu test scripts
 

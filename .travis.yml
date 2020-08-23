@@ -17,9 +17,9 @@ script:
 
 matrix:
   include:
-##    - name: "mypy"
-##      script:
-##          - make mypy
+    - name: "mypy"
+      script:
+          - make mypy
 
     - name: "black"
       script:
@@ -37,7 +37,7 @@ matrix:
           - make dump
           - make test
 ##          - make simpy
-##          - make regen-metaparser
+          - make regen-metaparser
 
 ##    - name: "simpy_cpython"
 ##      script:

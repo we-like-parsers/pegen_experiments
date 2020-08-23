@@ -1,6 +1,6 @@
 import token
 import tokenize
-from typing import List, Iterator
+from typing import Any, List, Iterator
 
 Mark = int  # NewType('Mark', int)
 
@@ -11,11 +11,11 @@ def shorttok(tok: tokenize.TokenInfo) -> str:
     return "%-25.25s" % f"{tok.start[0]}.{tok.start[1]}: {token.tok_name[tok.type]}:{tok.string!r}"
 
 
-def token_repr(self) -> str:
+def token_repr(self: Any) -> str:
     return f"{tokenize.tok_name[self.type]}({self.string!r:.25})"
 
 
-tokenize.TokenInfo.__repr__ = token_repr
+tokenize.TokenInfo.__repr__ = token_repr  # type: ignore
 
 
 class Tokenizer:
@@ -97,7 +97,7 @@ class Tokenizer:
         if self._verbose:
             self.report(True, index < old_index)
 
-    def update_farthest(self, farthest: Mark) -> Mark:
+    def update_farthest(self, farthest: Mark) -> None:
         self._farthest = max(self._farthest, farthest)
 
     def reset_farthest(self, farthest: Mark) -> Mark:

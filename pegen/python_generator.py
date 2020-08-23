@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import ast
 import re
 import token
-from typing import Any, Dict, Optional, IO, Text, Tuple
+from typing import Any, Dict, Optional, IO, Set, Text, Tuple
 
 from pegen.grammar import (
     Cut,
@@ -32,7 +34,7 @@ import ast
 import sys
 import tokenize
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
@@ -49,7 +51,7 @@ if __name__ == '__main__':
 
 
 class PythonCallMakerVisitor(GrammarVisitor):
-    def __init__(self, parser_generator: ParserGenerator):
+    def __init__(self, parser_generator: PythonParserGenerator):
         self.gen = parser_generator
         self.keywords: Set[str] = set()
         self.cache: Dict[Any, Any] = {}
@@ -158,7 +160,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             )
         super().__init__(grammar, tokens, file)
         self.skip_actions = skip_actions
-        self.callmakervisitor = PythonCallMakerVisitor(self)
+        self.callmakervisitor: PythonCallMakerVisitor = PythonCallMakerVisitor(self)
 
     def parse_bool(self, value: Optional[str], name: str, default: bool) -> bool:
         if value is None:
@@ -190,9 +192,9 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         self.print()
         with self.indent():
             if not keywords:
-                self.print("_keywords = set()")
+                self.print("_keywords: Set[str] = set()")
                 return
-            self.print("_keywords = {")
+            self.print("_keywords: Set[str] = {")
             with self.indent():
                 for kw in sorted(keywords):
                     self.print(f"{kw!r},")
@@ -202,7 +204,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         if self.skip_actions:
             header = MODULE_PREFIX
         else:
-            header = self.grammar.metas.get("header", MODULE_PREFIX)
+            header = self.grammar.metas.get("header") or MODULE_PREFIX
         if header is not None:
             self.print(header.rstrip("\n").format(filename=filename))
         if not self.skip_actions:
@@ -215,7 +217,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         if self.skip_actions:
             trailer = MODULE_SUFFIX
         else:
-            trailer = self.grammar.metas.get("trailer", MODULE_SUFFIX)
+            trailer = self.grammar.metas.get("trailer") or MODULE_SUFFIX
         if trailer is not None:
             self.print(trailer.rstrip("\n"))
 
@@ -284,14 +286,13 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                     self.visit(item)
             self.print("):")
             with self.indent():
+                action = node.action
                 if self.skip_actions:
                     name = node.rule_name
                     if name.startswith("incorrect_") or name.startswith("invalid_"):
                         action = "None"  # It's an error rule
                     else:
                         action = None
-                else:
-                    action = node.action
                 if not action:
                     if is_gather:
                         assert len(self.local_variable_names) == 2

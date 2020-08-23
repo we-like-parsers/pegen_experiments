@@ -5,7 +5,7 @@ import ast
 import sys
 import tokenize
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from pegen.parser import memoize, memoize_left_rec, logger, Parser
 
@@ -674,7 +674,7 @@ class GeneratedParser(Parser):
         if cut: return None
         return None
 
-    _keywords = set()
+    _keywords: Set[str] = set()
 
 
 if __name__ == '__main__':
