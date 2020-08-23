@@ -29,6 +29,8 @@ from pegen.grammar import (
 )
 """
 
+@keywords False
+
 start[Grammar]: grammar ENDMARKER { grammar }
 
 grammar[Grammar]:

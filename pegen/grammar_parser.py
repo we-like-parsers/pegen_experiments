@@ -276,9 +276,9 @@ class GeneratedParser(Parser):
         if (
             (literal := self.expect('('))
             and
-            (keyword := self.expect('memo'))
+            (literal_1 := self.expect('memo'))
             and
-            (literal_1 := self.expect(')'))
+            (literal_2 := self.expect(')'))
         ):
             return "memo"
         self.reset(mark)
@@ -674,8 +674,7 @@ class GeneratedParser(Parser):
         if cut: return None
         return None
 
-    _keywords = {
-    }
+    _keywords = set()
 
 
 if __name__ == '__main__':

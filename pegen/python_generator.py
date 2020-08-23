@@ -65,9 +65,10 @@ class PythonCallMakerVisitor(GrammarVisitor):
 
     def visit_StringLeaf(self, node: StringLeaf) -> Tuple[str, str]:
         val = ast.literal_eval(node.value)
-        if re.match(r"[a-zA-Z_]\w*\Z", val):  # This is a keyword
-            self.keywords.add(val)
-            return "keyword", f"self.expect_keyword({val!r})"
+        if self.gen.use_reserved_words:
+            if re.match(r"[a-zA-Z_]\w*\Z", val):  # This is a keyword
+                self.keywords.add(val)
+                return "keyword", f"self.expect_keyword({val!r})"
         return "literal", f"self.expect({node.value})"
 
     def visit_Rhs(self, node: Rhs) -> Tuple[Optional[str], str]:
@@ -148,6 +149,8 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         tokens: Dict[int, str] = token.tok_name,
         skip_actions: bool = False,
     ):
+        keywords = grammar.metas.get("keywords")
+        self.use_reserved_words = self.parse_bool(keywords, "keywords", True)
         if skip_actions and ("start" not in grammar.rules and "trailer" not in grammar.metas):
             first_rule = next(iter(grammar.rules))
             grammar.rules["start"] = Rule(
@@ -156,6 +159,18 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
         super().__init__(grammar, tokens, file)
         self.skip_actions = skip_actions
         self.callmakervisitor = PythonCallMakerVisitor(self)
+
+    def parse_bool(self, value: Optional[str], name: str, default: bool) -> bool:
+        if value is None:
+            return default
+        matches = {
+            "false": False,
+            "true": True,
+        }
+        cleaned = value.strip().lower()
+        if cleaned not in matches:
+            print(f"Unrecognized meta directive @{name} {value}")
+        return matches.get(cleaned, default)
 
     def generate(self, filename: str) -> None:
         self.print_header(filename)
