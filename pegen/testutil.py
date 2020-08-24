@@ -7,7 +7,7 @@ import textwrap
 import tokenize
 import token
 
-from typing import Any, cast, Dict, IO, Type, Final
+from typing import Any, cast, Dict, Final, IO, List, Tuple, Type
 
 from pegen.build import compile_c_extension
 from pegen.c_generator import CParserGenerator
@@ -15,7 +15,7 @@ from pegen.grammar import Grammar
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.parser import Parser
 from pegen.python_generator import PythonParserGenerator
-from pegen.tokenizer import Tokenizer
+from pegen.tokenizer import Mark, Tokenizer
 
 ALL_TOKENS = token.tok_name
 EXACT_TOKENS = token.EXACT_TOKEN_TYPES  # type: ignore
@@ -133,3 +133,47 @@ def print_memstats() -> bool:
     for key, value in res.items():
         print(f"  {key:12.12s}: {value:10.0f} MiB")
     return True
+
+
+def describe_token(tok: tokenize.TokenInfo, parser: Parser) -> str:
+    if tok.type == token.ERRORTOKEN:
+        return repr(tok.string)
+    if tok.type == token.OP:
+        return repr(tok.string)
+    if tok.type == token.AWAIT:
+        return "'await'"
+    if tok.type == token.ASYNC:
+        return "'async'"
+    if tok.string in parser._keywords:
+        return repr(tok.string)
+    return token.tok_name[tok.type]
+
+
+def recovery_by_insertions(parser: Parser, limit: int = 100) -> Tuple[tokenize.TokenInfo, Mark, List[tokenize.TokenInfo], Dict[Mark, List[tokenize.TokenInfo]]]:
+    tokenizer = parser._tokenizer
+    howfar = {}
+    pos = len(tokenizer._tokens) - 1
+    got = tokenizer._tokens[pos]
+    for i in range(limit):
+        parser.reset(0)
+        parser.reset_farthest(0)
+        parser.clear_excess(pos)
+        parser.insert_dummy(pos, i)
+        tree = parser.file()
+        tok = parser.remove_dummy()
+        if tok is None:
+            break
+        farthest = parser.reset_farthest(0)
+        if tree is not None or farthest > pos:
+            howfar.setdefault(farthest, []).append(tok)
+    else:
+        # TODO: Don't print
+        print(f"Stopped after trying {limit} times")
+    if howfar:
+        # Only report those tokens that got the farthest
+        farthest = max(howfar)
+        expected = sorted(howfar[farthest])
+    else:
+        farthest = pos
+        expected = []
+    return (got, farthest, expected, howfar)
