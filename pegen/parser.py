@@ -316,6 +316,14 @@ class Parser:
         self._dummy_inserted = None
         return tok
 
+    def delete_token(self, pos: Mark) -> tokenize.TokenInfo:
+        tok = self._tokenizer._tokens[pos]
+        del self._tokenizer._tokens[pos]
+        return tok
+
+    def insert_token(self, pos: Mark, tok: tokenize.TokenInfo) -> None:
+        self._tokenizer._tokens.insert(pos, tok)
+
 
 def make_dummy_token_type(type: str) -> int:
     if type in token.EXACT_TOKEN_TYPES:  # type: ignore

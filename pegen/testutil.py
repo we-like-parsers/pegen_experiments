@@ -149,7 +149,11 @@ def describe_token(tok: tokenize.TokenInfo, parser: Parser) -> str:
     return token.tok_name[tok.type]
 
 
-def recovery_by_insertions(parser: Parser, limit: int = 100) -> Tuple[tokenize.TokenInfo, Mark, List[tokenize.TokenInfo], Dict[Mark, List[tokenize.TokenInfo]]]:
+def recovery_by_insertions(
+    parser: Parser, limit: int = 100
+) -> Tuple[
+    tokenize.TokenInfo, Mark, List[tokenize.TokenInfo], Dict[Mark, List[tokenize.TokenInfo]]
+]:
     tokenizer = parser._tokenizer
     howfar = {}
     pos = len(tokenizer._tokens) - 1
@@ -177,3 +181,24 @@ def recovery_by_insertions(parser: Parser, limit: int = 100) -> Tuple[tokenize.T
         farthest = pos
         expected = []
     return (got, farthest, expected, howfar)
+
+
+def recovery_by_deletions(
+    parser: Parser, limit: int = 2
+) -> List[Tuple[tokenize.TokenInfo, int, Mark, Mark]]:
+    tokenizer = parser._tokenizer
+    orig_pos = len(tokenizer._tokens) - 1
+    orig_farthest = parser.reset_farthest(0)
+    results = []
+    for i in range(limit):
+        pos = orig_pos - i
+        parser.reset(0)
+        parser.reset_farthest(0)
+        parser.clear_excess(pos)
+        tok = parser.delete_token(pos)
+        tree = parser.file()
+        parser.insert_token(pos, tok)
+        farthest = parser.reset_farthest(0)
+        if farthest > orig_farthest:
+            results.append((tok, i, pos, farthest))
+    return results
