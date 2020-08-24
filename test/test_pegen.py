@@ -72,7 +72,7 @@ def test_typed_rules() -> None:
     )
 
 
-def test_repeat_with_separator_rules() -> None:
+def test_gather() -> None:
     grammar = """
     start: ','.thing+ NEWLINE
     thing: NUMBER
@@ -84,6 +84,20 @@ def test_repeat_with_separator_rules() -> None:
         "Rule('start', None, Rhs([Alt([NamedItem(None, Gather(StringLeaf(\"','\"), NameLeaf('thing'"
     )
     assert str(rules["thing"]) == "thing: NUMBER"
+    parser_class = make_parser(grammar)
+    node = parse_string("42\n", parser_class)
+    assert node == [
+        [[TokenInfo(NUMBER, string="42", start=(1, 0), end=(1, 2), line="42\n")]],
+        TokenInfo(NEWLINE, string="\n", start=(1, 2), end=(1, 3), line="42\n"),
+    ]
+    node = parse_string("1, 2\n", parser_class)
+    assert node == [
+        [
+            [TokenInfo(NUMBER, string="1", start=(1, 0), end=(1, 1), line="1, 2\n")],
+            [TokenInfo(NUMBER, string="2", start=(1, 3), end=(1, 4), line="1, 2\n")],
+        ],
+        TokenInfo(NEWLINE, string="\n", start=(1, 4), end=(1, 5), line="1, 2\n"),
+    ]
 
 
 def test_expr_grammar() -> None:

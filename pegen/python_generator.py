@@ -252,16 +252,17 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
             else:
                 self.print("return None")
 
-    def visit_NamedItem(self, node: NamedItem) -> None:
+    def visit_NamedItem(self, node: NamedItem, is_gather: bool = False) -> None:
         name, call = self.callmakervisitor.visit(node.item)
+        suffix = " is not None" if is_gather else ""
         if node.name:
             name = node.name
         if not name:
-            self.print(call)
+            self.print(f"{call}{suffix}")
         else:
             if name != "cut":
                 name = self.dedupe(name)
-            self.print(f"({name} := {call})")
+            self.print(f"({name} := {call}){suffix}")
 
     def visit_Rhs(self, node: Rhs, is_loop: bool = False, is_gather: bool = False) -> None:
         if is_loop:
@@ -283,7 +284,7 @@ class PythonParserGenerator(ParserGenerator, GrammarVisitor):
                         first = False
                     else:
                         self.print("and")
-                    self.visit(item)
+                    self.visit(item, is_gather=is_gather)
             self.print("):")
             with self.indent():
                 action = node.action

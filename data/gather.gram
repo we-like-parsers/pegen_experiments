@@ -1,0 +1,2 @@
+start: 'import' names
+names: ','.NAME+
