@@ -155,7 +155,7 @@ def recovery_by_insertions(
     tokenize.TokenInfo, Mark, List[tokenize.TokenInfo], Dict[Mark, List[tokenize.TokenInfo]]
 ]:
     tokenizer = parser._tokenizer
-    howfar = {}
+    howfar: Dict[int, List[tokenize.TokenInfo]] = {}
     pos = len(tokenizer._tokens) - 1
     got = tokenizer._tokens[pos]
     for i in range(limit):
@@ -163,7 +163,7 @@ def recovery_by_insertions(
         parser.reset_farthest(0)
         parser.clear_excess(pos)
         parser.insert_dummy(pos, i)
-        tree = parser.file()
+        tree = parser.start()
         tok = parser.remove_dummy()
         if tok is None:
             break
@@ -196,7 +196,7 @@ def recovery_by_deletions(
         parser.reset_farthest(0)
         parser.clear_excess(pos)
         tok = parser.delete_token(pos)
-        tree = parser.file()
+        tree = parser.start()
         parser.insert_token(pos, tok)
         farthest = parser.reset_farthest(0)
         if farthest > orig_farthest:

@@ -24,10 +24,12 @@ import pprint
 import tokenize
 import traceback
 
+from typing import Dict
+
 from pegen.testutil import recovery_by_insertions, describe_token
 from pegen.tokenizer import Tokenizer
 
-from parse import GeneratedParser
+from parse import GeneratedParser  # type: ignore[attr-defined]
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument(
@@ -77,7 +79,8 @@ def tester(source: str) -> None:
     # 1) Pass it to ast.parse()
     try:
         tree = ast.parse(source)
-    except SyntaxError as err:
+    except SyntaxError as e:
+        err = e
         print("ast.parse():")
         traceback.print_exception(err.__class__, err, None)
     else:
@@ -102,7 +105,7 @@ def tester(source: str) -> None:
         error_correction(parser)
 
 
-def error_correction(parser: GeneratedParser) -> None:
+def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-unimported]
     got, farthest, expected, howfar = recovery_by_insertions(parser)
     if expected:
         print(
