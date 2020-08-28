@@ -21,6 +21,7 @@ import ast
 import io
 import json
 import pprint
+import sys
 import tokenize
 import traceback
 
@@ -65,12 +66,15 @@ def main() -> None:
         print("=====", i, "=====")
         ## pprint.pprint(item)
         print(f"Line {syntax_err_line_no}: {error_type}: {error_message}")
+        print("  +-------------------------")
         print(indent(content, syntax_err_line_no))
+        print("  +-------------------------")
         tester(content)
 
-    print()
-    print("===== errors by type =====")
-    print(error_counts)
+    print("",
+          "===== errors by type =====",
+          error_counts,
+          sep="\n", file=sys.stderr)
 
 
 def tester(source: str) -> None:
@@ -79,10 +83,9 @@ def tester(source: str) -> None:
     # 1) Pass it to ast.parse()
     try:
         tree = ast.parse(source)
-    except SyntaxError as e:
-        err = e
+    except SyntaxError as err:
         print("ast.parse():")
-        traceback.print_exception(err.__class__, err, None)
+        print_exception(err)
     else:
         print("ast.parse(): NO PROBLEM")
 
@@ -91,14 +94,18 @@ def tester(source: str) -> None:
     tokengen = tokenize.generate_tokens(file.readline)
     tokenizer = Tokenizer(tokengen)
     parser = GeneratedParser(tokenizer)
-    tree = parser.file()
+    try:
+        tree = parser.file()
+    except Exception as err:
+        print("our parser crashed:")
+        print_exception(err)
+        return
     if tree:
         print("our parser: NO PROBLEM")
         ## pprint.pprint(tree)
     else:
         print("our parser:")
-        err = parser.make_syntax_error("<string>")
-        traceback.print_exception(err.__class__, err, None)
+        print_exception(parser.make_syntax_error("<string>"))
 
     # 3) Try error correction
     if not tree:
@@ -106,7 +113,12 @@ def tester(source: str) -> None:
 
 
 def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-unimported]
-    got, farthest, expected, howfar = recovery_by_insertions(parser)
+    try:
+        got, farthest, expected, howfar = recovery_by_insertions(parser)
+    except SyntaxError as err:
+        print("error recovery crashed!")
+        print_exception(err)
+        return
     if expected:
         print(
             f"Got {describe_token(got, parser)}, expected one of the following:",
@@ -117,6 +129,10 @@ def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-un
         print("Inserting something didn't help")
 
 
+def print_exception(err: Exception) -> None:
+        traceback.print_exception(err.__class__, err, None, file=sys.stdout)
+
+
 def indent(content: str, lineno: int) -> str:
     lines = content.splitlines()
     indented = []
@@ -124,7 +140,7 @@ def indent(content: str, lineno: int) -> str:
         if i == lineno:
             prefix = "==> "
         else:
-            prefix = "    "
+            prefix = "  | "
         indented.append(prefix + line)
     return "\n".join(indented)
 
