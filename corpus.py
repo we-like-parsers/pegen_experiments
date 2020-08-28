@@ -34,7 +34,10 @@ from parse import GeneratedParser  # type: ignore[attr-defined]
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument(
-    "-n", "--number", type=int, default=10, help="Number of cases to try (default 10; 0=all)"
+    "-n", "--number", type=int, default=1, help="Number of cases to try (default 1; 0=all)"
+)
+argparser.add_argument(
+    "-s", "--start", type=int, default=0, help="First case to try (default 0)"
 )
 argparser.add_argument(
     "-d",
@@ -50,11 +53,15 @@ def main() -> None:
     with open(args.dataset) as f:
         dataset = json.load(f)
     keys = list(dataset)
+    start = args.start
     number = args.number
     if number == 0:
         number = len(keys)
+    number = min(number, len(keys) - start)
+    if number <= 0:
+        sys.exit(f"No cases selected; there are only {len(keys)} cases")
     error_counts: Dict[str, int] = {}
-    for i in range(number):
+    for i in range(start, start + number):
         item = dataset[keys[i]]
         syntax_err_line_no = item["syntax_err_line_no"]
         error_type = item["error_type"]
