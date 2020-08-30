@@ -181,7 +181,10 @@ def build_c_generator(
 
 
 def build_python_generator(
-    grammar: Grammar, grammar_file: str, output_file: str, skip_actions: bool = False,
+    grammar: Grammar,
+    grammar_file: str,
+    output_file: str,
+    skip_actions: bool = False,
 ) -> ParserGenerator:
     with open(output_file, "w") as file:
         gen: ParserGenerator = PythonParserGenerator(grammar, file, skip_actions=skip_actions)
@@ -252,5 +255,10 @@ def build_python_parser_and_generator(
         skip_actions (bool, optional): Whether to pretend no rule has any actions.
     """
     grammar, parser, tokenizer = build_parser(grammar_file, verbose_tokenizer, verbose_parser)
-    gen = build_python_generator(grammar, grammar_file, output_file, skip_actions=skip_actions,)
+    gen = build_python_generator(
+        grammar,
+        grammar_file,
+        output_file,
+        skip_actions=skip_actions,
+    )
     return grammar, parser, tokenizer, gen

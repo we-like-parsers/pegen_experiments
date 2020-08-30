@@ -37,7 +37,9 @@ argparser.add_argument(
     "-v", "--verbose", action="store_true", help="Display detailed errors for failures"
 )
 argparser.add_argument(
-    "--skip-actions", action="store_true", help="Suppress code emission for rule actions",
+    "--skip-actions",
+    action="store_true",
+    help="Suppress code emission for rule actions",
 )
 argparser.add_argument(
     "-t", "--tree", action="count", help="Compare parse tree to official AST", default=0
@@ -79,7 +81,10 @@ def report_status(
 
 
 def compare_trees(
-    actual_tree: ast.AST, file: str, verbose: bool, include_attributes: bool = False,
+    actual_tree: ast.AST,
+    file: str,
+    verbose: bool,
+    include_attributes: bool = False,
 ) -> int:
     with open(file) as f:
         expected_tree = ast.parse(f.read())

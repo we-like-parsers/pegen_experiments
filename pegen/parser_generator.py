@@ -133,13 +133,22 @@ class ParserGenerator:
         self.counter += 1
         extra_function_name = f"_loop0_{self.counter}"
         extra_function_alt = Alt(
-            [NamedItem(None, node.separator), NamedItem("elem", node.node)], action="elem",
+            [NamedItem(None, node.separator), NamedItem("elem", node.node)],
+            action="elem",
         )
         self.todo[extra_function_name] = Rule(
-            extra_function_name, None, Rhs([extra_function_alt]),
+            extra_function_name,
+            None,
+            Rhs([extra_function_alt]),
         )
-        alt = Alt([NamedItem("elem", node.node), NamedItem("seq", NameLeaf(extra_function_name))],)
-        self.todo[name] = Rule(name, None, Rhs([alt]),)
+        alt = Alt(
+            [NamedItem("elem", node.node), NamedItem("seq", NameLeaf(extra_function_name))],
+        )
+        self.todo[name] = Rule(
+            name,
+            None,
+            Rhs([alt]),
+        )
         return name
 
     def dedupe(self, name: str) -> str:

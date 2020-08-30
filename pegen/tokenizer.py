@@ -81,7 +81,7 @@ class Tokenizer:
             raise err
 
     def diagnose(self) -> tokenize.TokenInfo:
-        if  1 <= self._farthest <= len(self._tokens):
+        if 1 <= self._farthest <= len(self._tokens):
             return self._tokens[self._farthest - 1]
         # Fall back on last token seen.  TODO: When does this get called?
         assert False, "Shouldn't get here"
