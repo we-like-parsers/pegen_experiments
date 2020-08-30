@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import io
 import pprint
@@ -7,7 +9,12 @@ import tokenize
 import traceback
 
 from pegen.tokenizer import Tokenizer
-from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error
+from pegen.testutil import (
+    describe_token,
+    make_improved_syntax_error,
+    recovery_by_deletions,
+    recovery_by_insertions,
+)
 
 from parse import GeneratedParser
 
@@ -50,7 +57,7 @@ def main() -> None:
             print("----- improved error -----")
             err = make_improved_syntax_error(parser, filename)
             traceback.print_exception(err.__class__, err, None)
-            print("----- raw error correction -----")
+            print("----- raw error correction by insertion -----")
             got, farthest, expected, howfar = recovery_by_insertions(parser)
             if expected:
                 print(
@@ -58,6 +65,10 @@ def main() -> None:
                     ", ".join(describe_token(tok, parser) for tok in expected),
                     f"[reached {farthest}]",
                 )
+            print("----- raw error correction by deletion -----")
+            results = recovery_by_deletions(parser)
+            for tok, backup, pos, farthest in results:
+                print(f"Excess token {describe_token(tok, parser)} at pos-{backup} deleted")
             sys.exit(1)
     finally:
         if file is not sys.stdin:
