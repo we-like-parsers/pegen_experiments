@@ -7,7 +7,7 @@ import tokenize
 import traceback
 
 from pegen.tokenizer import Tokenizer
-from pegen.testutil import recovery_by_insertions, describe_token
+from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error
 
 from parse import GeneratedParser
 
@@ -44,8 +44,13 @@ def main() -> None:
             traceback.print_exception(err.__class__, err, None)
             sys.exit(1)
         if not tree:
+            print("----- raw error -----")
             err = parser.make_syntax_error(filename)
             traceback.print_exception(err.__class__, err, None)
+            print("----- improved error -----")
+            err = make_improved_syntax_error(parser, filename)
+            traceback.print_exception(err.__class__, err, None)
+            print("----- raw error correction -----")
             got, farthest, expected, howfar = recovery_by_insertions(parser)
             if expected:
                 print(

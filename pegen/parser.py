@@ -180,6 +180,7 @@ class Parser:
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
+        self.get_farthest = self._tokenizer.get_farthest
         self.update_farthest = self._tokenizer.update_farthest
         self.reset_farthest = self._tokenizer.reset_farthest
 

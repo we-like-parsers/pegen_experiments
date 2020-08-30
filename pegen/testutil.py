@@ -156,18 +156,19 @@ def recovery_by_insertions(
 ]:
     tokenizer = parser._tokenizer
     howfar: Dict[int, List[tokenize.TokenInfo]] = {}
-    pos = len(tokenizer._tokens) - 1
+    initial_farthest = parser.get_farthest()
+    pos = initial_farthest - 1
     got = tokenizer._tokens[pos]
     for i in range(limit):
         parser.reset(0)
-        parser.reset_farthest(0)
+        save_farthest = parser.reset_farthest(0)
         parser.clear_excess(pos)
         parser.insert_dummy(pos, i)
         tree = parser.start()
         tok = parser.remove_dummy()
         if tok is None:
             break
-        farthest = parser.reset_farthest(0)
+        farthest = parser.reset_farthest(save_farthest)
         if tree is not None or farthest > pos:
             howfar.setdefault(farthest, []).append(tok)
     else:
@@ -187,8 +188,9 @@ def recovery_by_deletions(
     parser: Parser, limit: int = 2
 ) -> List[Tuple[tokenize.TokenInfo, int, Mark, Mark]]:
     tokenizer = parser._tokenizer
-    orig_pos = len(tokenizer._tokens) - 1
-    orig_farthest = parser.reset_farthest(0)
+    # TODO: Don't use len() here, but somehow use get_farthest.
+    orig_farthest = parser.get_farthest()
+    orig_pos = orig_farthest - 1
     results = []
     for i in range(limit):
         pos = orig_pos - i
@@ -202,3 +204,24 @@ def recovery_by_deletions(
         if farthest > orig_farthest:
             results.append((tok, i, pos, farthest))
     return results
+
+
+def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) -> SyntaxError:
+    err = parser.make_syntax_error(filename)
+
+    if not isinstance(err, SyntaxError):
+        return err
+
+    got, farthest, expected, howfar = recovery_by_insertions(parser, limit=limit)
+
+    if got.type == token.INDENT and len(expected) > 10:  # 10 is pretty arbitrary
+        return IndentationError("unexpected indent", *err.args[1:])
+    if len(expected) == 1 and expected[0].type == token.INDENT:
+        return IndentationError("expected an indented block", *err.args[1:])
+
+    if isinstance(err, SyntaxError) and err.msg == "pegen parse failure":
+        return err.__class__("invalid syntax", *err.args[1:])
+
+    print("TODO:", repr(err.msg))
+
+    return err

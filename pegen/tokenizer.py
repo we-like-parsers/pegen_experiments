@@ -81,6 +81,10 @@ class Tokenizer:
             raise err
 
     def diagnose(self) -> tokenize.TokenInfo:
+        if  1 <= self._farthest <= len(self._tokens):
+            return self._tokens[self._farthest - 1]
+        # Fall back on last token seen.  TODO: When does this get called?
+        assert False, "Shouldn't get here"
         if not self._tokens:
             self.getnext()
         return self._tokens[-1]
@@ -96,6 +100,9 @@ class Tokenizer:
         self._index = index
         if self._verbose:
             self.report(True, index < old_index)
+
+    def get_farthest(self) -> Mark:
+        return self._farthest
 
     def update_farthest(self, farthest: Mark) -> None:
         self._farthest = max(self._farthest, farthest)
