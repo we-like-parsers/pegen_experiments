@@ -311,10 +311,13 @@ class Parser:
 
     def remove_dummy(self) -> Optional[tokenize.TokenInfo]:
         if self._dummy_inserted is None:
-            return None
-        tok = self._tokenizer._tokens[self._dummy_inserted]
-        del self._tokenizer._tokens[self._dummy_inserted]  # TODO: Make an API for this
+            tok = None
+        else:
+            tok = self._tokenizer._tokens[self._dummy_inserted]
+            del self._tokenizer._tokens[self._dummy_inserted]  # TODO: Make an API for this
         self._dummy_inserted = None
+        self._dummy_count = None
+        self._dummy_pos = None
         return tok
 
     def delete_token(self, pos: Mark) -> tokenize.TokenInfo:
