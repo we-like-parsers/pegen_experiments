@@ -235,7 +235,7 @@ def try_our_parser(source: str) -> Tuple[Optional[Exception], GeneratedParser]:
 
 def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-unimported]
     try:
-        got, farthest, expected, howfar = recovery_by_insertions(parser)
+        got, reach, expected, howfar = recovery_by_insertions(parser)
     except SyntaxError as err:
         print("error recovery crashed!")
         print_exception(err)
@@ -244,7 +244,7 @@ def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-un
         print(
             f"Got {describe_token(got, parser)}, expected one of the following:",
             ", ".join(describe_token(tok, parser) for tok in expected),
-            ## f"[reached {farthest}]",
+            ## f"[reached {reach}]",
         )
     else:
         print("Inserting something didn't help")

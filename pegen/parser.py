@@ -49,9 +49,9 @@ def memoize(method: F) -> F:
         key = mark, method_name, args
         # Fast path: cache hit, and not verbose.
         if key in self._cache and not self._verbose:
-            tree, endmark, farthest = self._cache[key]
+            tree, endmark, reach = self._cache[key]
             self.reset(endmark)
-            self.update_farthest(farthest)
+            self.update_reach(reach)
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
@@ -61,21 +61,21 @@ def memoize(method: F) -> F:
             if verbose:
                 print(f"{fill}{method_name}({argsr}) ... (looking at {self.showpeek()})")
             self._level += 1
-            prior_farthest = self.reset_farthest(mark)
+            prior_reach = self.reset_reach(mark)
             tree = method(self, *args)
-            farthest = self.reset_farthest(prior_farthest)
-            self.update_farthest(farthest)
+            reach = self.reset_reach(prior_reach)
+            self.update_reach(reach)
             self._level -= 1
             if verbose:
                 print(f"{fill}... {method_name}({argsr}) -> {tree!s:.200}")
             endmark = self.mark()
-            self._cache[key] = tree, endmark, farthest
+            self._cache[key] = tree, endmark, reach
         else:
-            tree, endmark, farthest = self._cache[key]
+            tree, endmark, reach = self._cache[key]
             if verbose:
                 print(f"{fill}{method_name}({argsr}) -> {tree!s:.200}")
             self.reset(endmark)
-            self.update_farthest(farthest)
+            self.update_reach(reach)
         return tree
 
     memoize_wrapper.__wrapped__ = method  # type: ignore
@@ -91,9 +91,9 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
         key = mark, method_name, ()
         # Fast path: cache hit, and not verbose.
         if key in self._cache and not self._verbose:
-            tree, endmark, farthest = self._cache[key]
+            tree, endmark, reach = self._cache[key]
             self.reset(endmark)
-            self.update_farthest(farthest)
+            self.update_reach(reach)
             return tree
         # Slow path: no cache hit, or verbose.
         verbose = self._verbose
@@ -120,11 +120,11 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
 
             while True:
                 self.reset(mark)
-                prior_farthest = self.reset_farthest(mark)
+                prior_reach = self.reset_reach(mark)
                 result = method(self)
                 endmark = self.mark()
-                farthest = self.reset_farthest(prior_farthest)
-                self.update_farthest(farthest)
+                reach = self.reset_reach(prior_reach)
+                self.update_reach(reach)
                 depth += 1
                 if verbose:
                     print(
@@ -138,10 +138,10 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
                     if verbose:
                         print(f"{fill}Bailing with {lastresult!s:.200} to {lastmark}")
                     break
-                self._cache[key] = lastresult, lastmark, farthest = result, endmark, farthest
+                self._cache[key] = lastresult, lastmark, reach = result, endmark, reach
 
             self.reset(lastmark)
-            self.update_farthest(farthest)
+            self.update_reach(reach)
             tree = lastresult
 
             self._level -= 1
@@ -152,9 +152,9 @@ def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Option
             else:
                 endmark = mark
                 self.reset(endmark)
-            self._cache[key] = tree, endmark, farthest
+            self._cache[key] = tree, endmark, reach
         else:
-            tree, endmark, farthest = self._cache[key]
+            tree, endmark, reach = self._cache[key]
             if verbose:
                 print(f"{fill}{method_name}() -> {tree!s:.200} [fresh]")
             if tree:
@@ -180,9 +180,9 @@ class Parser:
         # TODO: Rename to _mark and _reset.
         self.mark = self._tokenizer.mark
         self.reset = self._tokenizer.reset
-        self.get_farthest = self._tokenizer.get_farthest
-        self.update_farthest = self._tokenizer.update_farthest
-        self.reset_farthest = self._tokenizer.reset_farthest
+        self.get_reach = self._tokenizer.get_reach
+        self.update_reach = self._tokenizer.update_reach
+        self.reset_reach = self._tokenizer.reset_reach
 
     _keywords: Set[str] = set()
 
@@ -273,8 +273,8 @@ class Parser:
         )
 
     def clear_excess(self, pos: Mark) -> None:
-        """Delete cache entries with farthest > pos."""
-        to_delete = [key for key, (tree, mark, farthest) in self._cache.items() if farthest > pos]
+        """Delete cache entries with reach > pos."""
+        to_delete = [key for key, (tree, mark, reach) in self._cache.items() if reach > pos]
         for key in to_delete:
             del self._cache[key]
 

@@ -30,7 +30,7 @@ class Tokenizer:
         self._tokengen = tokengen
         self._tokens = []
         self._index = 0
-        self._farthest = 0
+        self._reach = 0
         self._verbose = verbose
         if verbose:
             self.report(False, False)
@@ -51,7 +51,7 @@ class Tokenizer:
             cached = False
         tok = self._tokens[self._index]
         self._index += 1
-        self._farthest = max(self._farthest, self._index)
+        self._reach = max(self._reach, self._index)
         if self._verbose:
             self.report(cached, False)
         return tok
@@ -68,7 +68,7 @@ class Tokenizer:
             if tok.type == token.ERRORTOKEN and tok.string.isspace():
                 continue
             self._tokens.append(tok)
-        self._farthest = max(self._farthest, self._index + 1)
+        self._reach = max(self._reach, self._index + 1)
         return self._tokens[self._index]
 
     def fix_token_error(self, err: tokenize.TokenError) -> tokenize.TokenInfo:
@@ -83,8 +83,8 @@ class Tokenizer:
             raise err
 
     def diagnose(self) -> tokenize.TokenInfo:
-        if 1 <= self._farthest <= len(self._tokens):
-            return self._tokens[self._farthest - 1]
+        if 1 <= self._reach <= len(self._tokens):
+            return self._tokens[self._reach - 1]
         # Fall back on last token seen.  TODO: When does this get called?
         assert False, "Shouldn't get here"
         if not self._tokens:
@@ -103,16 +103,16 @@ class Tokenizer:
         if self._verbose:
             self.report(True, index < old_index)
 
-    def get_farthest(self) -> Mark:
-        return self._farthest
+    def get_reach(self) -> Mark:
+        return self._reach
 
-    def update_farthest(self, farthest: Mark) -> None:
-        self._farthest = max(self._farthest, farthest)
+    def update_reach(self, reach: Mark) -> None:
+        self._reach = max(self._reach, reach)
 
-    def reset_farthest(self, farthest: Mark) -> Mark:
-        prior_farthest = self._farthest
-        self._farthest = farthest
-        return prior_farthest
+    def reset_reach(self, reach: Mark) -> Mark:
+        prior_reach = self._reach
+        self._reach = reach
+        return prior_reach
 
     def report(self, cached: bool, back: bool) -> None:
         if back:

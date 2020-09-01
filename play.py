@@ -58,16 +58,16 @@ def main() -> None:
             err = make_improved_syntax_error(parser, filename)
             traceback.print_exception(err.__class__, err, None)
             print("----- raw error correction by insertion -----")
-            got, farthest, expected, howfar = recovery_by_insertions(parser)
+            got, reach, expected, howfar = recovery_by_insertions(parser)
             if expected:
                 print(
                     f"Got {describe_token(got, parser)}, expected one of the following:",
                     ", ".join(describe_token(tok, parser) for tok in expected),
-                    f"[reached {farthest}]",
+                    f"[reached {reach}]",
                 )
             print("----- raw error correction by deletion -----")
             results = recovery_by_deletions(parser)
-            for tok, backup, pos, farthest in results:
+            for tok, backup, pos, reach in results:
                 print(f"Excess token {describe_token(tok, parser)} at pos-{backup} deleted")
             sys.exit(1)
     finally:

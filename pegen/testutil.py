@@ -156,41 +156,41 @@ def recovery_by_insertions(
 ]:
     tokenizer = parser._tokenizer
     howfar: Dict[int, List[tokenize.TokenInfo]] = {}
-    initial_farthest = parser.get_farthest()
-    pos = initial_farthest - 1
+    initial_reach = parser.get_reach()
+    pos = initial_reach - 1
     got = tokenizer._tokens[pos]
     for i in range(limit):
         parser.reset(0)
-        save_farthest = parser.reset_farthest(0)
+        save_reach = parser.reset_reach(0)
         parser.clear_excess(pos)
         parser.insert_dummy(pos, i)
         tree = parser.start()
         tok = parser.remove_dummy()
         if tok is None:
             break
-        farthest = parser.reset_farthest(save_farthest)
-        if tree is not None or farthest > pos:
-            howfar.setdefault(farthest, []).append(tok)
+        reach = parser.reset_reach(save_reach)
+        if tree is not None or reach > pos:
+            howfar.setdefault(reach, []).append(tok)
     else:
         # TODO: Don't print
         print(f"Stopped after trying {limit} times")
     if howfar:
         # Only report those tokens that got the farthest
-        farthest = max(howfar)
-        expected = sorted(howfar[farthest])
+        reach = max(howfar)
+        expected = sorted(howfar[reach])
     else:
-        farthest = pos
+        reach = pos
         expected = []
-    return (got, farthest, expected, howfar)
+    return (got, reach, expected, howfar)
 
 
 def recovery_by_deletions(
     parser: Parser, limit: int = 2
 ) -> List[Tuple[tokenize.TokenInfo, int, Mark, Mark]]:
     tokenizer = parser._tokenizer
-    # TODO: Don't use len() here, but somehow use get_farthest.
-    orig_farthest = parser.get_farthest()
-    orig_pos = orig_farthest - 1
+    # TODO: Don't use len() here, but somehow use get_reach.
+    orig_reach = parser.get_reach()
+    orig_pos = orig_reach - 1
     results = []
     for i in range(limit):
         pos = orig_pos - i
@@ -199,15 +199,15 @@ def recovery_by_deletions(
         if parser._tokenizer._tokens[pos].type in (token.ENDMARKER, token.ERRORTOKEN):
             continue
         parser.reset(0)
-        parser.reset_farthest(0)
+        parser.reset_reach(0)
         parser.clear_excess(pos)
         tok = parser.delete_token(pos)
         tree = parser.start()
         parser.insert_token(pos, tok)
-        farthest = parser.reset_farthest(orig_farthest)
+        reach = parser.reset_reach(orig_reach)
         parser.reset(orig_pos)
-        if farthest > orig_farthest:
-            results.append((tok, i, pos, farthest))
+        if reach > orig_reach:
+            results.append((tok, i, pos, reach))
     return results
 
 
@@ -217,7 +217,7 @@ def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) 
     if not isinstance(err, SyntaxError):
         return err
 
-    got, farthest, expected, howfar = recovery_by_insertions(parser, limit=limit)
+    got, reach, expected, howfar = recovery_by_insertions(parser, limit=limit)
 
     if got.type == token.INDENT and len(expected) > 10:  # 10 is pretty arbitrary
         return IndentationError("unexpected indent", *err.args[1:])
@@ -226,8 +226,8 @@ def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) 
 
     deletions = recovery_by_deletions(parser, limit=1)
     if deletions:
-        d_tok, d_index, d_pos, d_farthest = deletions[0]
-        if d_farthest >= farthest:
+        d_tok, d_index, d_pos, d_reach = deletions[0]
+        if d_reach >= reach:
             return err.__class__(f"invalid syntax (unexpected token {describe_token(d_tok, parser)})")
 
     if isinstance(err, SyntaxError) and err.msg == "pegen parse failure":
