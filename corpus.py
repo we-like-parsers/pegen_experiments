@@ -60,6 +60,14 @@ argparser.add_argument(
     help="number of lines of context to show",
 )
 argparser.add_argument(
+    "-x",
+    "--exclude",
+    type=int,
+    nargs="+",
+    default=[],
+    help="Cases to be skipped",
+)
+argparser.add_argument(
     "--verify",
     action="store_true",
     help="Print items in the dataset where ast.parse and the item disagree",
@@ -80,6 +88,7 @@ def main() -> None:
         dataset = json.load(f)
     keys = list(dataset)
     context = args.context
+    exclude = args.exclude
     start = args.start
     number = args.number
     if number == 0:
@@ -90,6 +99,8 @@ def main() -> None:
     skip_counts: Dict[str, int] = {}
     error_counts: Dict[str, int] = {}
     for i in range(start, start + number):
+        if i in exclude:
+            continue
         item = dataset[keys[i]]
         syntax_err_line_no = item["syntax_err_line_no"]
         error_type = item["error_type"]
