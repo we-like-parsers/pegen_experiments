@@ -196,6 +196,8 @@ def recovery_by_deletions(
         pos = orig_pos - i
         if pos < 0:
             break
+        if parser._tokenizer._tokens[pos].type in (token.ENDMARKER, token.ERRORTOKEN):
+            continue
         parser.reset(0)
         parser.reset_farthest(0)
         parser.clear_excess(pos)
