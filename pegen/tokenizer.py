@@ -71,7 +71,7 @@ class Tokenizer:
         self._reach = max(self._reach, self._index + 1)
         return self._tokens[self._index]
 
-    def fix_token_error(self, err: tokenize.TokenError) -> tokenize.TokenInfo:
+    def fix_token_error(self, err: Exception) -> tokenize.TokenInfo:
         msg = err.args[0]
         if msg == "EOF in multi-line statement":
             return tokenize.TokenInfo(token.ENDMARKER, "", (0, 0), (0, 0), "")

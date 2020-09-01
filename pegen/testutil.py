@@ -228,7 +228,9 @@ def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) 
     if deletions:
         d_tok, d_index, d_pos, d_reach = deletions[0]
         if d_reach >= reach:
-            return err.__class__(f"invalid syntax (unexpected token {describe_token(d_tok, parser)})")
+            return err.__class__(
+                f"invalid syntax (unexpected token {describe_token(d_tok, parser)})"
+            )
 
     if isinstance(err, SyntaxError) and err.msg == "pegen parse failure":
         expected_strings = ", ".join([describe_token(tok, parser) for tok in expected])
