@@ -222,9 +222,14 @@ def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) 
     if len(expected) == 1 and expected[0].type == token.INDENT:
         return IndentationError("expected an indented block", *err.args[1:])
 
-    if isinstance(err, SyntaxError) and err.msg == "pegen parse failure":
-        return err.__class__("invalid syntax", *err.args[1:])
+    deletions = recovery_by_deletions(parser, limit=1)
+    if deletions:
+        d_tok, d_index, d_pos, d_farthest = deletions[0]
+        if d_farthest >= farthest:
+            return err.__class__(f"invalid syntax (unexpected token {describe_token(d_tok, parser)})")
 
-    print("TODO:", repr(err.msg))
+    if isinstance(err, SyntaxError) and err.msg == "pegen parse failure":
+        expected_strings = ", ".join([describe_token(tok, parser) for tok in expected])
+        return err.__class__(f"invalid syntax (expected one of {expected_strings})", *err.args[1:])
 
     return err
