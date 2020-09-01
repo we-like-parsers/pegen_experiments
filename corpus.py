@@ -29,10 +29,10 @@ import traceback
 
 from typing import Dict, Optional, Tuple
 
+from data.python_parser import GeneratedParser  # type: ignore[attr-defined]
 from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error
 from pegen.tokenizer import Tokenizer
 
-from parse import GeneratedParser  # type: ignore[attr-defined]
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument(
@@ -223,7 +223,7 @@ def try_our_parser(source: str) -> Tuple[Optional[Exception], GeneratedParser]:
     tokenizer = Tokenizer(tokengen)
     parser = GeneratedParser(tokenizer)
     try:
-        tree = parser.file()
+        tree = parser.start()
     except Exception as err:
         return err, parser
     if tree:

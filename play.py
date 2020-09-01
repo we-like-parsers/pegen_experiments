@@ -8,6 +8,7 @@ import token
 import tokenize
 import traceback
 
+from data.python_parser import GeneratedParser
 from pegen.tokenizer import Tokenizer
 from pegen.testutil import (
     describe_token,
@@ -15,8 +16,6 @@ from pegen.testutil import (
     recovery_by_deletions,
     recovery_by_insertions,
 )
-
-from parse import GeneratedParser
 
 
 # A variation of simple_parser_main() in pegen/parser.py.
@@ -46,7 +45,7 @@ def main() -> None:
         tokenizer = Tokenizer(tokengen)
         parser = GeneratedParser(tokenizer)
         try:
-            tree = parser.file()
+            tree = parser.start()
         except Exception as err:
             traceback.print_exception(err.__class__, err, None)
             sys.exit(1)
