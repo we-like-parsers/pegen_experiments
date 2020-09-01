@@ -41,7 +41,7 @@ class Tokenizer:
         while self._index == len(self._tokens):
             try:
                 tok = next(self._tokengen)
-            except tokenize.TokenError as err:
+            except (IndentationError, tokenize.TokenError) as err:
                 tok = self.fix_token_error(err)
             if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
@@ -61,7 +61,7 @@ class Tokenizer:
         while self._index == len(self._tokens):
             try:
                 tok = next(self._tokengen)
-            except tokenize.TokenError as err:
+            except (IndentationError, tokenize.TokenError) as err:
                 tok = self.fix_token_error(err)
             if tok.type in (tokenize.NL, tokenize.COMMENT):
                 continue
@@ -76,6 +76,8 @@ class Tokenizer:
         if msg == "EOF in multi-line statement":
             return tokenize.TokenInfo(token.ENDMARKER, "", (0, 0), (0, 0), "")
         elif msg == "EOF in multi-line string":
+            return tokenize.TokenInfo(token.ERRORTOKEN, "", (0, 0), (0, 0), "")
+        elif msg == "unindent does not match any outer indentation level":
             return tokenize.TokenInfo(token.ERRORTOKEN, "", (0, 0), (0, 0), "")
         else:
             raise err
