@@ -51,6 +51,13 @@ argparser.add_argument(
     help="JSON file containing the dataset (default data/parse_errors.json)",
 )
 argparser.add_argument(
+    "-c",
+    "--context",
+    type=int,
+    default=5,
+    help="number of lines of context to show",
+)
+argparser.add_argument(
     "--verify",
     action="store_true",
     help="Print items in the dataset where ast.parse and the item disagree",
@@ -70,6 +77,7 @@ def main() -> None:
     with open(args.dataset) as f:
         dataset = json.load(f)
     keys = list(dataset)
+    context = args.context
     start = args.start
     number = args.number
     if number == 0:
@@ -103,7 +111,7 @@ def main() -> None:
         ## pprint.pprint(item)
         print(f"Line {syntax_err_line_no}: {error_type}: {error_message}")
         print("  +-------------------------")
-        print(indent(content, syntax_err_line_no))
+        print(indent(content, syntax_err_line_no, context))
         print("  +-------------------------")
         tester(content, try_ours=(not args.verify))
         print()
@@ -244,7 +252,7 @@ def print_exception(err: Exception) -> None:
     traceback.print_exception(err.__class__, err, None, file=sys.stdout)
 
 
-def indent(content: str, lineno: int) -> str:
+def indent(content: str, lineno: int, context: int) -> str:
     lines = content.splitlines()
     indented = []
     for i, line in enumerate(lines, 1):
@@ -253,6 +261,12 @@ def indent(content: str, lineno: int) -> str:
         else:
             prefix = "  | "
         indented.append(prefix + line)
+    if len(indented) > lineno + context + 2:
+        del indented[lineno + context :]
+        indented.append("  ...")
+    if lineno > context + 2:
+        del indented[: lineno - context - 1]
+        indented.insert(0, "  ...")
     return "\n".join(indented)
 
 
