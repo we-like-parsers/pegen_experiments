@@ -155,7 +155,7 @@ def recovery_by_insertions(
     tokenize.TokenInfo, Mark, List[tokenize.TokenInfo], Dict[Mark, List[tokenize.TokenInfo]]
 ]:
     tokenizer = parser._tokenizer
-    howfar: Dict[int, List[tokenize.TokenInfo]] = {}
+    howfar: Dict[Mark, List[tokenize.TokenInfo]] = {}
     initial_reach = parser.get_reach()
     pos = initial_reach - 1
     got = tokenizer._tokens[pos]
@@ -211,7 +211,9 @@ def recovery_by_deletions(
     return results
 
 
-def make_improved_syntax_error(parser: Parser, filename: str, limit: int = 100) -> SyntaxError:
+def make_improved_syntax_error(
+    parser: Parser, filename: str = "<unknown>", *, limit: int = 100
+) -> SyntaxError:
     err = parser.make_syntax_error(filename)
 
     if not isinstance(err, SyntaxError):
