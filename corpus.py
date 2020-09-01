@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Play with a corpus of syntax errors.
 #
 # Corpus: https://doi.org/10.6084/m9.figshare.8244686.v1
