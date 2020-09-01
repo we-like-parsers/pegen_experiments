@@ -194,13 +194,16 @@ def recovery_by_deletions(
     results = []
     for i in range(limit):
         pos = orig_pos - i
+        if pos < 0:
+            break
         parser.reset(0)
         parser.reset_farthest(0)
         parser.clear_excess(pos)
         tok = parser.delete_token(pos)
         tree = parser.start()
         parser.insert_token(pos, tok)
-        farthest = parser.reset_farthest(0)
+        farthest = parser.reset_farthest(orig_farthest)
+        parser.reset(orig_pos)
         if farthest > orig_farthest:
             results.append((tok, i, pos, farthest))
     return results
