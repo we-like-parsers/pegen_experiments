@@ -27,7 +27,7 @@ import traceback
 
 from typing import Dict, Optional, Tuple
 
-from pegen.testutil import recovery_by_insertions, describe_token
+from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error
 from pegen.tokenizer import Tokenizer
 
 from parse import GeneratedParser  # type: ignore[attr-defined]
@@ -228,7 +228,7 @@ def try_our_parser(source: str) -> Tuple[Optional[Exception], GeneratedParser]:
         ## pprint.pprint(tree)
         return None, parser
     else:
-        return parser.make_syntax_error("<string>"), parser
+        return make_improved_syntax_error(parser, "<string>"), parser
 
 
 def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-unimported]
