@@ -111,7 +111,7 @@ def test_bad_unindent_during_recovery() -> None:
 
 
 def test_unexpected_eof_during_recovery() -> None:
-    # Catch TokenError("EOF in multi-line statement") raised in tokenizer.py
+    # Catch TokenError("EOF in multi-line statement") raised in tokenize.py
     # (this really means "not enough close parentheses")
     parser = make_parser("{")
     parser.start()
@@ -119,7 +119,17 @@ def test_unexpected_eof_during_recovery() -> None:
 
 
 def test_eof_in_multiline_string_during_recovery() -> None:
-    # Catch TokenError("EOF in multi-line string") raised in tokenizer.py
+    # Catch TokenError("EOF in multi-line string") raised in tokenize.py
     parser = make_parser("'''")
+    parser.start()
+    err = make_improved_syntax_error(parser)
+
+
+def test_very_long_arg_list() -> None:
+    # This raises RecursionError for n >= 222
+    n = 221
+    args = ", ".join(map(str, range(n)))
+    source = f"A({args})"
+    parser = make_parser(source)
     parser.start()
     err = make_improved_syntax_error(parser)
