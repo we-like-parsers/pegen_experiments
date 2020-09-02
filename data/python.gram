@@ -27,7 +27,7 @@ _PyPegen_parse(Parser *p)
 
 // The end
 '''
-start: file
+start: file  # CHANGED: Not present in the original
 
 file[mod_ty]: a=[statements] ENDMARKER { _PyPegen_make_module(p, a) }
 interactive[mod_ty]: a=statement_newline { Interactive(a, p->arena) }
@@ -536,23 +536,13 @@ yield_expr[expr_ty]:
 arguments[expr_ty] (memo):
     | a=args [','] &')' { a }
     | incorrect_arguments
+# CHANGED
 args[expr_ty]:
-    | a=starred_expression b=[',' c=args { c }] {
-        _Py_Call(_PyPegen_dummy_name(p),
-                 (b) ? CHECK(_PyPegen_seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
-                     : CHECK(_PyPegen_singleton_seq(p, a)),
-                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
-                 EXTRA) }
+    | ','.(starred_expression | named_expression !'=')+ [',' kwargs] { XXX }
     | a=kwargs { _Py_Call(_PyPegen_dummy_name(p),
                           CHECK_NULL_ALLOWED(_PyPegen_seq_extract_starred_exprs(p, a)),
                           CHECK_NULL_ALLOWED(_PyPegen_seq_delete_starred_exprs(p, a)),
                           EXTRA) }
-    | a=named_expression b=[',' c=args { c }] {
-        _Py_Call(_PyPegen_dummy_name(p),
-                 (b) ? CHECK(_PyPegen_seq_insert_in_front(p, a, ((expr_ty) b)->v.Call.args))
-                     : CHECK(_PyPegen_singleton_seq(p, a)),
-                 (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
-                 EXTRA) }
 kwargs[asdl_seq*]:
     | a=','.kwarg_or_starred+ ',' b=','.kwarg_or_double_starred+ { _PyPegen_join_sequences(p, a, b) }
     | ','.kwarg_or_starred+

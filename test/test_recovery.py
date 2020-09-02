@@ -126,8 +126,8 @@ def test_eof_in_multiline_string_during_recovery() -> None:
 
 
 def test_very_long_arg_list() -> None:
-    # This raises RecursionError for n >= 222
-    n = 221
+    # This used to raise RecursionError for n >= 222
+    n = 1000
     args = ", ".join(map(str, range(n)))
     source = f"A({args})"
     parser = make_parser(source)
