@@ -22,6 +22,7 @@ from pegen.testutil import (
 def main() -> None:
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-c", dest="command", help="command to run (default read a file)")
+    argparser.add_argument("-n", dest="nope", action="store_true", help="don't print AST")
     argparser.add_argument("filename", nargs="?", help="Input file ('-' to use stdin)")
 
     args = argparser.parse_args()
@@ -73,7 +74,8 @@ def main() -> None:
         if file is not sys.stdin:
             file.close()
 
-    pprint.pprint(tree, indent=2)
+    if not args.nope:
+        pprint.pprint(tree, indent=2)
 
 
 if __name__ == "__main__":
