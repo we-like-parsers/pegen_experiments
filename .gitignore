@@ -11,5 +11,7 @@ data/pypi/
 .mypy_cache
 .pytest_cache
 .envrc
+.vscode
 requirements-local.*
 cpython
+dset.db
