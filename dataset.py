@@ -5,6 +5,7 @@
 import argparse
 import ast
 import json
+from pegen.testutil import try_our_parser
 import sqlite3
 from typing import *
 
@@ -22,11 +23,16 @@ tags text
 """
 schema_items = [x.strip() for x in schema_str.split(",")]
 schema_pairs = [x.split(None, 1) for x in schema_items]
+
 more_schema_str = """
 ast_syntax_err_line_no integer,
 ast_syntax_err_offset integer,
 ast_error_type text,
-ast_error_message text
+ast_error_message text,
+pegen_syntax_err_line_no integer,
+pegen_syntax_err_offset integer,
+pegen_error_type text,
+pegen_error_message text
 """
 more_schema_items = [x.strip() for x in more_schema_str.split(",")]
 more_schema_pairs = [x.split(None, 1) for x in more_schema_items]
@@ -90,7 +96,8 @@ def print_record(record: Optional[sqlite3.Row], uid: Optional[str] = None) -> No
         else:
             print(f"Nothing")
     else:
-        for name, field in zip(record.keys(), record):  # type: ignore [no-untyped-call]
+        keys: List[str] = record.keys()  # type: ignore [no-untyped-call]
+        for name, field in zip(keys, record):
             if field is not None:
                 print(f"{name} --> {field!r:.100}")
 
@@ -125,15 +132,12 @@ def reload_main(args: argparse.Namespace) -> None:
 
 def validate_main(args: argparse.Namespace) -> None:
     db = DatasetDB()
-    uids = db.execute(
-        f"SELECT uid FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
+    records = db.execute(
+        f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
     )
     count = 0
-    for [uid] in uids:  # TODO: just get all the records
-        record = db.get_record(uid)
-        if record is None:
-            print(f"No record for {uid}")
-            continue
+    for record in records:
+        uid = record["uid"]
         try:
             ast.parse(record["content"])
         except SyntaxError as err:
@@ -167,14 +171,64 @@ def validate_main(args: argparse.Namespace) -> None:
         print(f"Validated {count} records")
 
 
-def print_main(args: argparse.Namespace) -> None:
+def pegen_main(args: argparse.Namespace) -> None:
     db = DatasetDB()
-    uids = db.execute(
-        f"SELECT uid FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
+    records = db.execute(
+        f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
     )
     count = 0
-    for [uid] in uids:
-        record = db.get_record(uid)
+    for record in records:
+        uid = record["uid"]
+        err, parser = try_our_parser(record["content"])
+        if err is None:
+            db.update_record(
+                uid,
+                dict(
+                    pegen_error_type="",
+                    pegen_error_message="",
+                    pegen_syntax_err_line_no=0,
+                    pegen_syntax_err_offset=0,
+                ),
+            )
+        elif isinstance(err, SyntaxError):
+            db.update_record(
+                uid,
+                dict(
+                    pegen_error_type=err.__class__.__name__,
+                    pegen_error_message=err.msg,
+                    pegen_syntax_err_line_no=err.lineno,
+                    pegen_syntax_err_offset=err.offset,
+                ),
+            )
+        else:
+            db.update_record(
+                uid,
+                dict(
+                    pegen_error_type=err.__class__.__name__,
+                    pegen_error_message=err.args[0],
+                    pegen_syntax_err_line_no=0,
+                    pegen_syntax_err_offset=0,
+                ),
+            )
+        if args.print:
+            print_record(db.get_record(uid))
+        count += 1
+    db.commit()  # TODO: If it's a large number, commit batches?
+    if not count:
+        print(f"Nothing to validate at offset {args.start}")
+    else:
+        print()
+        print(f"Validated {count} records")
+
+
+def print_main(args: argparse.Namespace) -> None:
+    db = DatasetDB()
+    records = db.execute(
+        f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
+    )
+    count = 0
+    for record in records:
+        uid = record["uid"]
         print_record(record, uid)
         count += 1
     if not count:
@@ -220,6 +274,12 @@ validate_parser.add_argument("-n", "--number", type=int, default=1)
 validate_parser.add_argument("-p", "--print", action="store_true")
 validate_parser.set_defaults(func=validate_main)
 
+pegen_parser = sub.add_parser("pegen", aliases=["peg", "g"])
+pegen_parser.add_argument("-s", "--start", type=int, default=0)
+pegen_parser.add_argument("-n", "--number", type=int, default=1)
+pegen_parser.add_argument("-p", "--print", action="store_true")
+pegen_parser.set_defaults(func=pegen_main)
+
 print_parser = sub.add_parser("print", aliases=["p"])
 print_parser.add_argument("-s", "--start", type=int, default=0)
 print_parser.add_argument("-n", "--number", type=int, default=1)
@@ -235,6 +295,8 @@ query_parser.set_defaults(func=query_main)
 
 def main() -> None:
     args = argv_parser.parse_args()
+    if args.number == 0:
+        args.number = 999999999
     args.func(args)
 
 
