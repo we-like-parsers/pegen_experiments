@@ -7,6 +7,7 @@ import sys
 import token
 import tokenize
 import traceback
+from typing import TextIO
 
 from data.python_parser import GeneratedParser
 from pegen.tokenizer import Tokenizer
@@ -31,7 +32,7 @@ def main() -> None:
         if args.filename:
             argparser.error("Use either -c or filename, not both")
         filename = "<string>"
-        file = io.StringIO(command)
+        file: TextIO = io.StringIO(command)
     else:
         filename = args.filename
         if not filename:
@@ -47,8 +48,8 @@ def main() -> None:
         parser = GeneratedParser(tokenizer)
         try:
             tree = parser.start()
-        except Exception as err:
-            traceback.print_exception(err.__class__, err, None)
+        except Exception as e:
+            traceback.print_exception(e.__class__, e, None)
             sys.exit(1)
         if not tree:
             print("----- raw error -----")
