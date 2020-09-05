@@ -167,6 +167,7 @@ def recovery_by_insertions(
         tree = parser.start()
         tok = parser.remove_dummy()
         if tok is None:
+            print(f"Break after {i+1} iterations")
             break
         reach = parser.reset_reach(save_reach)
         if tree is not None or reach > pos:
