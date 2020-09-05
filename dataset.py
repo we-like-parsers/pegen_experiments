@@ -137,17 +137,13 @@ def validate_main(args: argparse.Namespace) -> None:
         try:
             ast.parse(record["content"])
         except SyntaxError as err:
-            ast_error_type = err.__class__.__name__
-            ast_error_message = err.msg
-            ast_syntax_err_line_no = err.lineno
-            ast_syntax_err_offset = err.offset
             db.update_record(
                 uid,
                 dict(
-                    ast_error_type=ast_error_type,
-                    ast_error_message=ast_error_message,
-                    ast_syntax_err_line_no=ast_syntax_err_line_no,
-                    ast_syntax_err_offset=ast_syntax_err_offset,
+                    ast_error_type=err.__class__.__name__,
+                    ast_error_message=err.msg,
+                    ast_syntax_err_line_no=err.lineno,
+                    ast_syntax_err_offset=err.offset,
                 ),
             )
         else:
@@ -188,6 +184,22 @@ def print_main(args: argparse.Namespace) -> None:
         print(f"Printed {count} records")
 
 
+def query_main(args: argparse.Namespace) -> None:
+    db = DatasetDB()
+    records = db.execute(
+        f"SELECT {args.what} FROM dataset WHERE {args.query} ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
+    )
+    count = 0
+    for record in records:
+        print_record(record)
+        count += 1
+    if not count:
+        print(f"No query results at offset {args.start}")
+    else:
+        print()
+        print(f"Printed {count} query results")
+
+
 argv_parser = argparse.ArgumentParser()
 sub = argv_parser.add_subparsers(dest="sub̊command", required=True)
 
@@ -212,6 +224,13 @@ print_parser = sub.add_parser("print", aliases=["p"])
 print_parser.add_argument("-s", "--start", type=int, default=0)
 print_parser.add_argument("-n", "--number", type=int, default=1)
 print_parser.set_defaults(func=print_main)
+
+query_parser = sub.add_parser("query", aliases=["q"])
+query_parser.add_argument("-s", "--start", type=int, default=0)
+query_parser.add_argument("-n", "--number", type=int, default=1)
+query_parser.add_argument("-w", "--what", default="*")
+query_parser.add_argument("query", nargs="?", default="TRUE")
+query_parser.set_defaults(func=query_main)
 
 
 def main() -> None:
