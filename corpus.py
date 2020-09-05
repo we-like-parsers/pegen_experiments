@@ -30,7 +30,7 @@ import traceback
 from typing import Dict, Optional, Tuple
 
 from data.python_parser import GeneratedParser  # type: ignore[attr-defined]
-from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error
+from pegen.testutil import recovery_by_insertions, describe_token, make_improved_syntax_error, try_our_parser
 from pegen.tokenizer import Tokenizer
 
 
@@ -226,22 +226,6 @@ def try_ast_parse(source: str) -> Optional[Exception]:
         return err
     else:
         return None
-
-
-def try_our_parser(source: str) -> Tuple[Optional[Exception], GeneratedParser]:
-    file = io.StringIO(source)
-    tokengen = tokenize.generate_tokens(file.readline)
-    tokenizer = Tokenizer(tokengen)
-    parser = GeneratedParser(tokenizer)
-    try:
-        tree = parser.start()
-    except Exception as err:
-        return err, parser
-    if tree:
-        ## pprint.pprint(tree)
-        return None, parser
-    else:
-        return make_improved_syntax_error(parser, "<string>"), parser
 
 
 def error_correction(parser: GeneratedParser) -> None:  # type: ignore[no-any-unimported]

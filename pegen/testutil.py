@@ -7,7 +7,7 @@ import textwrap
 import tokenize
 import token
 
-from typing import Any, cast, Dict, Final, IO, List, Tuple, Type
+from typing import Any, cast, Dict, Final, IO, List, Optional, Tuple, Type
 
 from pegen.build import compile_c_extension
 from pegen.c_generator import CParserGenerator
@@ -16,6 +16,8 @@ from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.parser import Parser
 from pegen.python_generator import PythonParserGenerator
 from pegen.tokenizer import Mark, Tokenizer
+
+from data.python_parser import GeneratedParser  # type: ignore[import]
 
 ALL_TOKENS = token.tok_name
 EXACT_TOKENS = token.EXACT_TOKEN_TYPES  # type: ignore
@@ -167,14 +169,14 @@ def recovery_by_insertions(
         tree = parser.start()
         tok = parser.remove_dummy()
         if tok is None:
-            print(f"Break after {i+1} iterations")
+            ## print(f"Break after {i+1} iterations")
             break
         reach = parser.reset_reach(save_reach)
         if tree is not None or reach > pos:
             howfar.setdefault(reach, []).append(tok)
     else:
-        # TODO: Don't print
-        print(f"Stopped after trying {limit} times")
+        ## print(f"Stopped after trying {limit} times")
+        pass
     if howfar:
         # Only report those tokens that got the farthest
         reach = max(howfar)
@@ -240,3 +242,19 @@ def make_improved_syntax_error(
         return err.__class__(f"invalid syntax (expected one of {expected_strings})", *err.args[1:])
 
     return err
+
+
+def try_our_parser(source: str) -> Tuple[Optional[Exception], Parser]:
+    file = io.StringIO(source)
+    tokengen = tokenize.generate_tokens(file.readline)
+    tokenizer = Tokenizer(tokengen)
+    parser = GeneratedParser(tokenizer)
+    try:
+        tree = parser.start()
+    except Exception as err:
+        return err, parser
+    if tree:
+        ## import pprint; pprint.pprint(tree)
+        return None, parser
+    else:
+        return make_improved_syntax_error(parser, "<string>"), parser
