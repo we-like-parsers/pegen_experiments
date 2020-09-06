@@ -179,6 +179,10 @@ def pegen_main(args: argparse.Namespace) -> None:
     count = 0
     for record in records:
         uid = record["uid"]
+        if args.lazy and record["pegen_error_type"] is not None:
+            if args.print:
+                print(f"Skipping uid {uid}, already parsed")
+            continue
         err, parser = try_our_parser(record["content"])
         if err is None:
             db.update_record(
@@ -215,10 +219,10 @@ def pegen_main(args: argparse.Namespace) -> None:
         count += 1
     db.commit()  # TODO: If it's a large number, commit batches?
     if not count:
-        print(f"Nothing to validate at offset {args.start}")
+        print(f"Nothing to parse at offset {args.start}")
     else:
         print()
-        print(f"Validated {count} records")
+        print(f"Parsed {count} records")
 
 
 def print_main(args: argparse.Namespace) -> None:
@@ -278,6 +282,7 @@ pegen_parser = sub.add_parser("pegen", aliases=["peg", "g"])
 pegen_parser.add_argument("-s", "--start", type=int, default=0)
 pegen_parser.add_argument("-n", "--number", type=int, default=1)
 pegen_parser.add_argument("-p", "--print", action="store_true")
+pegen_parser.add_argument("-l", "--lazy", action="store_true")
 pegen_parser.set_defaults(func=pegen_main)
 
 print_parser = sub.add_parser("print", aliases=["p"])
