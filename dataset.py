@@ -7,6 +7,8 @@ import ast
 import json
 from pegen.testutil import try_our_parser
 import sqlite3
+import sys
+import time
 from typing import *
 
 
@@ -176,14 +178,22 @@ def pegen_main(args: argparse.Namespace) -> None:
     records = db.execute(
         f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
     )
-    count = 0
+    skipped = 0
+    parsed = 0
     for record in records:
         uid = record["uid"]
+        print(f"\r{skipped:10d} skipped; {parsed:10d} parsed; next: {uid:<10s}", end="", flush=True, file=sys.stderr)
         if args.lazy and record["pegen_error_type"] is not None:
             if args.print:
+                print(file=sys.stderr)
                 print(f"Skipping uid {uid}, already parsed")
+            skipped += 1
             continue
+        t0 = time.time()
         err, parser = try_our_parser(record["content"])
+        dt = time.time() - t0
+        if dt > 0.1:
+            print(f"took {dt:.3f} seconds", file=sys.stderr)  # Show uid of slow records
         if err is None:
             db.update_record(
                 uid,
@@ -215,14 +225,14 @@ def pegen_main(args: argparse.Namespace) -> None:
                 ),
             )
         if args.print:
+            print(file=sys.stderr)
             print_record(db.get_record(uid))
-        count += 1
+        parsed += 1
+        if parsed % 100 == 0:
+            print("committing", file=sys.stderr)
+            db.commit()
+    print(f"\r{skipped:10d} skipped; {parsed:10d} parsed" + " "*20, file=sys.stderr)
     db.commit()  # TODO: If it's a large number, commit batches?
-    if not count:
-        print(f"Nothing to parse at offset {args.start}")
-    else:
-        print()
-        print(f"Parsed {count} records")
 
 
 def print_main(args: argparse.Namespace) -> None:
