@@ -90,7 +90,7 @@ class DatasetDB:
         self.execute(f"UPDATE dataset SET {set_stuff} WHERE uid = (?)", values_stuff)
 
 
-def print_record(record: Optional[sqlite3.Row], uid: Optional[str] = None) -> None:
+def print_record(record: Optional[sqlite3.Row], uid: Optional[str] = None, verbose: bool = False) -> None:
     print("-" * 72)
     if record is None:
         if uid:
@@ -101,7 +101,15 @@ def print_record(record: Optional[sqlite3.Row], uid: Optional[str] = None) -> No
         keys: List[str] = record.keys()  # type: ignore [no-untyped-call]
         for name, field in zip(keys, record):
             if field is not None:
-                print(f"{name} --> {field!r:.100}")
+                if verbose:
+                    if isinstance(field, str) and "\n" in field:
+                        print(f"{name} --> '''\\")
+                        print(field)
+                        print("'''")
+                    else:
+                        print(f"{name} --> {field!r}")
+                else:
+                    print(f"{name} --> {field!r:.100}")
 
 
 def clear_main(args: argparse.Namespace) -> None:
@@ -237,13 +245,17 @@ def pegen_main(args: argparse.Namespace) -> None:
 
 def print_main(args: argparse.Namespace) -> None:
     db = DatasetDB()
-    records = db.execute(
-        f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
-    )
+    if args.uid:
+        sql = "SELECT * FROM dataset WHERE uid = ?"
+        values = [args.uid]
+    else:
+        sql = f"SELECT * FROM dataset ORDER BY uid ASC LIMIT {args.number} OFFSET {args.start}"
+        values = []
+    records = db.execute(sql, values)
     count = 0
     for record in records:
         uid = record["uid"]
-        print_record(record, uid)
+        print_record(record, uid, verbose=args.verbose or bool(args.uid))
         count += 1
     if not count:
         print(f"Nothing to print at offset {args.start}")
@@ -298,6 +310,8 @@ pegen_parser.set_defaults(func=pegen_main)
 print_parser = sub.add_parser("print", aliases=["p"])
 print_parser.add_argument("-s", "--start", type=int, default=0)
 print_parser.add_argument("-n", "--number", type=int, default=1)
+print_parser.add_argument("-u", "--uid")
+print_parser.add_argument("-v", "--verbose", action="store_true")
 print_parser.set_defaults(func=print_main)
 
 query_parser = sub.add_parser("query", aliases=["q"])
