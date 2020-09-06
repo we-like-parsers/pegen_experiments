@@ -17,11 +17,11 @@ uid text UNIQUE,
 content text,
 length integer,
 line_count integer,
-syntax_err_line_no integer,
-syntax_err_offset integer,
+tags text,
 error_type text,
 error_message text,
-tags text
+syntax_err_line_no integer,
+syntax_err_offset integer
 """
 schema_items = [x.strip() for x in schema_str.split(",")]
 schema_pairs = [x.split(None, 1) for x in schema_items]
@@ -31,10 +31,10 @@ ast_syntax_err_line_no integer,
 ast_syntax_err_offset integer,
 ast_error_type text,
 ast_error_message text,
-pegen_syntax_err_line_no integer,
-pegen_syntax_err_offset integer,
 pegen_error_type text,
-pegen_error_message text
+pegen_error_message text,
+pegen_syntax_err_line_no integer,
+pegen_syntax_err_offset integer
 """
 more_schema_items = [x.strip() for x in more_schema_str.split(",")]
 more_schema_pairs = [x.split(None, 1) for x in more_schema_items]
@@ -89,8 +89,29 @@ class DatasetDB:
         values_stuff.append(uid)
         self.execute(f"UPDATE dataset SET {set_stuff} WHERE uid = (?)", values_stuff)
 
+    def update_exception(
+        self,
+        prefix: str,
+        uid: str,
+        error_type: str,
+        error_message: str,
+        syntax_err_line_no: int,
+        syntax_err_offset: int,
+    ) -> None:
+        if prefix:
+            prefix += "_"
+        data = {
+            prefix + "error_type": error_type,
+            prefix + "error_message": error_message,
+            prefix + "syntax_err_line_no": syntax_err_line_no,
+            prefix + "syntax_err_offset": syntax_err_offset,
+        }
+        self.update_record(uid, data)
 
-def print_record(record: Optional[sqlite3.Row], uid: Optional[str] = None, verbose: bool = False) -> None:
+
+def print_record(
+    record: Optional[sqlite3.Row], uid: Optional[str] = None, verbose: bool = False
+) -> None:
     print("-" * 72)
     if record is None:
         if uid:
@@ -151,25 +172,11 @@ def validate_main(args: argparse.Namespace) -> None:
         try:
             ast.parse(record["content"])
         except SyntaxError as err:
-            db.update_record(
-                uid,
-                dict(
-                    ast_error_type=err.__class__.__name__,
-                    ast_error_message=err.msg,
-                    ast_syntax_err_line_no=err.lineno,
-                    ast_syntax_err_offset=err.offset,
-                ),
+            db.update_exception(
+                "ast", uid, err.__class__.__name__, err.msg, err.lineno or 0, err.offset or 0
             )
         else:
-            db.update_record(
-                uid,
-                dict(
-                    ast_error_type="",
-                    ast_error_message="",
-                    ast_syntax_err_line_no=0,
-                    ast_syntax_err_offset=0,
-                ),
-            )
+            db.update_exception("ast", uid, "", "", 0, 0)
         if args.print:
             print_record(db.get_record(uid))
         count += 1
@@ -190,7 +197,12 @@ def pegen_main(args: argparse.Namespace) -> None:
     parsed = 0
     for record in records:
         uid = record["uid"]
-        print(f"\r{skipped:10d} skipped; {parsed:10d} parsed; next: {uid:<10s}", end="", flush=True, file=sys.stderr)
+        print(
+            f"\r{skipped:10d} skipped; {parsed:10d} parsed; next: {uid:<10s}",
+            end="",
+            flush=True,
+            file=sys.stderr,
+        )
         if args.lazy and record["pegen_error_type"] is not None:
             if args.print:
                 print(file=sys.stderr)
@@ -203,34 +215,24 @@ def pegen_main(args: argparse.Namespace) -> None:
         if dt > 0.1:
             print(f"took {dt:.3f} seconds", file=sys.stderr)  # Show uid of slow records
         if err is None:
-            db.update_record(
-                uid,
-                dict(
-                    pegen_error_type="",
-                    pegen_error_message="",
-                    pegen_syntax_err_line_no=0,
-                    pegen_syntax_err_offset=0,
-                ),
-            )
+            db.update_exception("pegen", uid, "", "", 0, 0)
         elif isinstance(err, SyntaxError):
-            db.update_record(
+            db.update_exception(
+                "pegen",
                 uid,
-                dict(
-                    pegen_error_type=err.__class__.__name__,
-                    pegen_error_message=err.msg,
-                    pegen_syntax_err_line_no=err.lineno,
-                    pegen_syntax_err_offset=err.offset,
-                ),
+                err.__class__.__name__,
+                err.msg,
+                err.lineno or 0,
+                err.offset or 0,
             )
         else:
-            db.update_record(
+            db.update_exception(
+                "pegen",
                 uid,
-                dict(
-                    pegen_error_type=err.__class__.__name__,
-                    pegen_error_message=err.args[0],
-                    pegen_syntax_err_line_no=0,
-                    pegen_syntax_err_offset=0,
-                ),
+                err.__class__.__name__,
+                err.args[0],
+                0,
+                0,
             )
         if args.print:
             print(file=sys.stderr)
@@ -239,7 +241,7 @@ def pegen_main(args: argparse.Namespace) -> None:
         if parsed % 100 == 0:
             print("committing", file=sys.stderr)
             db.commit()
-    print(f"\r{skipped:10d} skipped; {parsed:10d} parsed" + " "*20, file=sys.stderr)
+    print(f"\r{skipped:10d} skipped; {parsed:10d} parsed" + " " * 20, file=sys.stderr)
     db.commit()  # TODO: If it's a large number, commit batches?
 
 
