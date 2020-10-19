@@ -1,5 +1,3 @@
-# type: ignore
-
 """
 Copy-parse of ast.dump, removing the `isinstance` checks. This is needed,
 because testing pegen requires generating a C extension module, which contains
@@ -7,10 +5,18 @@ a copy of the symbols defined in Python-ast.c. Thus, the isinstance check would
 always fail. We rely on string comparison of the base classes instead.
 TODO: Remove the above-described hack.
 """
+from _ast import Module
+from typing import Optional, Tuple
 
 
-def ast_dump(node, annotate_fields=True, include_attributes=False, *, indent=None):
-    def _format(node, level=0):
+def ast_dump(
+    node: Module,
+    annotate_fields: bool = True,
+    include_attributes: bool = False,
+    *,
+    indent: Optional[str] = None,
+) -> str:
+    def _format(node: Module, level: int = 0) -> Tuple[str, bool]:
         if indent is not None:
             level += 1
             prefix = "\n" + indent * level

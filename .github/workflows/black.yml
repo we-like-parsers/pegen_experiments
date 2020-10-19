@@ -27,4 +27,4 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install -r requirements-test.pip
     - name: Find formatting errors with black
-      run: black pegen tatsu test scripts --check
+      run: black pegen tatsu tests scripts --check

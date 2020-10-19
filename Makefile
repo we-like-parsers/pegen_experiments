@@ -103,7 +103,7 @@ mypy: regen-metaparser
 black: format-python
 
 format-python:
-	black pegen tatsu test scripts
+	black pegen tatsu tests scripts
 
 bench: cpython
 	$(MAKE) -s test_global 2>/dev/null
@@ -136,5 +136,5 @@ find_max_nesting:
 
 tags: TAGS
 
-TAGS: pegen/*.py test/test_pegen.py
-	etags pegen/*.py test/test_pegen.py
+TAGS: pegen/*.py tests/test_pegen.py
+	etags pegen/*.py tests/test_pegen.py

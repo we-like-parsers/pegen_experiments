@@ -8,6 +8,7 @@ import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension
+from pegen.ast_dump import ast_dump
 
 # fmt: off
 
@@ -632,7 +633,7 @@ def parser_extension(tmp_path_factory: Any) -> Any:
 def test_correct_ast_generation_on_source_files(parser_extension: Any, source: str) -> None:
     actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
-    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+    assert ast_dump(actual_ast, include_attributes=True) == ast_dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for source: {source}"
 
@@ -650,7 +651,7 @@ def test_correct_but_known_to_fail_ast_generation_on_source_files(
 ) -> None:
     actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
-    assert ast.dump(actual_ast, include_attributes=True) == ast.dump(
+    assert ast_dump(actual_ast, include_attributes=True) == ast_dump(
         expected_ast, include_attributes=True
     ), f"Wrong AST generation for source: {source}"
 
@@ -659,6 +660,6 @@ def test_correct_but_known_to_fail_ast_generation_on_source_files(
 def test_correct_ast_generation_without_pos_info(parser_extension: Any, source: str) -> None:
     actual_ast = parser_extension.parse_string(source, mode=1)
     expected_ast = ast.parse(source)
-    assert ast.dump(actual_ast) == ast.dump(
+    assert ast_dump(actual_ast) == ast_dump(
         expected_ast
     ), f"Wrong AST generation for source: {source}"

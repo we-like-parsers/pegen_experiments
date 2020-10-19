@@ -11,6 +11,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Checkout the CPython repo
+      uses: actions/checkout@v2
+      with:
+        repository: python/cpython
+        path: cpython
     - name: Set up Python 3.10-dev
       uses: actions/setup-python@v2
       with:
@@ -27,7 +32,9 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install -r requirements-test.pip
     - name: Test
-      run: pytest -v --cov=pegen --cov-report term -k 'not test_ast_generation and not test_c_parser and not test_tracebacks'
+      run: pytest -v --cov=pegen --cov-report term
+      env:
+        CPYTHON_ROOT: ./cpython
     - name: Publish coverage report on Coveralls
       run: coveralls
       env:

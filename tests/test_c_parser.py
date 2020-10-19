@@ -8,6 +8,7 @@ import pytest  # type: ignore
 
 from pegen.grammar_parser import GeneratedParser as GrammarParser
 from pegen.testutil import parse_string, generate_parser_c_extension, generate_c_parser_source
+from pegen.ast_dump import ast_dump
 
 
 def check_input_strings_for_grammar(
@@ -35,7 +36,7 @@ def verify_ast_generation(source: str, stmt: str, tmp_path: PurePath) -> None:
 
     expected_ast = ast.parse(stmt)
     actual_ast = extension.parse_string(stmt, mode=1)
-    assert ast.dump(expected_ast) == ast.dump(actual_ast)
+    assert ast_dump(expected_ast) == ast_dump(actual_ast)
 
 
 def test_c_parser(tmp_path: PurePath) -> None:
@@ -77,7 +78,7 @@ def test_c_parser(tmp_path: PurePath) -> None:
     for expr in expressions:
         the_ast = extension.parse_string(expr, mode=1)
         expected_ast = ast.parse(expr)
-        assert ast.dump(the_ast) == ast.dump(expected_ast)
+        assert ast_dump(the_ast) == ast_dump(expected_ast)
 
 
 def test_lookahead(tmp_path: PurePath) -> None:
@@ -260,7 +261,7 @@ def test_with_stmt_with_paren(tmp_path: PurePath) -> None:
     grammar = parse_string(grammar_source, GrammarParser)
     extension = generate_parser_c_extension(grammar, tmp_path)
     the_ast = extension.parse_string(stmt, mode=1)
-    assert ast.dump(the_ast).startswith(
+    assert ast_dump(the_ast).startswith(
         "Module(body=[With(items=[withitem(context_expr=Name(id='a', ctx=Load()), optional_vars=Name(id='b', ctx=Store())), "
         "withitem(context_expr=Name(id='c', ctx=Load()), optional_vars=Name(id='d', ctx=Store()))]"
     )

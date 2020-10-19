@@ -64,10 +64,14 @@ def compile_c_extension(
     if cpython_root_str:
         cpython_root: pathlib.Path = pathlib.Path(cpython_root_str)
     else:
-        cpython_root = MOD_DIR.parent.parent.parent
+        cpython_root = MOD_DIR.parent.parent / "cpython"
         if not (cpython_root / "Python").is_dir():
             # This is Guido's convention. :-)
             cpython_root = pathlib.Path.home() / "cpython"
+        if not (cpython_root / "Python").is_dir():
+            raise ValueError(
+                "No CPython repository found. Please use the CPYTHON_ROOT env variable."
+            )
     extension = [
         Extension(
             extension_name,
