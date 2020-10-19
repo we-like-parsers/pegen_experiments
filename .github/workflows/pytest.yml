@@ -28,5 +28,7 @@ jobs:
         python3 -m pip install -r requirements-test.pip
     - name: Test
       run: pytest -v --cov=pegen --cov-report term -k 'not test_ast_generation and not test_c_parser and not test_tracebacks'
-    - name: Publish coverage report
+    - name: Publish coverage report on Coveralls
       run: coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
