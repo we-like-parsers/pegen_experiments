@@ -85,6 +85,8 @@ items[NamedItemList]:
     | named_item { [named_item] }
 
 named_item[NamedItem]:
+    | a=NAME '[' type=NAME '*' ']' '=' ~ item {NamedItem(a.string, item, f"{type.string}*")}
+    | a=NAME '[' type=NAME ']' '=' ~ item {NamedItem(a.string, item, type.string)}
     | a=NAME '=' ~ item {NamedItem(a.string, item)}
     | item {NamedItem(None, item)}
     | it=lookahead {NamedItem(None, it)}
