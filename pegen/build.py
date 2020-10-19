@@ -70,7 +70,7 @@ def compile_c_extension(
             cpython_root = pathlib.Path.home() / "cpython"
         if not (cpython_root / "Python").is_dir():
             raise ValueError(
-                "No CPython repository found. Please use the CPYTHON_ROOT env varaible."
+                "No CPython repository found. Please use the CPYTHON_ROOT env variable."
             )
     extension = [
         Extension(
