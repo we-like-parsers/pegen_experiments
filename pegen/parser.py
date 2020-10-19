@@ -330,7 +330,7 @@ class Parser:
 
 
 def make_dummy_token_type(type: str) -> int:
-    if type in token.EXACT_TOKEN_TYPES:  # type: ignore
+    if type in token.EXACT_TOKEN_TYPES:
         return token.OP
     return getattr(token, type, token.ERRORTOKEN)
 

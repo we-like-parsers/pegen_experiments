@@ -20,7 +20,7 @@ from pegen.tokenizer import Mark, Tokenizer
 from data.python_parser import GeneratedParser  # type: ignore[import]
 
 ALL_TOKENS = token.tok_name
-EXACT_TOKENS = token.EXACT_TOKEN_TYPES  # type: ignore
+EXACT_TOKENS = token.EXACT_TOKEN_TYPES
 NON_EXACT_TOKENS = {
     name for index, name in token.tok_name.items() if index not in EXACT_TOKENS.values()
 }

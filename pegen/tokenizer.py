@@ -4,7 +4,7 @@ from typing import Any, List, Iterator
 
 Mark = int  # NewType('Mark', int)
 
-exact_token_types = token.EXACT_TOKEN_TYPES  # type: ignore
+exact_token_types = token.EXACT_TOKEN_TYPES
 
 
 def shorttok(tok: tokenize.TokenInfo) -> str:
