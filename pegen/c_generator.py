@@ -89,7 +89,16 @@ class FunctionCall:
             parts.append(", 1")
         if self.assigned_variable:
             if self.assigned_variable_type:
-                parts = ["(", self.assigned_variable, " = ", '(', self.assigned_variable_type, ')', *parts, ")"]
+                parts = [
+                    "(",
+                    self.assigned_variable,
+                    " = ",
+                    "(",
+                    self.assigned_variable_type,
+                    ")",
+                    *parts,
+                    ")",
+                ]
             else:
                 parts = ["(", self.assigned_variable, " = ", *parts, ")"]
         if self.comment:
@@ -366,7 +375,11 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             self.print(f"goto {goto_target};")
         self.print(f"}}")
 
-    def out_of_memory_return(self, expr: str, cleanup_code: Optional[str] = None,) -> None:
+    def out_of_memory_return(
+        self,
+        expr: str,
+        cleanup_code: Optional[str] = None,
+    ) -> None:
         self.print(f"if ({expr}) {{")
         with self.indent():
             if cleanup_code is not None:
@@ -533,7 +546,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
                 self._set_up_token_start_metadata_extraction()
             self.visit(
-                rhs, is_loop=False, is_gather=node.is_gather(), rulename=node.name,
+                rhs,
+                is_loop=False,
+                is_gather=node.is_gather(),
+                rulename=node.name,
             )
             if self.debug:
                 self.print(f'D(fprintf(stderr, "Fail at %d: {node.name}\\n", p->mark));')
@@ -566,7 +582,10 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
             if any(alt.action and "EXTRA" in alt.action for alt in rhs.alts):
                 self._set_up_token_start_metadata_extraction()
             self.visit(
-                rhs, is_loop=True, is_gather=node.is_gather(), rulename=node.name,
+                rhs,
+                is_loop=True,
+                is_gather=node.is_gather(),
+                rulename=node.name,
             )
             if is_repeat1:
                 self.print("if (_n == 0 || p->error_indicator) {")
@@ -753,7 +772,7 @@ class CParserGenerator(ParserGenerator, GrammarVisitor):
                 if v == "_cut_var":
                     v += " = 0"  # cut_var must be initialized
                 self.print(f"{var_type}{v};")
-                if v.startswith("_opt_var"):
+                if v and v.startswith("_opt_var"):
                     self.print(f"UNUSED({v}); // Silence compiler warnings")
 
             with self.local_variable_context():
