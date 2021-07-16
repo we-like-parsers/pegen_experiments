@@ -34,7 +34,7 @@ class Parser:
     def loop(self, nonempty, func, *args):
         mark = self.mark()
         nodes = []
-        while node := func(*args) is not None:
+        while (node := func(*args)) is not None:
             nodes.append(node)
         if len(nodes) >= nonempty:
             return nodes
