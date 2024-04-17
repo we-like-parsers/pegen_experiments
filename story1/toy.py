@@ -6,12 +6,12 @@ from story1.node import Node
 class ToyParser(Parser):
 
     def statement(self):
+        if i := self.if_statement():
+            return i
         if a := self.assignment():
             return a
         if e := self.expr():
             return e
-        if i := self.if_statement():
-            return i
         return None
 
     def expr(self):

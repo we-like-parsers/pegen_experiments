@@ -41,3 +41,14 @@ def test_toy():
     assert tree and tree.type == "sub"
     assert tree.children[0].type == NAME
     assert tree.children[1].type == "add"
+
+def test_if():
+    program = "if x+1: y-2"
+    file = StringIO(program)
+    tokengen = generate_tokens(file.readline)
+    tok = Tokenizer(tokengen)
+    p = ToyParser(tok)
+    tree = p.statement()
+    assert tree and tree.type == "if"
+    assert tree.children[0].type == "add"
+    assert tree.children[1].type == "sub"
